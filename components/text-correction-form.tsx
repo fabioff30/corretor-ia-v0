@@ -496,6 +496,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
                   section: "form_header",
                 })
               }}
+              className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
             >
               Faça sua doação aqui
             </Link>
