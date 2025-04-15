@@ -12,7 +12,7 @@ const blogPosts = {
     date: "2025-04-15",
     readTime: "10 min",
     coverImage:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/birthday-message-cover-Yx9Tz9Yx0Yd9Yx9Tz9Yx0Yd.jpg",
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/20250415_1826_Birthday%20Celebration%20Fun_simple_compose_01jrxngq4af9p8smw185v9kdvj-CleuSJnFtCXXifMf469miSPSFzAIiT.webp",
   },
 }
 

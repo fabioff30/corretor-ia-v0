@@ -10,7 +10,9 @@ import { SharePost } from "@/components/share-post"
 import Script from "next/script"
 
 interface BlogPostPageClientProps {
-  params: { slug: string }
+  params: {
+    slug: string
+  }
 }
 
 // Define the blog post content
