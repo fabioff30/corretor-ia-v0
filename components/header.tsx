@@ -1,169 +1,125 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { ModeToggle } from "@/components/mode-toggle"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Sparkles } from "lucide-react"
-import { WebhookStatus } from "@/components/webhook-status"
-import { motion } from "framer-motion"
+import { ModeToggle } from "@/components/mode-toggle"
+import { Menu, X } from "lucide-react"
 
 export function Header() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const pathname = usePathname()
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
+  const isActive = (path: string) => {
+    if (path === "/" && pathname === "/") return true
+    if (path !== "/" && pathname?.startsWith(path)) return true
+    return false
+  }
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  // Detectar cliques fora do menu mobile para fechá-lo
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Verificar se o menu está aberto e se o clique foi fora do menu e do botão de toggle
-      if (
-        isMobileMenuOpen &&
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(event.target as Node) &&
-        !(event.target as Element).closest('button[aria-label="Toggle menu"]')
-      ) {
-        setIsMobileMenuOpen(false)
-      }
-    }
-
-    // Adicionar o event listener apenas quando o menu estiver aberto
-    if (isMobileMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-
-    // Remover o event listener quando o componente for desmontado ou o menu for fechado
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isMobileMenuOpen])
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-background/80 backdrop-blur-md border-b" : "bg-transparent"
-      }`}
-    >
-      <div className="w-full max-w-[1366px] mx-auto flex min-h-16 items-center justify-between px-3 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center gap-1 sm:gap-2">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex items-center"
-            >
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary mr-1" />
-              <span className="text-lg sm:text-xl font-bold gradient-text">CorretorIA</span>
-            </motion.div>
+            <span className="text-xl font-bold">CorretorIA</span>
           </Link>
-          <div className="ml-2 sm:ml-4 hidden md:block">
-            <WebhookStatus />
-          </div>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
+        <nav className="hidden md:flex items-center gap-6">
+          <Link
+            href="/"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/") ? "text-primary" : "text-foreground/60"}`}
+          >
             Início
           </Link>
           <Link
             href="/recursos"
-            className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/recursos") ? "text-primary" : "text-foreground/60"}`}
           >
             Recursos
           </Link>
           <Link
+            href="/blog"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/blog") ? "text-primary" : "text-foreground/60"}`}
+          >
+            Blog
+          </Link>
+          <Link
             href="/sobre"
-            className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/sobre") ? "text-primary" : "text-foreground/60"}`}
           >
             Sobre
           </Link>
           <Link
-            href="#como-usar"
-            className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+            href="/contato"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/contato") ? "text-primary" : "text-foreground/60"}`}
           >
-            Como usar
+            Contato
           </Link>
-          <Link href="#faq" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-            FAQ
-          </Link>
-          <ModeToggle />
-          <Button size="sm" className="ml-2" asChild>
-            <Link href="/apoiar?utm_source=header&utm_medium=button&utm_campaign=main_nav">Apoiar</Link>
-          </Button>
         </nav>
 
-        {/* Mobile Menu Button */}
-        <div className="flex items-center md:hidden">
-          <div className="mr-1 sm:mr-2 scale-90 sm:scale-100">
-            <WebhookStatus />
-          </div>
+        <div className="flex items-center gap-4">
           <ModeToggle />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="ml-1 sm:ml-2 p-1 sm:p-2"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <Button asChild className="hidden md:flex">
+            <Link href="/apoiar">Apoiar</Link>
           </Button>
+          <button className="md:hidden" onClick={toggleMenu} aria-label="Toggle Menu">
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div ref={mobileMenuRef} className="md:hidden bg-background/95 backdrop-blur-md border-b">
-          <nav className="container flex flex-col space-y-4 py-4">
+      {/* Mobile Navigation */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t">
+          <div className="container py-4 flex flex-col gap-4">
             <Link
               href="/"
-              className="text-sm font-medium px-4 py-2 rounded-md hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className={`px-2 py-1 rounded-md ${isActive("/") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
             >
               Início
             </Link>
             <Link
               href="/recursos"
-              className="text-sm font-medium px-4 py-2 rounded-md hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className={`px-2 py-1 rounded-md ${isActive("/recursos") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
             >
               Recursos
             </Link>
             <Link
+              href="/blog"
+              className={`px-2 py-1 rounded-md ${isActive("/blog") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Blog
+            </Link>
+            <Link
               href="/sobre"
-              className="text-sm font-medium px-4 py-2 rounded-md hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className={`px-2 py-1 rounded-md ${isActive("/sobre") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
-              href="#como-usar"
-              className="text-sm font-medium px-4 py-2 rounded-md hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(false)}
+              href="/contato"
+              className={`px-2 py-1 rounded-md ${isActive("/contato") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
             >
-              Como usar
+              Contato
             </Link>
-            <Link
-              href="#faq"
-              className="text-sm font-medium px-4 py-2 rounded-md hover:bg-muted"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              FAQ
-            </Link>
-            <Button className="mx-4" onClick={() => setIsMobileMenuOpen(false)} asChild>
-              <Link href="/apoiar?utm_source=mobile_menu&utm_medium=button&utm_campaign=main_nav">Apoiar</Link>
+            <Button asChild className="mt-2">
+              <Link href="/apoiar" onClick={() => setIsMenuOpen(false)}>
+                Apoiar
+              </Link>
             </Button>
-          </nav>
+          </div>
         </div>
       )}
     </header>

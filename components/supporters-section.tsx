@@ -33,12 +33,6 @@ export function SupportersSection() {
     },
   ]
 
-  const handleDonationClick = () => {
-    sendGTMEvent("donation_click", {
-      donationSource: "supporters_section",
-    })
-  }
-
   return (
     <section className="py-16 relative overflow-hidden bg-muted/30">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background opacity-50"></div>
@@ -72,7 +66,7 @@ export function SupportersSection() {
                   </div>
                 ) : (
                   <Avatar className="h-20 w-20 border-2 border-primary/20">
-                    <AvatarImage src={supporter.avatar} alt={supporter.name} />
+                    <AvatarImage src={supporter.avatar || "/placeholder.svg"} alt={supporter.name} />
                     <AvatarFallback className="bg-primary/10 text-primary text-xl">
                       {supporter.name
                         .split(" ")
@@ -100,10 +94,18 @@ export function SupportersSection() {
                   variant="outline"
                   size="sm"
                   className="mt-3 border-primary/30 text-primary hover:bg-primary/10"
-                  onClick={handleDonationClick}
                   asChild
                 >
-                  <Link href="/apoiar?utm_source=supporters_section&utm_medium=button&utm_campaign=donation_button">
+                  <Link
+                    href="/apoiar"
+                    onClick={() => {
+                      sendGTMEvent("donation_click", {
+                        location: "supporters_section",
+                        element_type: "supporter_card_button",
+                        section: "community_supporters",
+                      })
+                    }}
+                  >
                     Doar agora
                   </Link>
                 </Button>
@@ -161,13 +163,17 @@ export function SupportersSection() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-green-500 hover:bg-green-600 text-white"
-              onClick={handleDonationClick}
-              asChild
-            >
-              <Link href="/apoiar?utm_source=supporters_section&utm_medium=button&utm_campaign=donation_button">
+            <Button size="lg" className="bg-green-500 hover:bg-green-600 text-white" asChild>
+              <Link
+                href="/apoiar"
+                onClick={() => {
+                  sendGTMEvent("donation_click", {
+                    location: "supporters_section",
+                    element_type: "primary_donation_button",
+                    section: "supporters_cta",
+                  })
+                }}
+              >
                 <Heart className="mr-2 h-4 w-4" />
                 Fazer uma Doação
               </Link>
@@ -178,7 +184,16 @@ export function SupportersSection() {
               onClick={() => sendGTMEvent("coffee_click", { donationSource: "supporters_section" })}
               asChild
             >
-              <Link href="/apoiar?utm_source=supporters_section&utm_medium=button&utm_campaign=coffee_button">
+              <Link
+                href="/apoiar"
+                onClick={() => {
+                  sendGTMEvent("donation_click", {
+                    location: "supporters_section",
+                    element_type: "coffee_button",
+                    section: "supporters_cta",
+                  })
+                }}
+              >
                 <Coffee className="mr-2 h-4 w-4" />
                 Pagar um Café
               </Link>

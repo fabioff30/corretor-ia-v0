@@ -5,6 +5,7 @@ import { Sparkles, Heart } from "lucide-react"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 
 export function CTASection() {
   return (
@@ -33,8 +34,19 @@ export function CTASection() {
             Experimente nosso corretor de texto online e gratuito e veja a diferença na qualidade da sua escrita. Sem
             cadastro, sem instalação, sem complicações.
           </p>
-          <Button size="lg" className="px-8 h-12 text-base" asChild>
-            <Link href="/apoiar?utm_source=cta_section&utm_medium=button&utm_campaign=donation_cta">
+          <Button
+            size="lg"
+            className="px-8 h-12 text-base"
+            onClick={() => {
+              sendGTMEvent("donation_click", {
+                location: "cta_section",
+                element_type: "primary_button",
+                section: "page_bottom",
+              })
+            }}
+            asChild
+          >
+            <Link href="/apoiar">
               Apoiar o CorretorIA
               <Heart className="ml-2 h-4 w-4" />
             </Link>

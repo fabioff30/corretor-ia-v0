@@ -191,11 +191,7 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
 
   const currentBanner = banners[currentBannerIndex]
 
-  // Build the UTM URL
-  const getUtmUrl = (banner: Banner) => {
-    const { utmParams } = banner
-    return `/apoiar?utm_source=${utmParams.source}&utm_medium=${utmParams.medium}&utm_campaign=${utmParams.campaign}&utm_content=${utmParams.content}`
-  }
+  // Remover a função getUtmUrl que não será mais necessária
 
   const handleClose = () => {
     setIsVisible(false)
@@ -213,28 +209,20 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
     })
   }
 
-  const handleClick = () => {
-    sendGTMEvent("supporter_banner_clicked", {
-      ad_position: position,
-      ad_variant: variant,
-      ad_content: currentBanner.utmParams.content,
-      utm_source: currentBanner.utmParams.source,
-      utm_medium: currentBanner.utmParams.medium,
-      utm_campaign: currentBanner.utmParams.campaign,
-    })
-  }
+  // Remova a função handleClick que não será mais necessária.
 
   // Styles based on position
   const positionStyles = {
     top: "top-0 left-0 right-0 border-b w-full",
-    bottom: "bottom-0 left-0 right-0 md:bottom-4 md:left-auto md:right-4 md:max-w-md w-full md:w-auto",
+    bottom:
+      "bottom-0 left-0 right-0 md:bottom-4 md:left-4 md:right-4 lg:left-auto lg:right-4 md:max-w-md w-full md:w-auto",
     sidebar: "top-24 right-4 max-w-[300px] hidden md:block",
   }
 
   // Sizes based on variant
   const sizeStyles = {
     standard: "min-h-[90px]",
-    responsive: "min-h-[180px] md:min-h-[250px]",
+    responsive: "min-h-[120px] md:min-h-[180px] lg:min-h-[250px]",
     inline: "min-h-[90px]",
   }
 
@@ -244,7 +232,7 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
       initial={{ opacity: 0, y: position === "top" ? -20 : 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: position === "top" ? -20 : 20 }}
-      className={`fixed z-[9999] ${positionStyles[position]} bg-background rounded-lg shadow-lg border p-2 sm:p-4 ${position === "bottom" ? "border-b-0 md:border-b" : ""}`}
+      className={`fixed z-[9999] ${positionStyles[position]} bg-background rounded-lg shadow-lg border p-2 sm:p-3 md:p-4 ${position === "bottom" ? "border-b-0 md:border-b" : ""}`}
     >
       <div className="flex flex-col">
         <div className="flex justify-between items-center mb-2">
@@ -259,7 +247,19 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
         </div>
 
         <div className="relative">
-          <Link href={getUtmUrl(currentBanner)} onClick={handleClick} className="block">
+          <Link
+            href="/apoiar"
+            onClick={() => {
+              sendGTMEvent("banner_click", {
+                location: "ad_banner",
+                position: position,
+                variant: variant,
+                banner_id: currentBanner.id,
+                banner_content: currentBanner.utmParams.content,
+              })
+            }}
+            className="block"
+          >
             <Image
               src={currentBanner.src || "/placeholder.svg"}
               alt={currentBanner.alt}

@@ -488,8 +488,14 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
             Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX. Sua contribuição é
             fundamental para continuarmos oferecendo correções de texto de qualidade.{" "}
             <Link
-              href="/apoiar?utm_source=correction_form&utm_medium=notice_link&utm_campaign=donation_link"
-              className="text-green-600 hover:underline font-medium"
+              href="/apoiar"
+              onClick={() => {
+                sendGTMEvent("donation_click", {
+                  location: "correction_form",
+                  element_type: "notice_link",
+                  section: "form_header",
+                })
+              }}
             >
               Faça sua doação aqui
             </Link>
@@ -554,7 +560,16 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
               }}
               asChild
             >
-              <Link href="/apoiar?utm_source=correction_form&utm_medium=button&utm_campaign=donation_button">
+              <Link
+                href="/apoiar"
+                onClick={() => {
+                  sendGTMEvent("donation_click", {
+                    location: "correction_form",
+                    element_type: "donate_button",
+                    section: "form_actions",
+                  })
+                }}
+              >
                 <Heart className="mr-2 h-4 w-4 transition-transform group-hover:animate-heartbeat" />
                 <span className="relative z-10">Doar</span>
                 <span className="absolute inset-0 bg-green-500/0 group-hover:bg-green-500/10 transition-colors duration-300 rounded-md"></span>
@@ -716,7 +731,16 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
                 }}
                 asChild
               >
-                <Link href="/apoiar?utm_source=after_rating&utm_medium=button&utm_campaign=donation_button">
+                <Link
+                  href="/apoiar"
+                  onClick={() => {
+                    sendGTMEvent("donation_click", {
+                      location: "after_rating",
+                      element_type: "support_button",
+                      section: "rating_section",
+                    })
+                  }}
+                >
                   <Heart className="mr-2 h-5 w-5" />
                   Apoiar o CorretorIA
                 </Link>

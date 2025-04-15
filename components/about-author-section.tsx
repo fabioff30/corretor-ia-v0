@@ -5,6 +5,8 @@ import { Github, Linkedin, Globe, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { sendGTMEvent } from "@/utils/gtm-helper"
+import Link from "next/link"
 
 export function AboutAuthorSection() {
   return (
@@ -67,10 +69,19 @@ export function AboutAuthorSection() {
                     </a>
                   </div>
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <a href="mailto:contato@corretordetextoonline.com.br">
+                    <Link
+                      href="/apoiar"
+                      onClick={() => {
+                        sendGTMEvent("donation_click", {
+                          location: "about_author",
+                          element_type: "contact_button",
+                          section: "author_bio",
+                        })
+                      }}
+                    >
                       <Mail className="h-4 w-4 mr-2" />
                       Contato
-                    </a>
+                    </Link>
                   </Button>
                 </div>
                 <div className="col-span-2 p-6 md:p-8">

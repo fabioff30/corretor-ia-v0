@@ -45,7 +45,9 @@ export function UseCasesSection() {
 
   return (
     <section id="casos-de-uso" className="py-20 relative">
-      <div className="max-w-screen-xl mx-auto px-4 md:px-8"> {/* Mudança aqui */}
+      <div className="max-w-screen-xl mx-auto px-4 md:px-8">
+        {" "}
+        {/* Mudança aqui */}
         <div className="text-center mb-12">
           <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Versatilidade
@@ -55,7 +57,6 @@ export function UseCasesSection() {
             Nossa ferramenta é ideal para diversos tipos de textos e situações
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {useCases.map((useCase, index) => (
             <motion.div

@@ -25,21 +25,17 @@ export function InlineAd({ className = "", format = "auto" }: InlineAdProps) {
   // Se não tiver consentimento, não mostrar nada
   if (!hasConsent) return null
 
-  const handleClick = () => {
-    sendGTMEvent("supporter_banner_clicked", {
-      ad_location: "inline",
-      ad_format: format,
-      utm_source: "inline_ad",
-      utm_medium: "banner",
-      utm_campaign: "support_banner",
-    })
-  }
-
   return (
     <div className={`my-8 overflow-hidden min-h-[250px] rounded-lg border ${className}`}>
       <Link
-        href="/apoiar?utm_source=inline_ad&utm_medium=banner&utm_campaign=support_banner"
-        onClick={handleClick}
+        href="/apoiar"
+        onClick={() => {
+          sendGTMEvent("banner_click", {
+            location: "inline_ad",
+            format: format,
+            section: className || "default_section",
+          })
+        }}
         className="block"
       >
         <Image

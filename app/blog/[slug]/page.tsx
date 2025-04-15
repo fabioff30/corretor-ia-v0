@@ -1,0 +1,60 @@
+import type { Metadata } from "next"
+import { BlogPostPageClient } from "./BlogPostPageClient"
+
+// Adicionar o novo post sobre mensagens de aniversário
+const blogPosts = {
+  "mensagens-de-aniversario": {
+    title: "+100 ideias de mensagem de aniversário para emocionar quem você ama",
+    description:
+      "Descubra mais de 100 mensagens de aniversário para amigos, família, amor e colegas. Frases prontas para copiar e enviar no WhatsApp, cartões e redes sociais.",
+    keywords:
+      "mensagem de aniversário, feliz aniversário, parabéns, mensagens para amigos, mensagens românticas, mensagens para família, mensagens engraçadas, mensagens para WhatsApp",
+    date: "2025-04-15",
+    readTime: "10 min",
+    coverImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/birthday-message-cover-Yx9Tz9Yx0Yd9Yx9Tz9Yx0Yd.jpg",
+  },
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const post = blogPosts[params.slug]
+
+  if (!post) {
+    return {
+      title: "Post não encontrado",
+      description: "O post que você está procurando não existe ou foi removido.",
+    }
+  }
+
+  return {
+    title: `${post.title} | CorretorIA`,
+    description: post.description,
+    keywords: post.keywords,
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      url: `https://corretordetextoonline.com.br/blog/${params.slug}`,
+      siteName: "CorretorIA",
+      locale: "pt_BR",
+      type: "article",
+      images: [
+        {
+          url: post.coverImage,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+      images: [post.coverImage],
+    },
+  }
+}
+
+export default function BlogPostPage({ params }: { params: { slug: string } }) {
+  return <BlogPostPageClient params={params} />
+}
