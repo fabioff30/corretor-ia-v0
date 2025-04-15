@@ -1,6 +1,9 @@
 import type { Metadata } from "next"
 import { BlogPostPageClient } from "./BlogPostPageClient"
 
+// Add the correct type import from next
+import type { PageProps } from "next/types"
+
 // Adicionar o novo post sobre mensagens de aniversário
 const blogPosts = {
   "mensagens-de-aniversario": {
@@ -55,6 +58,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+// Fix the type definition for the page component
+export default function BlogPostPage({ params }: PageProps<{ slug: string }>) {
   return <BlogPostPageClient slug={params.slug} />
 }
