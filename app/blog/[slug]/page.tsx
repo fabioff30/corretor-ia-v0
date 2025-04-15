@@ -56,5 +56,5 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  return <BlogPostPageClient params={params} />
+  return <BlogPostPageClient slug={params.slug} />
 }

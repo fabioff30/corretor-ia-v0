@@ -9,12 +9,6 @@ import { Button } from "@/components/ui/button"
 import { SharePost } from "@/components/share-post"
 import Script from "next/script"
 
-interface BlogPostPageClientProps {
-  params: {
-    slug: string
-  }
-}
-
 // Define the blog post content
 const blogPosts = {
   "mensagens-de-aniversario": {
@@ -301,8 +295,8 @@ const blogPosts = {
   },
 }
 
-export function BlogPostPageClient({ params }: BlogPostPageClientProps) {
-  const post = blogPosts[params.slug]
+export function BlogPostPageClient({ slug }: { slug: string }) {
+  const post = blogPosts[slug]
 
   useEffect(() => {
     // No need to dynamically load the script, we'll use Next.js Script component
@@ -357,7 +351,7 @@ export function BlogPostPageClient({ params }: BlogPostPageClientProps) {
           </div>
 
           <div className="mt-8 pt-6 border-t">
-            <SharePost title={post.title} slug={params.slug} />
+            <SharePost title={post.title} slug={slug} />
           </div>
         </div>
       </div>
