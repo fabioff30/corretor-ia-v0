@@ -1,20 +1,7 @@
-import { Suspense } from "react"
 import { BackgroundGradient } from "@/components/background-gradient"
-import { BlogPostList } from "@/components/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
 
-export const metadata = {
-  title: "Blog | CorretorIA",
-  description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
-}
-
-export default function BlogPage({
-  searchParams,
-}: {
-  searchParams: { page?: string }
-}) {
-  const page = searchParams.page ? Number.parseInt(searchParams.page) : 1
-
+export default function BlogLoading() {
   return (
     <>
       <BackgroundGradient />
@@ -27,9 +14,7 @@ export default function BlogPage({
             </p>
           </div>
 
-          <Suspense fallback={<BlogPageSkeleton />}>
-            <BlogPostList page={page} />
-          </Suspense>
+          <BlogPageSkeleton />
         </div>
       </div>
     </>

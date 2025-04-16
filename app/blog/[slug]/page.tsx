@@ -1,64 +1,57 @@
 import type { Metadata } from "next"
-import { BlogPostPageClient } from "./BlogPostPageClient"
-
-// Add the correct type import from next
-import type { PageProps } from "next/types"
-
-// Adicionar o novo post sobre mensagens de aniversário
-const blogPosts = {
-  "mensagens-de-aniversario": {
-    title: "+100 ideias de mensagem de aniversário para emocionar quem você ama",
-    description:
-      "Descubra mais de 100 mensagens de aniversário para amigos, família, amor e colegas. Frases prontas para copiar e enviar no WhatsApp, cartões e redes sociais.",
-    keywords:
-      "mensagem de aniversário, feliz aniversário, parabéns, mensagens para amigos, mensagens românticas, mensagens para família, mensagens engraçadas, mensagens para WhatsApp",
-    date: "2025-04-15",
-    readTime: "10 min",
-    coverImage:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/20250415_1826_Birthday%20Celebration%20Fun_simple_compose_01jrxngq4af9p8smw185v9kdvj-CleuSJnFtCXXifMf469miSPSFzAIiT.webp",
-  },
-}
+import { notFound } from "next/navigation"
+import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
+import { BlogPostContent } from "@/components/blog-post-content"
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = blogPosts[params.slug]
+  const post = await getPostBySlug(params.slug)
 
   if (!post) {
     return {
-      title: "Post não encontrado",
+      title: "Post não encontrado | CorretorIA",
       description: "O post que você está procurando não existe ou foi removido.",
     }
   }
 
+  const excerpt = extractExcerpt(post.excerpt.rendered)
+  const featuredImage = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || ""
+
   return {
-    title: `${post.title} | CorretorIA`,
-    description: post.description,
-    keywords: post.keywords,
+    title: `${post.title.rendered} | CorretorIA`,
+    description: excerpt,
     openGraph: {
-      title: post.title,
-      description: post.description,
+      title: post.title.rendered,
+      description: excerpt,
       url: `https://corretordetextoonline.com.br/blog/${params.slug}`,
       siteName: "CorretorIA",
       locale: "pt_BR",
       type: "article",
-      images: [
-        {
-          url: post.coverImage,
-          width: 1200,
-          height: 630,
-          alt: post.title,
-        },
-      ],
+      images: featuredImage
+        ? [
+            {
+              url: featuredImage,
+              width: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.width || 1200,
+              height: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.height || 630,
+              alt: post.title.rendered,
+            },
+          ]
+        : [],
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.description,
-      images: [post.coverImage],
+      title: post.title.rendered,
+      description: excerpt,
+      images: featuredImage ? [featuredImage] : [],
     },
   }
 }
 
-// Fix the type definition for the page component
-export default function BlogPostPage({ params }: PageProps<{ slug: string }>) {
-  return <BlogPostPageClient slug={params.slug} />
+export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+  const post = await getPostBySlug(params.slug)
+
+  if (!post) {
+    notFound()
+  }
+
+  return <BlogPostContent post={post} />
 }

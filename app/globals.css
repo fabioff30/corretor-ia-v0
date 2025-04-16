@@ -174,3 +174,70 @@
 .animate-heartbeat {
   animation: heartbeat 1s ease-in-out infinite;
 }
+
+/* WordPress Content Styles */
+.prose img {
+  @apply rounded-md my-6 mx-auto;
+}
+
+.prose figure {
+  @apply my-6;
+}
+
+.prose figure.wp-block-image {
+  @apply my-8;
+}
+
+.prose figure figcaption {
+  @apply text-center text-sm text-foreground/70 mt-2;
+}
+
+.prose .wp-block-quote {
+  @apply border-l-4 border-primary pl-4 italic my-6;
+}
+
+.prose .wp-block-code {
+  @apply bg-muted p-4 rounded-md my-6 overflow-auto;
+}
+
+.prose .wp-block-embed {
+  @apply my-8;
+}
+
+.prose .wp-block-embed iframe {
+  @apply w-full aspect-video rounded-md;
+}
+
+.prose .wp-block-button {
+  @apply my-4;
+}
+
+.prose .wp-block-button__link {
+  @apply bg-primary text-primary-foreground px-4 py-2 rounded-md inline-block no-underline hover:bg-primary/90 transition-colors;
+}
+
+.prose .wp-block-gallery {
+  @apply grid grid-cols-2 md:grid-cols-3 gap-4 my-8;
+}
+
+.prose .blocks-gallery-item img {
+  @apply rounded-md object-cover w-full h-full;
+}
+
+/* Fix for WordPress content in dark mode */
+.dark .prose a {
+  @apply text-primary hover:text-primary/80;
+}
+
+.dark .prose strong {
+  @apply text-foreground;
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  @apply text-foreground;
+}
