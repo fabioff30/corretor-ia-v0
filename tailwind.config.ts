@@ -96,9 +96,40 @@ const config = {
         "hero-pattern":
           "linear-gradient(to bottom right, rgba(var(--primary-rgb), 0.1), rgba(var(--secondary-rgb), 0.1))",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: "none",
+            color: "hsl(var(--foreground))",
+            "--tw-prose-headings": "hsl(var(--foreground))",
+            "--tw-prose-links": "hsl(var(--primary))",
+            "--tw-prose-bold": "hsl(var(--foreground))",
+            "--tw-prose-counters": "hsl(var(--foreground) / 0.7)",
+            "--tw-prose-bullets": "hsl(var(--foreground) / 0.7)",
+            "--tw-prose-quotes": "hsl(var(--foreground) / 0.8)",
+            "--tw-prose-code": "hsl(var(--foreground))",
+            "--tw-prose-hr": "hsl(var(--border))",
+            "--tw-prose-th-borders": "hsl(var(--border))",
+            "--tw-prose-td-borders": "hsl(var(--border))",
+
+            // Dark mode
+            "--tw-prose-invert-body": "hsl(var(--foreground))",
+            "--tw-prose-invert-headings": "hsl(var(--foreground))",
+            "--tw-prose-invert-links": "hsl(var(--primary))",
+            "--tw-prose-invert-bold": "hsl(var(--foreground))",
+            "--tw-prose-invert-counters": "hsl(var(--foreground) / 0.7)",
+            "--tw-prose-invert-bullets": "hsl(var(--foreground) / 0.7)",
+            "--tw-prose-invert-quotes": "hsl(var(--foreground) / 0.8)",
+            "--tw-prose-invert-code": "hsl(var(--foreground))",
+            "--tw-prose-invert-hr": "hsl(var(--border))",
+            "--tw-prose-invert-th-borders": "hsl(var(--border))",
+            "--tw-prose-invert-td-borders": "hsl(var(--border))",
+          },
+        },
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config
 
 export default config

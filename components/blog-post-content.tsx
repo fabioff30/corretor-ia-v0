@@ -32,6 +32,9 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
   // Fetch related posts
   const relatedPosts = await getRelatedPosts(post.slug)
 
+  // Process content to fix any styling issues
+  const processedContent = processWordPressContent(post.content.rendered)
+
   return (
     <>
       <BackgroundGradient />
@@ -101,7 +104,7 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
           <div>
             <div
               className="prose prose-lg max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: post.content.rendered }}
+              dangerouslySetInnerHTML={{ __html: processedContent }}
             />
 
             <InlineAd className="my-8" />
@@ -159,4 +162,39 @@ function extractExcerpt(html: string, maxLength = 160): string {
   // Truncate to maxLength
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength).trim() + "..."
+}
+
+// Function to process WordPress content and fix styling issues
+function processWordPressContent(content: string): string {
+  // Add IDs to headings for better anchor linking if they don't have IDs
+  let processedContent = content.replace(/<(h[1-6])(?![^>]*\bid=["'])[^>]*>(.*?)<\/\1>/gi, (match, tag, text) => {
+    const id = text
+      .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/[^\w-]/g, "") // Remove special characters
+    return `<${tag} id="${id}">${text}</${tag}>`
+  })
+
+  // Ensure links open in a new tab if they're external
+  processedContent = processedContent.replace(
+    /<a\s+(?![^>]*\btarget=["'])[^>]*href=["']([^"']+)["'][^>]*>/gi,
+    (match, href) => {
+      if (href.startsWith("http") && !href.includes("corretordetextoonline.com.br")) {
+        return match.replace(/<a\s+/, '<a target="_blank" rel="noopener noreferrer" ')
+      }
+      return match
+    },
+  )
+
+  // Fix image sizing issues
+  processedContent = processedContent.replace(/<img\s+[^>]*>/gi, (match) => {
+    if (!match.includes("class=")) {
+      return match.replace(/<img\s+/, '<img class="rounded-md my-6 mx-auto" ')
+    }
+    return match
+  })
+
+  return processedContent
 }

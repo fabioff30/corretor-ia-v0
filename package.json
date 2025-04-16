@@ -64,7 +64,8 @@
     "@ai-sdk/openai": "latest",
     "@upstash/redis": "latest",
     "@react-email/components": "latest",
-    "diff": "latest"
+    "diff": "latest",
+    "@tailwindcss/typography": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
