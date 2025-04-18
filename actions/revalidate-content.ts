@@ -10,10 +10,10 @@ import { revalidatePath } from "next/cache"
 export async function revalidateContent(slug?: string): Promise<{ success: boolean; message: string }> {
   try {
     if (slug) {
-      // Revalidar post específico
-      revalidatePath(`/blog/${slug}`)
+      // Revalidar post específico com força total (revalidate: 0)
+      revalidatePath(`/blog/${slug}`, "page")
       // Também revalidar índice do blog para atualizar listagens
-      revalidatePath("/blog")
+      revalidatePath("/blog", "page")
 
       console.log(`Revalidated post: ${slug}`)
       return {
@@ -21,8 +21,8 @@ export async function revalidateContent(slug?: string): Promise<{ success: boole
         message: `O post ${slug} foi atualizado com sucesso.`,
       }
     } else {
-      // Revalidar todo o conteúdo do blog
-      revalidatePath("/blog")
+      // Revalidar todo o conteúdo do blog com força total
+      revalidatePath("/blog", "page")
 
       console.log("Revalidated all blog content")
       return {

@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { revalidateContent } from "@/actions/revalidate-content"
+import { useRouter } from "next/navigation"
 
 interface AdminRefreshButtonProps {
   slug?: string
@@ -23,6 +24,7 @@ export function AdminRefreshButton({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
   const { isAdmin, isLoading } = useAdminAuth()
+  const router = useRouter()
 
   // Se não for admin ou ainda estiver carregando, não renderiza o botão
   if (!isAdmin || isLoading) return null
@@ -30,7 +32,7 @@ export function AdminRefreshButton({
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
-      // Usar a Server Action em vez de chamar a API diretamente
+      // Usar a Server Action para revalidar o conteúdo
       const result = await revalidateContent(slug)
 
       if (result.success) {
@@ -39,10 +41,14 @@ export function AdminRefreshButton({
           description: result.message,
         })
 
-        // Force a client-side navigation to refresh the page after a short delay
+        // Usar o router para atualizar a página
+        router.refresh()
+
+        // Também forçar um reload completo após um pequeno delay
+        // para garantir que o conteúdo seja recarregado do servidor
         setTimeout(() => {
           window.location.reload()
-        }, 1000)
+        }, 500)
       } else {
         throw new Error(result.message || "Falha ao atualizar o conteúdo")
       }

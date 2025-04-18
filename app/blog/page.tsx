@@ -4,6 +4,9 @@ import { BlogPostList } from "@/components/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
 
+export const dynamic = "force-dynamic" // Corrigido: hífen em vez de underscore
+export const revalidate = 300 // Revalidar a cada 5 minutos
+
 export const metadata = {
   title: "Blog | CorretorIA",
   description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
