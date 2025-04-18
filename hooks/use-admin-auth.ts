@@ -2,49 +2,45 @@
 
 import { useState, useEffect } from "react"
 
-// Chave para armazenar o estado de autenticação no localStorage
-const ADMIN_AUTH_KEY = "admin-authenticated"
-
 export function useAdminAuth() {
-  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // Verificar o estado de autenticação ao carregar o componente
   useEffect(() => {
+    // Verificar se o usuário já está autenticado no localStorage
     const checkAuth = () => {
-      const storedAuth = localStorage.getItem(ADMIN_AUTH_KEY)
-      setIsAdmin(storedAuth === "true")
+      const storedAuth = localStorage.getItem("adminAuth")
+      if (storedAuth === "true") {
+        setIsAuthenticated(true)
+      }
       setIsLoading(false)
     }
 
     checkAuth()
   }, [])
 
-  // Função para autenticar como administrador
-  const loginAsAdmin = (password: string) => {
-    // Verificar a senha do administrador
-    // Usamos o ADMIN_API_KEY como senha
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin-password-not-set"
+  const login = (password: string): boolean => {
+    // Verificar se a senha corresponde à variável de ambiente
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
 
-    if (password === adminPassword) {
-      localStorage.setItem(ADMIN_AUTH_KEY, "true")
-      setIsAdmin(true)
+    if (adminPassword && password === adminPassword) {
+      localStorage.setItem("adminAuth", "true")
+      setIsAuthenticated(true)
       return true
     }
 
     return false
   }
 
-  // Função para sair da conta de administrador
-  const logoutAdmin = () => {
-    localStorage.removeItem(ADMIN_AUTH_KEY)
-    setIsAdmin(false)
+  const logout = () => {
+    localStorage.removeItem("adminAuth")
+    setIsAuthenticated(false)
   }
 
   return {
-    isAdmin,
+    isAuthenticated,
     isLoading,
-    loginAsAdmin,
-    logoutAdmin,
+    login,
+    logout,
   }
 }
