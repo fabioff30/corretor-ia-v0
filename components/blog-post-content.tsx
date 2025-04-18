@@ -8,7 +8,6 @@ import { InlineAd } from "@/components/inline-ad"
 import { type WPPost, formatWpDate, calculateReadingTime, getRelatedPosts } from "@/utils/wordpress-api"
 import { Suspense } from "react"
 import { SupportButton } from "@/components/support-button"
-import { AdminRefreshButton } from "@/components/admin-refresh-button"
 
 interface BlogPostContentProps {
   post: WPPost
@@ -41,12 +40,9 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
       <BackgroundGradient />
       <article className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <Link href="/blog" className="text-primary hover:underline inline-block">
-              ← Voltar para o blog
-            </Link>
-            <AdminRefreshButton slug={post.slug} />
-          </div>
+          <Link href="/blog" className="text-primary hover:underline mb-4 inline-block">
+            ← Voltar para o blog
+          </Link>
 
           <h1
             className="text-3xl md:text-4xl font-bold mb-4"
@@ -78,7 +74,7 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
             </div>
           )}
 
-          <SharePost title={post.title.rendered} slug={post.slug} />
+          <SharePost title={post.title.rendered} url={`https://corretordetextoonline.com.br/blog/${post.slug}`} />
 
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 mt-[15px]">
             <h3 className="font-bold text-lg text-primary mb-2">Precisa corrigir seu texto?</h3>
@@ -130,7 +126,11 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
               </div>
             </div>
 
-            <SharePost title={post.title.rendered} slug={post.slug} className="mt-8" />
+            <SharePost
+              title={post.title.rendered}
+              url={`https://corretordetextoonline.com.br/blog/${post.slug}`}
+              className="mt-8"
+            />
 
             <Suspense fallback={<div className="mt-12 pt-8 border-t">Carregando posts relacionados...</div>}>
               {relatedPosts.length > 0 && (

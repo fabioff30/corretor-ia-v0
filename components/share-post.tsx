@@ -8,10 +8,9 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 interface SharePostProps {
   title: string
   slug: string
-  className?: string
 }
 
-export function SharePost({ title, slug, className = "" }: SharePostProps) {
+export function SharePost({ title, slug }: SharePostProps) {
   const [copied, setCopied] = useState(false)
   const url = `https://corretordetextoonline.com.br/blog/${slug}`
 
@@ -55,7 +54,7 @@ export function SharePost({ title, slug, className = "" }: SharePostProps) {
   }
 
   return (
-    <div className={`flex flex-col space-y-3 ${className}`}>
+    <div className="flex flex-col space-y-3">
       <p className="text-sm font-medium">Compartilhe este artigo:</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleShare("facebook")}>

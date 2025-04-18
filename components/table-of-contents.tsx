@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface TOCItem {
@@ -16,30 +16,6 @@ interface TableOfContentsProps {
 export function TableOfContents({ content }: TableOfContentsProps) {
   const [tocItems, setTocItems] = useState<TOCItem[]>([])
   const [activeId, setActiveId] = useState<string>("")
-
-  // Extrair a lógica do useEffectEvent para um useCallback normal
-  const checkActiveHeading = useCallback(() => {
-    const headingElements = tocItems.map((item) => document.getElementById(item.id))
-
-    // Find the heading that's currently in view
-    const currentHeading = headingElements.find((element, index) => {
-      if (!element) return false
-
-      const rect = element.getBoundingClientRect()
-      const nextElement = headingElements[index + 1]
-
-      if (nextElement) {
-        const nextRect = nextElement.getBoundingClientRect()
-        return rect.top <= 100 && nextRect.top > 100
-      }
-
-      return rect.top <= 100
-    })
-
-    if (currentHeading) {
-      setActiveId(currentHeading.id)
-    }
-  }, [tocItems])
 
   useEffect(() => {
     // Parse headings from content
@@ -68,12 +44,31 @@ export function TableOfContents({ content }: TableOfContentsProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      checkActiveHeading()
+      const headingElements = tocItems.map((item) => document.getElementById(item.id))
+
+      // Find the heading that's currently in view
+      const currentHeading = headingElements.find((element, index) => {
+        if (!element) return false
+
+        const rect = element.getBoundingClientRect()
+        const nextElement = headingElements[index + 1]
+
+        if (nextElement) {
+          const nextRect = nextElement.getBoundingClientRect()
+          return rect.top <= 100 && nextRect.top > 100
+        }
+
+        return rect.top <= 100
+      })
+
+      if (currentHeading) {
+        setActiveId(currentHeading.id)
+      }
     }
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [checkActiveHeading])
+  }, [tocItems])
 
   if (tocItems.length < 2) return null
 

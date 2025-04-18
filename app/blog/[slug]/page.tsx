@@ -3,9 +3,6 @@ import { notFound } from "next/navigation"
 import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
 import { BlogPostContent } from "@/components/blog-post-content"
 
-export const dynamic = "force-dynamic" // Forçar renderização dinâmica
-export const revalidate = 300 // Revalidar a cada 5 minutos
-
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = await getPostBySlug(params.slug)
 

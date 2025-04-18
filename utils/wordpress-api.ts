@@ -4,9 +4,6 @@
 
 const API_URL = "https://blog.corretordetextoonline.com.br/wp-json/wp/v2"
 
-// Reduced revalidation time from 3600 (1 hour) to 300 (5 minutes)
-const DEFAULT_REVALIDATION_TIME = 300
-
 export interface WPPost {
   id: number
   slug: string
@@ -61,47 +58,30 @@ export interface WPMedia {
   }
 }
 
-// Vamos atualizar as funções de fetch para garantir que não usem cache quando forceRefresh for true
-
 /**
  * Fetch posts from WordPress API
- * @param page Page number
- * @param perPage Posts per page
- * @param forceRefresh Whether to bypass cache and force a fresh fetch
  */
 export async function getPosts(
   page = 1,
   perPage = 10,
-  forceRefresh = false,
 ): Promise<{
   posts: WPPost[]
   totalPages: number
   totalPosts: number
 }> {
   try {
-    console.log(`Fetching posts: page ${page}, perPage ${perPage}, forceRefresh: ${forceRefresh}`)
-
-    const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&page=${page}&per_page=${perPage}`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
-    })
+    const response = await fetch(
+      `${API_URL}/posts?_embed=author,wp:featuredmedia&page=${page}&per_page=${perPage}`,
+      { next: { revalidate: 3600 } }, // Cache for 1 hour
+    )
 
     if (!response.ok) {
-      console.error(`Failed to fetch posts: ${response.status} ${response.statusText}`)
       throw new Error(`Failed to fetch posts: ${response.status}`)
     }
 
     const posts = await response.json()
     const totalPosts = Number.parseInt(response.headers.get("X-WP-Total") || "0", 10)
     const totalPages = Number.parseInt(response.headers.get("X-WP-TotalPages") || "0", 10)
-
-    console.log(`Fetched ${posts.length} posts. Total: ${totalPosts}, Pages: ${totalPages}`)
 
     return {
       posts,
@@ -120,37 +100,23 @@ export async function getPosts(
 
 /**
  * Fetch a single post by slug
- * @param slug Post slug
- * @param forceRefresh Whether to bypass cache and force a fresh fetch
  */
-export async function getPostBySlug(slug: string, forceRefresh = false): Promise<WPPost | null> {
+export async function getPostBySlug(slug: string): Promise<WPPost | null> {
   try {
-    console.log(`Fetching post by slug: ${slug}, forceRefresh: ${forceRefresh}`)
-
     const response = await fetch(`${API_URL}/posts?slug=${slug}&_embed=author,wp:featuredmedia`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
+      next: { revalidate: 3600 }, // Cache for 1 hour
     })
 
     if (!response.ok) {
-      console.error(`Failed to fetch post: ${response.status} ${response.statusText}`)
       throw new Error(`Failed to fetch post: ${response.status}`)
     }
 
     const posts = await response.json()
 
     if (posts.length === 0) {
-      console.log(`No post found with slug: ${slug}`)
       return null
     }
 
-    console.log(`Successfully fetched post: ${slug}`)
     return posts[0]
   } catch (error) {
     console.error(`Error fetching post with slug ${slug}:`, error)
@@ -160,23 +126,11 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
 
 /**
  * Fetch related posts (excluding the current post)
- * @param currentSlug Current post slug to exclude
- * @param limit Maximum number of posts to fetch
- * @param forceRefresh Whether to bypass cache and force a fresh fetch
  */
-export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefresh = false): Promise<WPPost[]> {
+export async function getRelatedPosts(currentSlug: string, limit = 4): Promise<WPPost[]> {
   try {
-    console.log(`Fetching related posts (excluding ${currentSlug}), forceRefresh: ${forceRefresh}`)
-
     const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&per_page=${limit}`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
+      next: { revalidate: 3600 }, // Cache for 1 hour
     })
 
     if (!response.ok) {
@@ -184,10 +138,7 @@ export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefre
     }
 
     const posts = await response.json()
-    const filteredPosts = posts.filter((post: WPPost) => post.slug !== currentSlug)
-
-    console.log(`Fetched ${filteredPosts.length} related posts`)
-    return filteredPosts
+    return posts.filter((post: WPPost) => post.slug !== currentSlug)
   } catch (error) {
     console.error("Error fetching related posts:", error)
     return []
