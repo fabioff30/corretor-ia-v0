@@ -2,6 +2,10 @@ import { Suspense } from "react"
 import { BackgroundGradient } from "@/components/background-gradient"
 import { BlogPostList } from "@/components/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
+import { AdminRefreshButton } from "@/components/admin-refresh-button"
+
+export const dynamic = "force-dynamic" // Corrigido: hífen em vez de underscore
+export const revalidate = 300 // Revalidar a cada 5 minutos
 
 export const metadata = {
   title: "Blog | CorretorIA",
@@ -25,6 +29,9 @@ export default function BlogPage({
             <p className="text-lg text-foreground/80">
               Dicas, mensagens e conteúdo para melhorar sua comunicação escrita
             </p>
+            <div className="mt-4">
+              <AdminRefreshButton />
+            </div>
           </div>
 
           <Suspense fallback={<BlogPageSkeleton />}>

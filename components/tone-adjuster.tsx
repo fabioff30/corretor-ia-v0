@@ -1,15 +1,38 @@
 "use client"
 
 import { useState } from "react"
-import { Wand2 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Check, Wand2 } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { sendGTMEvent } from "@/utils/gtm-helper"
-// Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 
-// Manter o tipo ToneOption com "Padrão" incluído
-type ToneOption = "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico"
+// 1. ATUALIZAR O TIPO ToneOption para incluir os novos tons
+type ToneOption =
+  | "Padrão"
+  | "Formal"
+  | "Informal"
+  | "Acadêmico"
+  | "Criativo"
+  | "Conciso"
+  | "Romântico"
+  | "Narrativo"  // <-- Adicionado
+  | "Confiante" // <-- Adicionado
+
+// 2. ADICIONAR os novos tons ao array `tones`
+const tones: { value: ToneOption; label: string; description: string }[] = [
+  { value: "Padrão", label: "Padrão", description: "Tom de escrita neutro e geral." },
+  { value: "Formal", label: "Formal", description: "Linguagem séria para documentos oficiais." },
+  { value: "Informal", label: "Informal", description: "Tom descontraído e casual." },
+  { value: "Acadêmico", label: "Acadêmico", description: "Linguagem técnica para trabalhos científicos." },
+  { value: "Criativo", label: "Criativo", description: "Tom original e imaginativo." },
+  { value: "Conciso", label: "Conciso", description: "Linguagem direta e objetiva." },
+  { value: "Romântico", label: "Romântico", description: "Tom emotivo e apaixonado." },
+  // --- Novos tons adicionados abaixo ---
+  { value: "Narrativo", label: "Narrativo", description: "Tom narrativo para contar histórias." }, // <-- Adicionado
+  { value: "Confiante", label: "Confiante", description: "Tom assertivo e seguro." }, // <-- Adicionado
+]
 
 interface ToneAdjusterProps {
   onToneChange?: (tone: ToneOption) => void
@@ -18,30 +41,18 @@ interface ToneAdjusterProps {
 }
 
 export function ToneAdjuster({ onToneChange, className, disabled = false }: ToneAdjusterProps) {
-  // Manter "Padrão" como o estado inicial
   const [selectedTone, setSelectedTone] = useState<ToneOption>("Padrão")
 
-  // Manter a lista de opções com "Padrão" como primeira opção
-  const toneOptions: ToneOption[] = ["Padrão", "Formal", "Informal", "Acadêmico", "Criativo", "Conciso", "Romântico"]
-
-  const handleToneChange = (tone: ToneOption) => {
+  const handleSelectTone = (tone: ToneOption) => {
     setSelectedTone(tone)
-
-    // Enviar evento para o GTM
-    sendGTMEvent("tone_selected", {
-      tone: tone,
-    })
-
-    // Rastrear evento de seleção de tom no Meta Pixel
-    trackPixelCustomEvent("ToneSelected", {
-      tone: tone,
-    })
-
-    // Chamar o callback se existir
+    sendGTMEvent("tone_selected", { tone: tone })
+    trackPixelCustomEvent("ToneSelected", { tone: tone })
     if (onToneChange) {
       onToneChange(tone)
     }
   }
+
+  const selectedToneLabel = tones.find((t) => t.value === selectedTone)?.label || "Padrão"
 
   return (
     <div className={cn("w-full flex justify-end", className)}>
@@ -50,18 +61,30 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
           <Wand2 className="h-3 w-3 mr-1.5 flex-shrink-0" />
           <span>Ajustar Tom</span>
         </div>
-        <Select value={selectedTone} onValueChange={handleToneChange} disabled={disabled}>
-          <SelectTrigger className="w-full bg-background h-8 text-xs">
-            <SelectValue placeholder="Selecione o tom" />
-          </SelectTrigger>
-          <SelectContent>
-            {toneOptions.map((tone) => (
-              <SelectItem key={tone} value={tone} className="text-sm">
-                {tone}
-              </SelectItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={disabled}>
+            <Button variant="outline" className="w-full justify-between h-8 text-xs">
+              {selectedToneLabel}
+              <Wand2 className="h-4 w-4 ml-2 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[240px]">
+            {tones.map((tone) => (
+              <DropdownMenuItem
+                key={tone.value}
+                onClick={() => handleSelectTone(tone.value)}
+                className="flex items-center justify-between cursor-pointer"
+                disabled={disabled}
+              >
+                <div>
+                  <div className="text-sm">{tone.label}</div>
+                  <div className="text-xs text-muted-foreground">{tone.description}</div>
+                </div>
+                {selectedTone === tone.value && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

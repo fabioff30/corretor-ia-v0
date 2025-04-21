@@ -11,6 +11,7 @@ import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { FloatingContactWidget } from "@/components/contact-dialog"
 import { AdController } from "@/components/ad-controller"
+import { AdminLogin } from "@/components/admin-login"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -127,6 +128,7 @@ export default function RootLayout({
           <CookieConsent />
           <FloatingContactWidget />
           <AdController />
+          <AdminLogin />
         </ThemeProvider>
       </body>
     </html>
