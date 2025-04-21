@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 
-// 1. ATUALIZAR O TIPO ToneOption para incluir os novos tons
 type ToneOption =
   | "Padrão"
   | "Formal"
@@ -17,10 +16,9 @@ type ToneOption =
   | "Criativo"
   | "Conciso"
   | "Romântico"
-  | "Narrativo"  // <-- Adicionado
-  | "Confiante" // <-- Adicionado
+  | "Narrativo"
+  | "Confiante"
 
-// 2. ADICIONAR os novos tons ao array `tones`
 const tones: { value: ToneOption; label: string; description: string }[] = [
   { value: "Padrão", label: "Padrão", description: "Tom de escrita neutro e geral." },
   { value: "Formal", label: "Formal", description: "Linguagem séria para documentos oficiais." },
@@ -29,9 +27,8 @@ const tones: { value: ToneOption; label: string; description: string }[] = [
   { value: "Criativo", label: "Criativo", description: "Tom original e imaginativo." },
   { value: "Conciso", label: "Conciso", description: "Linguagem direta e objetiva." },
   { value: "Romântico", label: "Romântico", description: "Tom emotivo e apaixonado." },
-  // --- Novos tons adicionados abaixo ---
-  { value: "Narrativo", label: "Narrativo", description: "Tom narrativo para contar histórias." }, // <-- Adicionado
-  { value: "Confiante", label: "Confiante", description: "Tom assertivo e seguro." }, // <-- Adicionado
+  { value: "Narrativo", label: "Narrativo", description: "Tom narrativo para contar histórias." },
+  { value: "Confiante", label: "Confiante", description: "Tom assertivo e seguro." },
 ]
 
 interface ToneAdjusterProps {
@@ -68,7 +65,14 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
               <Wand2 className="h-4 w-4 ml-2 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[240px]">
+          {/* AJUSTE AQUI: Adicionadas classes para rolagem e altura máxima */}
+          <DropdownMenuContent
+            align="end"
+            className={cn(
+              "w-[240px]", // Mantém a largura padrão
+              "max-h-[60vh] overflow-y-auto" // Limita altura e adiciona rolagem
+            )}
+          >
             {tones.map((tone) => (
               <DropdownMenuItem
                 key={tone.value}
