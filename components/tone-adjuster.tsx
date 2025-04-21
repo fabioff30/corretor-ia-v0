@@ -70,7 +70,7 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
             align="end"
             className={cn(
               "w-[240px]", // Mantém a largura padrão
-              "max-h-[60vh] overflow-y-auto" // Limita altura e adiciona rolagem
+              "max-h-[60vh] overflow-y-auto", // Limita altura e adiciona rolagem
             )}
           >
             {tones.map((tone) => (

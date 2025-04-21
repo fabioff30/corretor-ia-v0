@@ -5,24 +5,25 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
 
 export function AdminLogin() {
-  const [password, setPassword] = useState("")
-  const { login } = useAdminAuth()
+  const [adminPassword, setAdminPassword] = useState("")
+  const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
   const { toast } = useToast()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (login(password)) {
+    if (login(adminPassword)) {
       toast({
         title: "Login bem-sucedido",
         description: "Você está autenticado como administrador.",
         variant: "success",
       })
+      setAdminPassword("")
     } else {
       toast({
         title: "Falha no login",
@@ -32,33 +33,45 @@ export function AdminLogin() {
     }
   }
 
+  const handleAdminLogout = () => {
+    logout()
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu da área administrativa.",
+    })
+  }
+
+  if (isLoading) {
+    return null // Or a loading spinner
+  }
+
+  if (isAuthenticated) {
+    return null
+  }
+
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Acesso Administrativo</CardTitle>
-        <CardDescription>Entre com a senha de administrador para acessar o painel.</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
+    <div className="fixed bottom-4 left-4 z-[100] w-full max-w-sm">
+      <Card>
+        <CardHeader>
+          <CardTitle>Acesso Administrativo</CardTitle>
+        </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleAdminLogin} className="space-y-4">
             <div className="space-y-2">
               <Input
-                id="password"
                 type="password"
-                placeholder="Senha de administrador"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                placeholder="Senha"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="h-9"
               />
             </div>
-          </div>
+            <Button type="submit" className="w-full">
+              Entrar
+            </Button>
+          </form>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full">
-            Entrar
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+      </Card>
+    </div>
   )
 }

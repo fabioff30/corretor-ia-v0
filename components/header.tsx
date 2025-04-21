@@ -1,15 +1,24 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Menu, Sparkles, X } from "lucide-react"
+import { Menu, Sparkles, X, Shield, LogOut } from "lucide-react"
+import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [adminPassword, setAdminPassword] = useState("")
   const pathname = usePathname()
+  const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
+  const { toast } = useToast()
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -19,6 +28,33 @@ export function Header() {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
+  }
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (login(adminPassword)) {
+      toast({
+        title: "Login bem-sucedido",
+        description: "Você está autenticado como administrador.",
+        variant: "success",
+      })
+      setAdminPassword("")
+    } else {
+      toast({
+        title: "Falha no login",
+        description: "Senha incorreta. Tente novamente.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAdminLogout = () => {
+    logout()
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu da área administrativa.",
+    })
   }
 
   return (
@@ -66,6 +102,57 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
+          {/* Admin Access Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent">
+                <Shield className="h-4 w-4" />
+                <span className="sr-only">Acesso Administrativo</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {!isLoading && (
+                <>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-2 py-1.5 text-sm font-medium">Área Administrativa</div>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/content-monitoring" className="cursor-pointer">
+                          Monitoramento de Conteúdo
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/ratings" className="cursor-pointer">
+                          Estatísticas de Avaliações
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleAdminLogout} className="text-red-500 cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <form onSubmit={handleAdminLogin} className="p-2">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Acesso Administrativo</div>
+                        <Input
+                          type="password"
+                          placeholder="Senha"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                        <Button type="submit" size="sm" className="w-full">
+                          Entrar
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <ModeToggle />
           <Button asChild className="hidden md:flex">
             <Link href="/apoiar">Apoiar</Link>
