@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
 import { BlogPostContent } from "@/components/blog-post-content"
-import { getCanonicalUrl } from "@/lib/canonical-url"
+import { headers } from "next/headers"
 
 export const dynamic = "force-dynamic" // Forçar renderização dinâmica
 export const revalidate = 300 // Revalidar a cada 5 minutos
@@ -19,18 +19,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
   const excerpt = extractExcerpt(post.excerpt.rendered)
   const featuredImage = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || ""
-  const canonicalUrl = getCanonicalUrl(`/blog/${params.slug}`)
 
   return {
     title: `${post.title.rendered} | CorretorIA`,
     description: excerpt,
-    alternates: {
-      canonical: canonicalUrl,
-    },
     openGraph: {
       title: post.title.rendered,
       description: excerpt,
-      url: canonicalUrl,
+      url: `https://corretordetextoonline.com.br/blog/${params.slug}`,
       siteName: "CorretorIA",
       locale: "pt_BR",
       type: "article",
@@ -60,6 +56,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   if (!post) {
     notFound()
   }
+
+  const headersList = headers()
+  const canonicalUrl = `https://www.corretordetextoonline.com.br/blog/${params.slug}`
+
+  // This will be used by the middleware
+  headersList.append("x-canonical-url", canonicalUrl)
 
   return <BlogPostContent post={post} />
 }

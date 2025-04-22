@@ -11,7 +11,6 @@ import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { FloatingContactWidget } from "@/components/contact-dialog"
 import { AdController } from "@/components/ad-controller"
-import { getCanonicalUrl } from "@/lib/canonical-url"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,9 +20,6 @@ export const metadata: Metadata = {
     "Corrija textos em português com inteligência artificial. Identifica erros gramaticais, ortográficos e de pontuação automaticamente.",
   keywords:
     "corretor de texto, corretor ortográfico, correção gramatical, português, inteligência artificial, IA, corretor online, corretor grátis",
-  alternates: {
-    canonical: getCanonicalUrl(),
-  },
     generator: 'v0.dev'
 }
 
@@ -42,6 +38,10 @@ export default function RootLayout({
           rel="icon"
           href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/corretoria-DfN4vmv8uKDAmhlXjQNEQ2EACGGRep.png"
           type="image/png"
+        />
+        <link
+          rel="canonical"
+          href={`https://www.corretordetextoonline.com.br${typeof window !== "undefined" ? window.location.pathname : ""}`}
         />
 
         {/* Meta Pixel Code */}

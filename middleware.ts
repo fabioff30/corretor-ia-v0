@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Define the canonical domain
+const CANONICAL_DOMAIN = "https://www.corretordetextoonline.com.br"
+
 export function middleware(request: NextRequest) {
-  // Clone the request headers
   const requestHeaders = new Headers(request.headers)
+  const url = request.nextUrl.clone()
 
-  // Get the pathname from the URL
-  const { pathname } = request.nextUrl
+  // Create the canonical URL by combining the canonical domain with the current path
+  const canonicalUrl = `${CANONICAL_DOMAIN}${url.pathname}`
 
-  // Set the canonical URL based on the current path
-  const canonicalUrl = `https://corretordetextoonline.com.br${pathname}`
-
-  // Add the Link header with rel=canonical
+  // Set the Link header with rel=canonical
   requestHeaders.set("Link", `<${canonicalUrl}>; rel="canonical"`)
 
-  // Return the response with the modified headers
+  // Return the response with the updated headers
   return NextResponse.next({
     request: {
       headers: requestHeaders,
@@ -22,18 +22,16 @@ export function middleware(request: NextRequest) {
   })
 }
 
-// Only run the middleware on these paths
 export const config = {
   matcher: [
-    "/",
-    "/recursos",
-    "/blog",
-    "/blog/:path*",
-    "/sobre",
-    "/contato",
-    "/apoiar",
-    "/privacidade",
-    "/termos",
-    "/cookies",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|images|js|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 }
