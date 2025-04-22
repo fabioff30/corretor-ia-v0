@@ -1,68 +1,85 @@
 import type { MetadataRoute } from "next"
 import { getPosts } from "@/utils/wordpress-api"
+import { getCanonicalUrl } from "@/lib/canonical-url"
 
-export default async function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://www.corretordetextoonline.com.br"
-
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Get blog posts for sitemap
-  const { posts } = await getPosts(1, 100) // Get up to 100 posts for sitemap
+  const { posts, totalPages } = await getPosts(1, 100) // Get up to 100 posts for sitemap
 
+  // Create sitemap entries for blog posts
   const blogPostsUrls = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
+    url: getCanonicalUrl(`/blog/${post.slug}`),
     lastModified: new Date(post.modified),
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
 
-  return [
+  // Create sitemap entries for blog pagination pages
+  const blogPaginationUrls = Array.from({ length: totalPages }, (_, i) => ({
+    url: getCanonicalUrl(`/blog?page=${i + 1}`),
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }))
+
+  // Main sitemap entries
+  const mainUrls = [
     {
-      url: baseUrl,
+      url: getCanonicalUrl(),
       lastModified: new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: "weekly" as const,
       priority: 1,
     },
     {
-      url: `${baseUrl}/sobre`,
+      url: getCanonicalUrl("/sobre"),
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "monthly" as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/como-usar`,
+      url: getCanonicalUrl("/recursos"),
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "monthly" as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/recursos`,
+      url: getCanonicalUrl("/blog"),
       lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "daily" as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/blog`,
+      url: getCanonicalUrl("/contato"),
       lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/faq`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
+      changeFrequency: "monthly" as const,
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/termos`,
+      url: getCanonicalUrl("/apoiar"),
       lastModified: new Date(),
-      changeFrequency: "yearly",
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    },
+    {
+      url: getCanonicalUrl("/termos"),
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/privacidade`,
+      url: getCanonicalUrl("/privacidade"),
       lastModified: new Date(),
-      changeFrequency: "yearly",
+      changeFrequency: "yearly" as const,
       priority: 0.5,
     },
-    ...blogPostsUrls,
+    {
+      url: getCanonicalUrl("/cookies"),
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.5,
+    },
   ]
+
+  // Combine all sitemap entries
+  return [...mainUrls, ...blogPostsUrls, ...blogPaginationUrls]
 }

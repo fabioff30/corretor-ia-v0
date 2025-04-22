@@ -3,13 +3,18 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { BlogPostList } from "@/components/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
+import { getCanonicalUrl } from "@/lib/canonical-url"
+import type { Metadata } from "next"
 
 export const dynamic = "force-dynamic" // Corrigido: hífen em vez de underscore
 export const revalidate = 300 // Revalidar a cada 5 minutos
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Blog | CorretorIA",
   description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
+  alternates: {
+    canonical: getCanonicalUrl("/blog"),
+  },
 }
 
 export default function BlogPage({
@@ -18,6 +23,7 @@ export default function BlogPage({
   searchParams: { page?: string }
 }) {
   const page = searchParams.page ? Number.parseInt(searchParams.page) : 1
+  const canonicalUrl = page > 1 ? getCanonicalUrl(`/blog?page=${page}`) : getCanonicalUrl("/blog")
 
   return (
     <>

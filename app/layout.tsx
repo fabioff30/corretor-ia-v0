@@ -11,6 +11,7 @@ import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { FloatingContactWidget } from "@/components/contact-dialog"
 import { AdController } from "@/components/ad-controller"
+import { getCanonicalUrl } from "@/lib/canonical-url"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
     "Corrija textos em português com inteligência artificial. Identifica erros gramaticais, ortográficos e de pontuação automaticamente.",
   keywords:
     "corretor de texto, corretor ortográfico, correção gramatical, português, inteligência artificial, IA, corretor online, corretor grátis",
+  alternates: {
+    canonical: getCanonicalUrl(),
+  },
     generator: 'v0.dev'
 }
 

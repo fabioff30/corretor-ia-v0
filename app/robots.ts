@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { getCanonicalUrl } from "@/lib/canonical-url"
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://www.corretordetextoonline.com.br/sitemap.xml",
+    sitemap: getCanonicalUrl("/sitemap.xml"),
   }
 }
