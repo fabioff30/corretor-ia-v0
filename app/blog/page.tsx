@@ -7,12 +7,17 @@ import { AdminRefreshButton } from "@/components/admin-refresh-button"
 export const dynamic = "force-dynamic" // Corrigido: hífen em vez de underscore
 export const revalidate = 300 // Revalidar a cada 5 minutos
 
-export const metadata = {
-  title: "Blog | CorretorIA",
-  description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
-  alternates: {
-    canonical: "https://www.corretordetextoonline.com.br/blog",
-  },
+export function generateMetadata({ searchParams }: { searchParams: { page?: string } }) {
+  const pageParam = searchParams.page ? `?page=${searchParams.page}` : ""
+  const canonicalUrl = `https://www.corretordetextoonline.com.br/blog${pageParam}`
+
+  return {
+    title: "Blog | CorretorIA",
+    description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
+    alternates: {
+      canonical: canonicalUrl,
+    },
+  }
 }
 
 export default function BlogPage({

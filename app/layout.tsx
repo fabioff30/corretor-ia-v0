@@ -39,10 +39,15 @@ export default function RootLayout({
           href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/corretoria-DfN4vmv8uKDAmhlXjQNEQ2EACGGRep.png"
           type="image/png"
         />
-        <link
-          rel="canonical"
-          href={`https://www.corretordetextoonline.com.br${typeof window !== "undefined" ? window.location.pathname : ""}`}
-        />
+        <Script id="canonical-url" strategy="beforeInteractive">
+          {`
+            // Set canonical URL dynamically
+            const link = document.createElement('link');
+            link.rel = 'canonical';
+            link.href = 'https://www.corretordetextoonline.com.br' + window.location.pathname + window.location.search;
+            document.head.appendChild(link);
+          `}
+        </Script>
 
         {/* Meta Pixel Code */}
         <Script id="meta-pixel" strategy="afterInteractive">

@@ -5,13 +5,19 @@ export function canonicalMiddleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const response = NextResponse.next()
 
-  // Determine the canonical URL
-  let canonicalUrl = `https://www.corretordetextoonline.com.br${url.pathname}`
+  // Base canonical domain
+  const canonicalDomain = "https://www.corretordetextoonline.com.br"
 
-  // Add search params for paginated pages
-  if (url.pathname === "/blog" && url.searchParams.has("page")) {
-    canonicalUrl += `?page=${url.searchParams.get("page")}`
+  // Build the canonical path with query parameters if needed
+  let canonicalPath = url.pathname
+
+  // Add search params for paginated pages or other query parameters that should be preserved
+  if (url.search) {
+    canonicalPath += url.search
   }
+
+  // Construct the full canonical URL
+  const canonicalUrl = `${canonicalDomain}${canonicalPath}`
 
   // Add the canonical URL as a Link header
   response.headers.set("Link", `<${canonicalUrl}>; rel="canonical"`)
