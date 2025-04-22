@@ -61,8 +61,6 @@ export interface WPMedia {
   }
 }
 
-// Vamos atualizar as funções de fetch para garantir que não usem cache quando forceRefresh for true
-
 /**
  * Fetch posts from WordPress API
  * @param page Page number
@@ -86,10 +84,6 @@ export async function getPosts(
         revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
       },
       cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
     })
 
     if (!response.ok) {
@@ -132,10 +126,6 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
         revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
       },
       cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
     })
 
     if (!response.ok) {
@@ -173,10 +163,6 @@ export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefre
         revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
       },
       cache: forceRefresh ? "no-store" : "default",
-      headers: {
-        "Cache-Control": forceRefresh ? "no-cache, no-store, must-revalidate" : "",
-        Pragma: forceRefresh ? "no-cache" : "",
-      },
     })
 
     if (!response.ok) {
