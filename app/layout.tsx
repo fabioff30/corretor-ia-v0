@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
 import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
-import { FloatingContactWidget } from "@/components/contact-dialog"
+import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { AdController } from "@/components/ad-controller"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -129,7 +129,7 @@ export default function RootLayout({
           </div>
           <Toaster />
           <CookieConsent />
-          <FloatingContactWidget />
+          <JulinhoAssistant />
           <AdController />
         </ThemeProvider>
       </body>
