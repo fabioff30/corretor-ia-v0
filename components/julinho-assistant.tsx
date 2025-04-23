@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Send, X, AlertCircle, PauseCircle, PlayCircle } from "lucide-react"
+import { Send, X, AlertCircle } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import Image from "next/image"
 import { useTheme } from "next-themes"
@@ -55,7 +55,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0)
   const [batchedResponse, setBatchedResponse] = useState<string[]>([])
   const [isPaused, setIsPaused] = useState(false)
-  const [typingSpeed, setTypingSpeed] = useState(300) // ms between batches
+  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -71,41 +71,50 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     }
   }, [open])
 
-  // Process batched responses
+  // Calculate a natural delay based on message length and add some randomness
+  const calculateNaturalDelay = (message: string) => {
+    // Base delay between messages (in milliseconds)
+    const baseDelay = 1200
+
+    // Additional delay based on message length (50ms per character, capped at 2000ms)
+    const lengthDelay = Math.min(message.length * 50, 2000)
+
+    // Add some randomness (±20% variation)
+    const randomFactor = 0.8 + Math.random() * 0.4
+
+    return Math.round((baseDelay + lengthDelay) * randomFactor)
+  }
+
+  // Process batched responses - now each batch is a separate message with natural timing
   useEffect(() => {
     if (batchedResponse.length > 0 && currentBatchIndex < batchedResponse.length && !isPaused) {
+      // Show typing indicator before sending the message
+      setIsTyping(true)
+
+      // Calculate a natural delay based on message content
+      const currentMessage = batchedResponse[currentBatchIndex]
+      const typingDelay = calculateNaturalDelay(currentMessage)
+
       const timer = setTimeout(() => {
-        // If this is the first batch, add a new message
-        if (currentBatchIndex === 0) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant_batch_${Date.now()}`,
-              role: "assistant",
-              content: batchedResponse[0],
-              isComplete: batchedResponse.length === 1,
-            },
-          ])
-        } else {
-          // Otherwise update the last message
-          setMessages((prev) => {
-            const newMessages = [...prev]
-            const lastMessage = newMessages[newMessages.length - 1]
+        // Add a new message for each batch
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant_batch_${Date.now()}_${currentBatchIndex}`,
+            role: "assistant",
+            content: currentMessage,
+            isComplete: true, // Each message is complete on its own
+          },
+        ])
 
-            // Append the new batch to the existing content
-            newMessages[newMessages.length - 1] = {
-              ...lastMessage,
-              content: lastMessage.content + "\n\n" + batchedResponse[currentBatchIndex],
-              isComplete: currentBatchIndex === batchedResponse.length - 1,
-            }
+        // Hide typing indicator
+        setIsTyping(false)
 
-            return newMessages
-          })
-        }
-
-        // Move to the next batch
-        setCurrentBatchIndex(currentBatchIndex + 1)
-      }, typingSpeed) // Delay between batches
+        // Move to the next batch after a short pause
+        setTimeout(() => {
+          setCurrentBatchIndex(currentBatchIndex + 1)
+        }, 300) // Small pause after message appears before starting to type the next one
+      }, typingDelay) // Natural delay for typing
 
       return () => clearTimeout(timer)
     } else if (batchedResponse.length > 0 && currentBatchIndex >= batchedResponse.length) {
@@ -114,8 +123,9 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
       setCurrentBatchIndex(0)
       setIsLoading(false)
       setIsPaused(false)
+      setIsTyping(false)
     }
-  }, [batchedResponse, currentBatchIndex, isPaused, typingSpeed])
+  }, [batchedResponse, currentBatchIndex, isPaused])
 
   // Log the session ID when component mounts
   useEffect(() => {
@@ -157,7 +167,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   // Scroll para o final da conversa quando novas mensagens são adicionadas
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, errorMessage])
+  }, [messages, errorMessage, isTyping])
 
   // Limpar mensagem de erro quando o usuário digita
   useEffect(() => {
@@ -208,16 +218,26 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         // O estado de loading será desativado quando todos os batches forem processados
       } else {
         // Se for uma resposta simples, adicionar diretamente
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant_${Date.now()}`,
-            role: "assistant",
-            content: "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
-            isComplete: true,
-          },
-        ])
-        setIsLoading(false)
+        setIsTyping(true)
+
+        // Calculate a natural delay for typing
+        const typingDelay = calculateNaturalDelay(
+          "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
+        )
+
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant_${Date.now()}`,
+              role: "assistant",
+              content: "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
+              isComplete: true,
+            },
+          ])
+          setIsTyping(false)
+          setIsLoading(false)
+        }, typingDelay)
       }
 
       setInput("")
@@ -225,6 +245,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
       console.error("Erro ao enviar mensagem:", error)
       setErrorMessage("Não foi possível conectar ao Julinho. Por favor, tente novamente mais tarde.")
       setIsLoading(false)
+      setIsTyping(false)
     }
   }
 
@@ -244,41 +265,25 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   // Função para completar imediatamente a resposta
   const completeResponse = () => {
     if (batchedResponse.length > 0 && currentBatchIndex < batchedResponse.length) {
-      // Concatenar todos os batches restantes
-      const remainingContent = batchedResponse.slice(currentBatchIndex).join("\n\n")
+      // Adicionar todas as mensagens restantes de uma vez
+      const remainingBatches = batchedResponse.slice(currentBatchIndex)
 
-      setMessages((prev) => {
-        const newMessages = [...prev]
-        const lastMessage = newMessages[newMessages.length - 1]
-
-        // Se estamos no primeiro batch, criar uma nova mensagem
-        if (currentBatchIndex === 0) {
-          return [
-            ...prev,
-            {
-              id: `assistant_complete_${Date.now()}`,
-              role: "assistant",
-              content: remainingContent,
-              isComplete: true,
-            },
-          ]
-        }
-
-        // Caso contrário, atualizar a última mensagem
-        newMessages[newMessages.length - 1] = {
-          ...lastMessage,
-          content: lastMessage.content + "\n\n" + remainingContent,
+      setMessages((prev) => [
+        ...prev,
+        ...remainingBatches.map((content, index) => ({
+          id: `assistant_complete_${Date.now()}_${index}`,
+          role: "assistant" as const,
+          content,
           isComplete: true,
-        }
-
-        return newMessages
-      })
+        })),
+      ])
 
       // Resetar o estado de batches
       setBatchedResponse([])
       setCurrentBatchIndex(0)
       setIsLoading(false)
       setIsPaused(false)
+      setIsTyping(false)
     }
   }
 
@@ -394,32 +399,6 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                     </span>
                   )}
                 </div>
-                {message.role === "assistant" && !message.isComplete && (
-                  <div className="flex flex-col ml-2 gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 rounded-full"
-                      onClick={togglePause}
-                      title={isPaused ? "Continuar" : "Pausar"}
-                    >
-                      {isPaused ? (
-                        <PlayCircle className="h-4 w-4 text-yellow-500" />
-                      ) : (
-                        <PauseCircle className="h-4 w-4 text-yellow-500" />
-                      )}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 rounded-full"
-                      onClick={completeResponse}
-                      title="Completar"
-                    >
-                      <span className="text-xs font-bold text-yellow-500">⏭️</span>
-                    </Button>
-                  </div>
-                )}
               </div>
             ))}
             {errorMessage && (
@@ -434,7 +413,44 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                 </div>
               </div>
             )}
-            {isLoading && batchedResponse.length === 0 && currentBatchIndex === 0 && (
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
+                  <Image
+                    src="/images/julinho-avatar.webp"
+                    alt="Julinho"
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div
+                  className={`max-w-[75%] rounded-lg p-3 ${
+                    isDarkMode
+                      ? "bg-gray-800 border border-gray-700 shadow-sm rounded-tl-none"
+                      : "bg-white border border-gray-200 shadow-sm rounded-tl-none"
+                  }`}
+                >
+                  <div className="flex space-x-1">
+                    <div
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Initial loading indicator */}
+            {isLoading && !isTyping && batchedResponse.length === 0 && currentBatchIndex === 0 && (
               <div className="flex justify-start">
                 <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
                   <Image
