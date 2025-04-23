@@ -19,7 +19,7 @@ export function HeroSection() {
             className="inline-flex items-center bg-primary/10 text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-full"
           >
             <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-            <span className="text-xs sm:text-sm font-medium">Correção de texto inteligente</span>
+            <span className="text-xs sm:text-sm font-medium">Corretor de texto com IA</span>
           </motion.div>
 
           {/* Título */}

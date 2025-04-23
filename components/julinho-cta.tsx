@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { useTheme } from "next-themes"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { X } from "lucide-react"
 
@@ -16,8 +15,7 @@ interface JulinhoCTAProps {
 export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTAProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
-  const { theme } = useTheme()
-  const isDarkMode = theme === "dark"
+  const isDarkMode = false // Removed useTheme and hardcoded to false
 
   // Show CTA after a delay
   useEffect(() => {
@@ -92,11 +90,7 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
         exit={{ opacity: 0, y: 10, scale: 0.9 }}
         className={`fixed ${positionClasses[position]} z-40 max-w-[300px]`}
       >
-        <div
-          className={`rounded-lg shadow-lg overflow-hidden ${
-            isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
-          }`}
-        >
+        <div className={`rounded-lg shadow-lg overflow-hidden bg-white border border-gray-200`}>
           {/* Header */}
           <div className="bg-yellow-400 p-3 flex items-center justify-between">
             <div className="flex items-center gap-2">

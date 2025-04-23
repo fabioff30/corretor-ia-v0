@@ -10,7 +10,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Send, X, AlertCircle } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import Image from "next/image"
-import { useTheme } from "next-themes"
 import ReactMarkdown from "react-markdown"
 import { JulinhoCTA } from "./julinho-cta"
 import { sendGTMEvent } from "@/utils/gtm-helper"
@@ -61,8 +60,8 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery("(max-width: 640px)")
-  const { theme } = useTheme()
-  const isDarkMode = theme === "dark"
+  const theme = "light"
+  // const isDarkMode = theme === "dark"
 
   // Focus input when dialog opens
   useEffect(() => {
@@ -103,7 +102,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
           ...prev,
           {
             id: `assistant_batch_${Date.now()}_${currentBatchIndex}`,
-            role: "assistant",
+            role: "assistant" as const,
             content: currentMessage,
             isComplete: true, // Each message is complete on its own
           },
@@ -134,58 +133,61 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     console.log("Julinho session ID:", sessionId)
   }, [sessionId])
 
-  // Verificar se o aviso de cookies foi fechado
+  // Verify cookie consent and set initial theme
   useEffect(() => {
-    // Função para verificar o consentimento de cookies
+    // Function to check cookie consent
     const checkCookieConsent = () => {
       const consentGiven = localStorage.getItem("cookie-consent")
       if (consentGiven) {
-        // Se o consentimento foi dado ou recusado, mostrar o widget após um delay
+        // Show the widget after a delay
         setTimeout(() => {
           setIsVisible(true)
         }, 1000)
       }
     }
 
-    // Verificar imediatamente
+    // Check immediately
     checkCookieConsent()
 
-    // Configurar um listener para detectar mudanças no localStorage
+    // Set initial theme after component mounts
+    // setTheme(theme)
+
+    // Configure a listener for storage changes
     const handleStorageChange = () => {
       checkCookieConsent()
     }
 
     window.addEventListener("storage", handleStorageChange)
 
-    // Verificar periodicamente (para o caso do evento de storage não ser disparado na mesma janela)
+    // Periodic check
     const interval = setInterval(checkCookieConsent, 1000)
 
     return () => {
       window.removeEventListener("storage", handleStorageChange)
       clearInterval(interval)
     }
-  }, [])
+  }, [theme])
 
-  // Scroll para o final da conversa quando novas mensagens são adicionadas
+  // Scroll to the end of the conversation when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, errorMessage, isTyping])
 
-  // Limpar mensagem de erro quando o usuário digita
+  // Clear error message when the user types
   useEffect(() => {
     if (input && errorMessage) {
       setErrorMessage(null)
     }
   }, [input, errorMessage])
 
-  // Função para enviar mensagem para o webhook
+  // Function to send message to the webhook
   const sendMessage = async (userMessage: string) => {
     try {
       setIsLoading(true)
       setErrorMessage(null)
       setIsPaused(false)
 
-      // Adicionar a mensagem do usuário à lista
+      // Add the user's message to the list
       const userMessageObj = {
         id: `user_${Date.now()}`,
         role: "user" as const,
@@ -194,7 +196,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
       }
       setMessages((prev) => [...prev, userMessageObj])
 
-      // Enviar a mensagem para a API
+      // Send the message to the API
       const response = await fetch("/api/julinho", {
         method: "POST",
         headers: {
@@ -202,24 +204,24 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         },
         body: JSON.stringify({
           messages: [...messages, userMessageObj],
-          sessionId: sessionId, // Passar o ID da sessão para a API
+          sessionId: sessionId, // Pass the session ID to the API
         }),
       })
 
       if (!response.ok) {
-        throw new Error(`API respondeu com status: ${response.status}`)
+        throw new Error(`API responded with status: ${response.status}`)
       }
 
       const data = (await response.json()) as ApiResponse
 
-      // Processar a resposta
+      // Process the response
       if (data.isBatched && data.batches.length > 0) {
-        // Se for uma resposta em batches, configurar para processamento
+        // If it's a batched response, configure for processing
         setBatchedResponse(data.batches)
         setCurrentBatchIndex(0)
-        // O estado de loading será desativado quando todos os batches forem processados
+        // The loading state will be deactivated when all batches are processed
       } else {
-        // Se for uma resposta simples, adicionar diretamente
+        // If it's a simple response, add directly
         setIsTyping(true)
 
         // Calculate a natural delay for typing
@@ -232,7 +234,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             ...prev,
             {
               id: `assistant_${Date.now()}`,
-              role: "assistant",
+              role: "assistant" as const,
               content: "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
               isComplete: true,
             },
@@ -244,14 +246,14 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
 
       setInput("")
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error)
+      console.error("Error sending message:", error)
       setErrorMessage("Não foi possível conectar ao Julinho. Por favor, tente novamente mais tarde.")
       setIsLoading(false)
       setIsTyping(false)
     }
   }
 
-  // Função para lidar com o envio do formulário
+  // Function to handle form submission
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
@@ -259,15 +261,15 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     sendMessage(input.trim())
   }
 
-  // Função para pausar/retomar a digitação
+  // Function to pause/resume typing
   const togglePause = () => {
     setIsPaused(!isPaused)
   }
 
-  // Função para completar imediatamente a resposta
+  // Function to immediately complete the response
   const completeResponse = () => {
     if (batchedResponse.length > 0 && currentBatchIndex < batchedResponse.length) {
-      // Adicionar todas as mensagens restantes de uma vez
+      // Add all remaining messages at once
       const remainingBatches = batchedResponse.slice(currentBatchIndex)
 
       setMessages((prev) => [
@@ -280,7 +282,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         })),
       ])
 
-      // Resetar o estado de batches
+      // Reset the batch state
       setBatchedResponse([])
       setCurrentBatchIndex(0)
       setIsLoading(false)
@@ -289,12 +291,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     }
   }
 
-  // Determinar a posição do widget
+  // Determine the position of the widget
   const positionClasses = {
     "bottom-right": isMobile ? "bottom-4 right-4" : "bottom-6 right-6",
     "bottom-left": isMobile ? "bottom-4 left-4" : "bottom-6 left-6",
-    "top-right": isMobile ? "top-20 right-4" : "top-24 right-6",
-    "top-left": isMobile ? "top-20 left-4" : "top-24 left-6",
   }
 
   // Handle opening the chat
@@ -354,10 +354,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
           } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
         >
-          <DialogHeader className={`p-4 border-b ${isDarkMode ? "bg-yellow-900/50" : "bg-yellow-50"}`}>
+          <DialogHeader className={`p-4 border-b bg-yellow-500 text-black`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-foreground">
                   <Image
                     src="/images/julinho-avatar.webp"
                     alt="Julinho"
@@ -367,28 +367,22 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                   />
                 </div>
                 <div>
-                  <DialogTitle className={`text-lg font-bold ${isDarkMode ? "text-yellow-100" : ""} julinho-text`}>
-                    Julinho
-                  </DialogTitle>
-                  <DialogDescription
-                    className={`text-xs ${isDarkMode ? "text-yellow-200/80" : "text-gray-600"} julinho-text`}
-                  >
-                    Tutor de Português
-                  </DialogDescription>
+                  <DialogTitle className={`text-lg font-bold julinho-text`}>Julinho</DialogTitle>
+                  <DialogDescription className={`text-xs julinho-text`}>Tutor de Português</DialogDescription>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
-                className={`h-8 w-8 rounded-full ${isDarkMode ? "hover:bg-yellow-900/70 text-yellow-100" : ""}`}
+                className={`h-8 w-8 rounded-full hover:bg-yellow-500/70 text-black`}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </DialogHeader>
 
-          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isDarkMode ? "bg-gray-900/95" : "bg-gray-50"}`}>
+          <div className={`flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30`}>
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 {message.role === "assistant" && (
@@ -406,12 +400,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                   className={`max-w-[75%] rounded-lg p-3 ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground rounded-tr-none"
-                      : isDarkMode
-                        ? "bg-gray-800/90 text-gray-50 border border-gray-700 shadow-sm rounded-tl-none"
-                        : "bg-white text-gray-900 border border-gray-200 shadow-sm rounded-tl-none"
+                      : "bg-white text-gray-900 border border-gray-200 shadow-sm rounded-tl-none"
                   }`}
                 >
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <div className="julinho-text">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                   {!message.isComplete && (
@@ -425,9 +417,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             {errorMessage && (
               <div className="flex justify-center">
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    isDarkMode ? "bg-red-900/50 text-red-100" : "bg-red-100 text-red-800"
-                  } flex items-center gap-2`}
+                  className={`max-w-[80%] rounded-lg p-3 bg-destructive/10 text-destructive flex items-center gap-2`}
                 >
                   <AlertCircle className="h-4 w-4" />
                   {errorMessage}
@@ -446,24 +436,18 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div
-                  className={`max-w-[75%] rounded-lg p-3 ${
-                    isDarkMode
-                      ? "bg-gray-800/90 border border-gray-700 shadow-sm rounded-tl-none"
-                      : "bg-white border border-gray-200 shadow-sm rounded-tl-none"
-                  }`}
-                >
+                <div className={`max-w-[75%] rounded-lg p-3 bg-card border border-border shadow-sm rounded-tl-none`}>
                   <div className="flex space-x-1">
                     <div
-                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
                       style={{ animationDelay: "0ms" }}
                     ></div>
                     <div
-                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
                       style={{ animationDelay: "150ms" }}
                     ></div>
                     <div
-                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
                       style={{ animationDelay: "300ms" }}
                     ></div>
                   </div>
@@ -482,13 +466,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div
-                  className={`max-w-[75%] rounded-lg p-3 ${
-                    isDarkMode
-                      ? "bg-gray-800 border border-gray-700 shadow-sm rounded-tl-none"
-                      : "bg-white border border-gray-200 shadow-sm rounded-tl-none"
-                  }`}
-                >
+                <div className={`max-w-[75%] rounded-lg p-3 bg-card border border-border shadow-sm rounded-tl-none`}>
                   <div className="flex space-x-1">
                     <div
                       className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
@@ -509,27 +487,20 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             <div ref={messagesEndRef} />
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className={`border-t p-3 flex gap-2 ${isDarkMode ? "bg-gray-900 border-gray-800" : "bg-white"}`}
-          >
+          <form onSubmit={handleSubmit} className={`border-t p-3 flex gap-2 bg-card`}>
             <input
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua dúvida sobre português..."
-              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-300 ${
-                isDarkMode
-                  ? "bg-gray-800/90 border-gray-600 text-gray-50 placeholder:text-gray-300/70"
-                  : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
-              }`}
+              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background border border-input text-foreground placeholder:text-muted-foreground`}
               disabled={isLoading}
             />
             <Button
               type="submit"
               size="icon"
               disabled={isLoading || !input.trim()}
-              className={`${isDarkMode ? "bg-yellow-500" : "bg-yellow-400"} hover:bg-yellow-500 text-black min-w-[40px] h-[40px] flex-shrink-0`}
+              className={`bg-primary hover:bg-primary/90 text-primary-foreground min-w-[40px] h-[40px] flex-shrink-0`}
             >
               <Send className="h-4 w-4" />
             </Button>
