@@ -13,7 +13,7 @@ interface JulinhoCTAProps {
   position?: "bottom-right" | "bottom-left"
 }
 
-export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTAProps) {
+export function JulinhoCTA({ onOpenChat, position = "bottom-left" }: JulinhoCTAProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const { theme } = useTheme()
