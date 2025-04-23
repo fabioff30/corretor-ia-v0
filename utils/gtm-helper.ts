@@ -10,5 +10,10 @@ export function sendGTMEvent(eventName: string, eventData: Record<string, any> =
       event: eventName,
       ...eventData,
     })
+
+    // Log the event in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[GTM Event] ${eventName}`, eventData)
+    }
   }
 }

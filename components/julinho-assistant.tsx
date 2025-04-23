@@ -12,6 +12,8 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import ReactMarkdown from "react-markdown"
+import { JulinhoCTA } from "./julinho-cta"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 
 interface JulinhoAssistantProps {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left"
@@ -295,6 +297,21 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     "top-left": isMobile ? "top-20 left-4" : "top-24 left-6",
   }
 
+  // Handle opening the chat
+  const handleOpenChat = () => {
+    setOpen(true)
+
+    // Track conversation start in Google Analytics
+    sendGTMEvent("julinho_conversation_start", {
+      event_category: "Engagement",
+      event_label: "Julinho Conversation Started",
+      session_id: sessionId,
+    })
+
+    // Mark as interacted
+    localStorage.setItem("julinho-interacted", "true")
+  }
+
   if (!isVisible) return null
 
   return (
@@ -309,7 +326,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={() => setOpen(true)}
+                  onClick={handleOpenChat}
                   size="icon"
                   className={`${
                     isMobile ? "h-14 w-14" : "h-12 w-12"
@@ -515,6 +532,9 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Add the CTA component */}
+      <JulinhoCTA onOpenChat={handleOpenChat} position={position} />
     </>
   )
 }
