@@ -354,7 +354,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
           } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
         >
-          <DialogHeader className={`p-4 border-b ${isDarkMode ? "bg-yellow-900/30" : "bg-yellow-50"}`}>
+          <DialogHeader className={`p-4 border-b ${isDarkMode ? "bg-yellow-900/50" : "bg-yellow-50"}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400">
@@ -367,8 +367,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                   />
                 </div>
                 <div>
-                  <DialogTitle className={`text-lg font-bold ${isDarkMode ? "text-white" : ""}`}>Julinho</DialogTitle>
-                  <DialogDescription className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                  <DialogTitle className={`text-lg font-bold ${isDarkMode ? "text-yellow-100" : ""}`}>
+                    Julinho
+                  </DialogTitle>
+                  <DialogDescription className={`text-xs ${isDarkMode ? "text-yellow-200/80" : "text-gray-600"}`}>
                     Tutor de Português
                   </DialogDescription>
                 </div>
@@ -377,14 +379,14 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
-                className={`h-8 w-8 rounded-full ${isDarkMode ? "hover:bg-gray-800 text-gray-200" : ""}`}
+                className={`h-8 w-8 rounded-full ${isDarkMode ? "hover:bg-yellow-900/70 text-yellow-100" : ""}`}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </DialogHeader>
 
-          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isDarkMode ? "bg-gray-900/95" : "bg-gray-50"}`}>
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 {message.role === "assistant" && (
@@ -403,7 +405,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                     message.role === "user"
                       ? "bg-primary text-primary-foreground rounded-tr-none"
                       : isDarkMode
-                        ? "bg-gray-800 text-gray-100 border border-gray-700 shadow-sm rounded-tl-none"
+                        ? "bg-gray-800/90 text-gray-50 border border-gray-700 shadow-sm rounded-tl-none"
                         : "bg-white text-gray-900 border border-gray-200 shadow-sm rounded-tl-none"
                   }`}
                 >
@@ -422,7 +424,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
               <div className="flex justify-center">
                 <div
                   className={`max-w-[80%] rounded-lg p-3 ${
-                    isDarkMode ? "bg-red-900/30 text-red-200" : "bg-red-100 text-red-800"
+                    isDarkMode ? "bg-red-900/50 text-red-100" : "bg-red-100 text-red-800"
                   } flex items-center gap-2`}
                 >
                   <AlertCircle className="h-4 w-4" />
@@ -445,21 +447,21 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                 <div
                   className={`max-w-[75%] rounded-lg p-3 ${
                     isDarkMode
-                      ? "bg-gray-800 border border-gray-700 shadow-sm rounded-tl-none"
+                      ? "bg-gray-800/90 border border-gray-700 shadow-sm rounded-tl-none"
                       : "bg-white border border-gray-200 shadow-sm rounded-tl-none"
                   }`}
                 >
                   <div className="flex space-x-1">
                     <div
-                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
                       style={{ animationDelay: "0ms" }}
                     ></div>
                     <div
-                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
                       style={{ animationDelay: "150ms" }}
                     ></div>
                     <div
-                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"
                       style={{ animationDelay: "300ms" }}
                     ></div>
                   </div>
@@ -514,9 +516,9 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua dúvida sobre português..."
-              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-300 ${
                 isDarkMode
-                  ? "bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                  ? "bg-gray-800/90 border-gray-600 text-gray-50 placeholder:text-gray-300/70"
                   : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
               }`}
               disabled={isLoading}
@@ -525,7 +527,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
               type="submit"
               size="icon"
               disabled={isLoading || !input.trim()}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black min-w-[40px] h-[40px] flex-shrink-0"
+              className={`${isDarkMode ? "bg-yellow-500" : "bg-yellow-400"} hover:bg-yellow-500 text-black min-w-[40px] h-[40px] flex-shrink-0`}
             >
               <Send className="h-4 w-4" />
             </Button>
