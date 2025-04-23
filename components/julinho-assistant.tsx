@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Send, X, AlertCircle, ArrowLeft } from "lucide-react"
+import { Send, X, AlertCircle } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import Image from "next/image"
 import { useTheme } from "next-themes"
@@ -38,7 +38,7 @@ interface SimpleResponse {
 
 type ApiResponse = BatchResponse | SimpleResponse
 
-export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantProps) {
+export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistantProps) {
   const [open, setOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -342,7 +342,7 @@ export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantP
                   />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side={isMobile ? "top" : "right"}>
+              <TooltipContent side={isMobile ? "top" : "left"}>
                 <p>Julinho - Tutor de Português</p>
               </TooltipContent>
             </Tooltip>
@@ -350,19 +350,13 @@ export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantP
         </motion.div>
 
         <DialogContent
-          className={`
-            ${isMobile ? "w-full h-full max-w-full max-h-full inset-0 m-0 rounded-none" : "sm:max-w-[400px] h-[500px]"}
-            flex flex-col p-0 gap-0 overflow-hidden border-0
-          `}
+          className={`${
+            isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
+          } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
         >
           <DialogHeader className={`p-4 border-b ${isDarkMode ? "bg-yellow-900/30" : "bg-yellow-50"}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {isMobile && (
-                  <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-8 w-8 mr-1">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                )}
                 <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400">
                   <Image
                     src="/images/julinho-avatar.webp"
@@ -379,26 +373,18 @@ export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantP
                   </DialogDescription>
                 </div>
               </div>
-              {!isMobile && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setOpen(false)}
-                  className={`h-8 w-8 rounded-full ${isDarkMode ? "hover:bg-gray-800 text-gray-200" : ""}`}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setOpen(false)}
+                className={`h-8 w-8 rounded-full ${isDarkMode ? "hover:bg-gray-800 text-gray-200" : ""}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </DialogHeader>
 
-          <div
-            className={`flex-1 overflow-y-auto p-4 space-y-4 ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}
-            style={{
-              height: isMobile ? "calc(100vh - 140px)" : "auto",
-              overflowY: "auto",
-            }}
-          >
+          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}>
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 {message.role === "assistant" && (
@@ -521,9 +507,7 @@ export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantP
 
           <form
             onSubmit={handleSubmit}
-            className={`border-t p-3 flex gap-2 ${isDarkMode ? "bg-gray-900 border-gray-800" : "bg-white"} ${
-              isMobile ? "sticky bottom-0 w-full" : ""
-            }`}
+            className={`border-t p-3 flex gap-2 ${isDarkMode ? "bg-gray-900 border-gray-800" : "bg-white"}`}
           >
             <input
               ref={inputRef}
@@ -550,7 +534,7 @@ export function JulinhoAssistant({ position = "bottom-left" }: JulinhoAssistantP
       </Dialog>
 
       {/* Add the CTA component */}
-      <JulinhoCTA onOpenChat={handleOpenChat} position="bottom-left" />
+      <JulinhoCTA onOpenChat={handleOpenChat} position={position} />
     </>
   )
 }
