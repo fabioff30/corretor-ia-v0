@@ -367,10 +367,12 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                   />
                 </div>
                 <div>
-                  <DialogTitle className={`text-lg font-bold ${isDarkMode ? "text-yellow-100" : ""}`}>
+                  <DialogTitle className={`text-lg font-bold ${isDarkMode ? "text-yellow-100" : ""} julinho-text`}>
                     Julinho
                   </DialogTitle>
-                  <DialogDescription className={`text-xs ${isDarkMode ? "text-yellow-200/80" : "text-gray-600"}`}>
+                  <DialogDescription
+                    className={`text-xs ${isDarkMode ? "text-yellow-200/80" : "text-gray-600"} julinho-text`}
+                  >
                     Tutor de Português
                   </DialogDescription>
                 </div>

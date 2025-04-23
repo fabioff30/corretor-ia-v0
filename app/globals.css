@@ -377,3 +377,12 @@
 .prose ol li::marker {
   @apply text-foreground/70;
 }
+
+/* Add this CSS class to ensure Julinho's text is always readable */
+.julinho-text {
+  color: hsl(var(--foreground)); /* Default text color */
+}
+
+.dark .julinho-text {
+  color: hsl(var(--yellow-100)); /* Text color in dark mode */
+}
