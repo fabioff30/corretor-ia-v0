@@ -53,7 +53,23 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
     // Hide CTA
     setIsVisible(false)
 
-    // Open chat
+    // Check if on mobile and redirect if needed
+    const isMobile = window.innerWidth < 640
+    if (isMobile) {
+      // Get or create a session ID
+      const sessionId =
+        localStorage.getItem("julinho-session-id") ||
+        `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+      // Save the session ID
+      localStorage.setItem("julinho-session-id", sessionId)
+
+      // Redirect to the dedicated chat page
+      window.location.href = `/chat/julinho?session=${sessionId}`
+      return
+    }
+
+    // Open chat (desktop behavior)
     onOpenChat()
   }
 

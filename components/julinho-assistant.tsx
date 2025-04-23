@@ -299,6 +299,24 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
 
   // Handle opening the chat
   const handleOpenChat = () => {
+    // If on mobile, redirect to the dedicated chat page
+    if (isMobile) {
+      // Save the session ID to localStorage before redirecting
+      localStorage.setItem("julinho-session-id", sessionId)
+
+      // Track redirection in Google Analytics
+      sendGTMEvent("julinho_mobile_redirect", {
+        event_category: "Navigation",
+        event_label: "Redirected to Julinho Chat Page",
+        session_id: sessionId,
+      })
+
+      // Redirect to the dedicated chat page
+      window.location.href = `/chat/julinho?session=${sessionId}`
+      return
+    }
+
+    // Desktop behavior remains the same
     setOpen(true)
 
     // Track conversation start in Google Analytics
