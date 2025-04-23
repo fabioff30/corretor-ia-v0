@@ -6,6 +6,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { X } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 interface JulinhoCTAProps {
   onOpenChat: () => void
@@ -13,9 +14,21 @@ interface JulinhoCTAProps {
 }
 
 export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTAProps) {
+  const pathname = usePathname()
+
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const isDarkMode = false // Removed useTheme and hardcoded to false
+  const [shouldRender, setShouldRender] = useState(true)
+
+  useEffect(() => {
+    if (pathname === "/chat/julinho") {
+      setShouldRender(false)
+      return
+    } else {
+      setShouldRender(true)
+    }
+  }, [pathname])
 
   // Show CTA after a delay
   useEffect(() => {
@@ -95,6 +108,8 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
     "bottom-right": "bottom-24 right-6",
     "bottom-left": "bottom-24 left-6",
   }
+
+  if (!shouldRender) return null
 
   if (!isVisible || isDismissed) return null
 

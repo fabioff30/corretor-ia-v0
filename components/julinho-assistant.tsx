@@ -13,6 +13,7 @@ import Image from "next/image"
 import ReactMarkdown from "react-markdown"
 import { JulinhoCTA } from "./julinho-cta"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { usePathname } from "next/navigation"
 
 interface JulinhoAssistantProps {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left"
@@ -38,6 +39,8 @@ interface SimpleResponse {
 type ApiResponse = BatchResponse | SimpleResponse
 
 export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistantProps) {
+  const pathname = usePathname()
+
   const [open, setOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -328,6 +331,13 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
 
     // Mark as interacted
     localStorage.setItem("julinho-interacted", "true")
+  }
+
+  // Hide the widget on the chat page
+  const shouldHideWidget = pathname === "/chat/julinho"
+
+  if (shouldHideWidget) {
+    return null
   }
 
   if (!isVisible) return null

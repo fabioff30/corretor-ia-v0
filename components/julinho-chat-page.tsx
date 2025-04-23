@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Send, ArrowLeft, AlertCircle } from "lucide-react"
@@ -43,9 +43,14 @@ export function JulinhoChatPage() {
   const [isTyping, setIsTyping] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const [userHasScrolled, setUserHasScrolled] = useState(false)
+  const [newMessageCount, setNewMessageCount] = useState(0)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const lastScrollPositionRef = useRef<number>(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   // Redirect desktop users back to the main page
@@ -115,8 +120,8 @@ export function JulinhoChatPage() {
     }
   }, [isInitialized])
 
-  // Function to check if user is near bottom of chat
-  const isNearBottom = () => {
+  // More robust function to check if user is near bottom of chat
+  const isNearBottom = useCallback(() => {
     if (!chatContainerRef.current) return true
 
     const container = chatContainerRef.current
@@ -124,50 +129,85 @@ export function JulinhoChatPage() {
     const position = container.scrollHeight - container.scrollTop - container.clientHeight
 
     return position < threshold
-  }
+  }, [])
 
-  // Handle scroll events to determine if auto-scroll should be enabled
+  // Handle scroll events with debounce to determine if auto-scroll should be enabled
   useEffect(() => {
     const handleScroll = () => {
-      if (chatContainerRef.current) {
-        setShouldAutoScroll(isNearBottom())
+      if (!chatContainerRef.current) return
+
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
       }
+
+      // Store the current scroll position
+      lastScrollPositionRef.current = chatContainerRef.current.scrollTop
+
+      // Mark that the user has manually scrolled
+      setUserHasScrolled(true)
+
+      // Debounce the scroll event to avoid excessive state updates
+      scrollTimeoutRef.current = setTimeout(() => {
+        const isAtBottom = isNearBottom()
+        setShouldAutoScroll(isAtBottom)
+
+        // If we're at the bottom, reset the new message counter
+        if (isAtBottom) {
+          setNewMessageCount(0)
+        }
+      }, 100)
     }
 
     const chatContainer = chatContainerRef.current
     if (chatContainer) {
-      chatContainer.addEventListener("scroll", handleScroll)
-      return () => chatContainer.removeEventListener("scroll", handleScroll)
+      chatContainer.addEventListener("scroll", handleScroll, { passive: true })
+      return () => {
+        chatContainer.removeEventListener("scroll", handleScroll)
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current)
+        }
+      }
     }
+  }, [isNearBottom])
+
+  // Controlled scroll to bottom function
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (!messagesEndRef.current || !chatContainerRef.current) return
+
+    const chatContainer = chatContainerRef.current
+    const scrollHeight = chatContainer.scrollHeight
+
+    chatContainer.scrollTo({
+      top: scrollHeight,
+      behavior: behavior,
+    })
+
+    // Reset state after scrolling to bottom
+    setShouldAutoScroll(true)
+    setNewMessageCount(0)
+    setUserHasScrolled(false)
   }, [])
 
-  // Scroll to the end of the conversation when new messages are added, but only if user was already at bottom
+  // Handle initial scroll and new messages
   useEffect(() => {
-    if (messagesEndRef.current && shouldAutoScroll) {
+    // On initial load, scroll to bottom immediately
+    if (messages.length > 0 && !userHasScrolled) {
+      scrollToBottom("auto")
+      return
+    }
+
+    // For new messages, only auto-scroll if we were already at the bottom
+    if (shouldAutoScroll && messagesEndRef.current && chatContainerRef.current) {
       // Use requestAnimationFrame to ensure the DOM has updated before scrolling
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        scrollToBottom()
       })
+    } else if (!shouldAutoScroll && messages.length > 0) {
+      // If we're not at the bottom and a new message arrives, increment the counter
+      setNewMessageCount((prev) => prev + 1)
     }
-  }, [messages, shouldAutoScroll])
-
-  // Scroll to bottom when typing indicator appears/disappears, but only if user was already at bottom
-  useEffect(() => {
-    if (messagesEndRef.current && shouldAutoScroll && isTyping) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      })
-    }
-  }, [isTyping, shouldAutoScroll])
-
-  // Scroll to bottom when error message appears, but only if user was already at bottom
-  useEffect(() => {
-    if (messagesEndRef.current && shouldAutoScroll && errorMessage) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      })
-    }
-  }, [errorMessage, shouldAutoScroll])
+  }, [messages, shouldAutoScroll, userHasScrolled, scrollToBottom])
 
   // Calculate a natural delay based on message length and add some randomness
   const calculateNaturalDelay = (message: string) => {
@@ -194,10 +234,7 @@ export function JulinhoChatPage() {
       const typingDelay = calculateNaturalDelay(currentMessage)
 
       const timer = setTimeout(() => {
-        // Check if user is at bottom before adding new message
-        const wasAtBottom = isNearBottom()
-
-        // Add a new message for each batch
+        // Add a new message for each batch without triggering auto-scroll
         setMessages((prev) => [
           ...prev,
           {
@@ -207,9 +244,6 @@ export function JulinhoChatPage() {
             isComplete: true, // Each message is complete on its own
           },
         ])
-
-        // Update auto-scroll state based on user's position
-        setShouldAutoScroll(wasAtBottom)
 
         // Hide typing indicator
         setIsTyping(false)
@@ -245,20 +279,15 @@ export function JulinhoChatPage() {
       setErrorMessage(null)
       setIsPaused(false)
 
-      // Check if user is at bottom before adding new message
-      const wasAtBottom = isNearBottom()
-
-      // Add the user's message to the list
+      // Add the user's message to the list without triggering auto-scroll
       const userMessageObj = {
         id: `user_${Date.now()}`,
         role: "user" as const,
         content: userMessage,
         isComplete: true,
       }
-      setMessages((prev) => [...prev, userMessageObj])
 
-      // Update auto-scroll state based on user's position
-      setShouldAutoScroll(wasAtBottom)
+      setMessages((prev) => [...prev, userMessageObj])
 
       // Send the message to the API
       const response = await fetch("/api/julinho", {
@@ -294,9 +323,6 @@ export function JulinhoChatPage() {
         )
 
         setTimeout(() => {
-          // Check if user is at bottom before adding new message
-          const wasAtBottomBeforeResponse = isNearBottom()
-
           setMessages((prev) => [
             ...prev,
             {
@@ -306,9 +332,6 @@ export function JulinhoChatPage() {
               isComplete: true,
             },
           ])
-
-          // Update auto-scroll state based on user's position
-          setShouldAutoScroll(wasAtBottomBeforeResponse)
 
           setIsTyping(false)
           setIsLoading(false)
@@ -329,13 +352,10 @@ export function JulinhoChatPage() {
     e.preventDefault()
     if (!input.trim() || isLoading) return
 
-    sendMessage(input.trim())
-  }
+    // Prevent default form behavior that might cause scrolling
+    e.preventDefault()
 
-  // Function to manually scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    setShouldAutoScroll(true)
+    sendMessage(input.trim())
   }
 
   // Function to go back to the main page
@@ -384,7 +404,7 @@ export function JulinhoChatPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={scrollToBottom}
+            onClick={() => scrollToBottom()}
             className="h-8 w-8 rounded-full bg-[#128C7E]/20 hover:bg-[#128C7E]/40 text-white"
             aria-label="Rolar para o final da conversa"
           >
@@ -408,10 +428,13 @@ export function JulinhoChatPage() {
       {/* Chat area with absolute positioning for typing indicator */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-[#E5DDD5] bg-[url('/images/chat-bg-pattern.png')] relative"
+        className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-[#E5DDD5] relative"
         style={{
           height: "calc(100vh - 16rem)", // Subtract header (4rem) and input area (4rem) heights
           maxHeight: "calc(100vh - 16rem)",
+          backgroundImage: "url('/images/chat-bg-pattern.png')",
+          backgroundRepeat: "repeat",
+          scrollBehavior: "auto", // Prevent smooth scrolling from interfering with manual scrolling
         }}
       >
         {/* Messages container */}
@@ -545,14 +568,14 @@ export function JulinhoChatPage() {
         </Button>
       </form>
 
-      {/* Floating scroll to bottom button - appears when not at bottom and new messages arrive */}
-      {!shouldAutoScroll && messages.length > 0 && (
+      {/* Floating scroll to bottom button with unread count - appears when not at bottom and new messages arrive */}
+      {!shouldAutoScroll && newMessageCount > 0 && (
         <div className="absolute bottom-20 right-4 z-20">
           <Button
-            onClick={scrollToBottom}
+            onClick={() => scrollToBottom()}
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg bg-[#128C7E] hover:bg-[#075E54] text-white"
-            aria-label="Novas mensagens, rolar para baixo"
+            className="h-10 w-10 rounded-full shadow-lg bg-[#128C7E] hover:bg-[#075E54] text-white relative"
+            aria-label={`${newMessageCount} novas mensagens, rolar para baixo`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -567,6 +590,11 @@ export function JulinhoChatPage() {
             >
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
+
+            {/* Unread message counter */}
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {newMessageCount}
+            </span>
           </Button>
         </div>
       )}
