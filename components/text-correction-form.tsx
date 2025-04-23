@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/text-evaluation"
-import { Loader2, Send, Copy, RotateCcw, AlertTriangle, Sparkles, Clock, Heart, Share2 } from "lucide-react"
+import { Loader2, Send, Copy, RotateCcw, AlertTriangle, Sparkles, Clock, Heart, MessageSquare } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
@@ -656,28 +656,20 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
                       </Button>
                       <Button
                         onClick={() => {
-                          // Criar URL para compartilhar no WhatsApp com assinatura entre parênteses e em uma nova linha
-                          // Usando um coração representado por um caractere mais compatível
-                          const whatsappText = encodeURIComponent(
-                            `${result.correctedText}
-
-(Texto revisado pelo https://corretordetextoonline.com.br/)`,
-                          )
-                          const whatsappUrl = `https://wa.me/?text=${whatsappText}`
-
                           // Registrar evento no GTM
-                          sendGTMEvent("whatsapp_share", {
+                          sendGTMEvent("julinho_chat_click", {
+                            source: "text_correction_result",
                             textLength: result.correctedText.length,
                           })
 
-                          // Abrir em nova janela/aba
-                          window.open(whatsappUrl, "_blank")
+                          // Redirecionar para a página do Julinho
+                          window.location.href = "/chat/julinho"
                         }}
                         size="sm"
-                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-600 hover:bg-green-700 text-white"
+                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-yellow-500 hover:bg-yellow-600 text-white"
                       >
-                        <Share2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                        Compartilhar no WhatsApp
+                        <MessageSquare className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        Perguntar ao Julinho
                       </Button>
                     </div>
                   </CardContent>
