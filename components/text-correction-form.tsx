@@ -53,8 +53,8 @@ interface TextCorrectionFormProps {
 // Tipos para os modos de operação
 type OperationMode = "correct" | "rewrite"
 
-// Tipos para os estilos de reescrita
-type RewriteStyle = "formal" | "informal" | "academic" | "creative" | "childlike"
+// Atualizar o tipo RewriteStyle para substituir "informal" por "humanized"
+type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {
@@ -612,11 +612,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     // ou armazená-la de alguma forma
   }
 
-  // Função para renderizar o seletor de estilo de reescrita
+  // Atualizar a função renderRewriteStyleSelector para substituir o estilo "informal" por "humanizado"
   const renderRewriteStyleSelector = () => {
     const styles = [
       { value: "formal", label: "Formal", description: "Linguagem séria e profissional" },
-      { value: "informal", label: "Informal", description: "Tom casual e descontraído" },
+      { value: "humanized", label: "Humanizado", description: "Tom natural e conversacional" },
       { value: "academic", label: "Acadêmico", description: "Estilo técnico e científico" },
       { value: "creative", label: "Criativo", description: "Linguagem expressiva e original" },
       { value: "childlike", label: "Como uma Criança", description: "Linguagem simples e inocente" },

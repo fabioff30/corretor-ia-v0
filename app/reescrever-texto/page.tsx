@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export const metadata: Metadata = {
   title: "Reescrever Texto - Reescreva seus textos com Inteligência Artificial",
-  description: "Reescreva seu texto em diferentes estilos: formal, informal, acadêmico, criativo ou infantil. Use inteligência artificial para melhorar a reescrita deles.",
+  description:
+    "Reescreva seu texto em diferentes estilos: formal, informal, acadêmico, criativo ou infantil. Use inteligência artificial para melhorar a reescrita deles.",
   keywords: "reescrever texto, reescrita, estilo de texto, português, IA, inteligência artificial, reescrever online",
   openGraph: {
     title: "Reescrever Texto - Reescreva seus textos com Inteligência Artificial",
@@ -43,7 +44,7 @@ export default function RewriteTextPage() {
                 <strong>Formal:</strong> Ideal para documentos profissionais, e-mails corporativos e textos oficiais.
               </li>
               <li>
-                <strong>Informal:</strong> Perfeito para comunicações casuais, redes sociais e mensagens pessoais.
+                <strong>Humanizado:</strong> Perfeito para comunicações naturais, com tom conversacional e acessível.
               </li>
               <li>
                 <strong>Acadêmico:</strong> Adequado para trabalhos científicos, artigos e dissertações.
