@@ -3,11 +3,11 @@ import TextCorrectionForm from "@/components/text-correction-form"
 import { Card, CardContent } from "@/components/ui/card"
 
 export const metadata: Metadata = {
-  title: "Reescrever Texto - CorretorIA",
-  description: "Reescreva seu texto em diferentes estilos: formal, informal, acadêmico, criativo ou infantil.",
+  title: "Reescrever Texto - Reescreva seus textos com Inteligência Artificial",
+  description: "Reescreva seu texto em diferentes estilos: formal, informal, acadêmico, criativo ou infantil. Use inteligência artificial para melhorar a reescrita deles.",
   keywords: "reescrever texto, reescrita, estilo de texto, português, IA, inteligência artificial, reescrever online",
   openGraph: {
-    title: "Reescrever Texto - CorretorIA",
+    title: "Reescrever Texto - Reescreva seus textos com Inteligência Artificial",
     description: "Reescreva seu texto em diferentes estilos com nossa ferramenta de inteligência artificial.",
     url: "https://www.corretordetextoonline.com.br/reescrever-texto",
     siteName: "CorretorIA",
