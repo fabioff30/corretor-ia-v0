@@ -1,13 +1,27 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/text-evaluation"
-import { Loader2, Send, Copy, RotateCcw, AlertTriangle, Sparkles, Clock, Heart, MessageSquare } from "lucide-react"
+import {
+  Loader2,
+  Send,
+  Copy,
+  RotateCcw,
+  AlertTriangle,
+  Sparkles,
+  Clock,
+  Heart,
+  MessageSquare,
+  FileText,
+  Pencil,
+  Wand2,
+  CheckCircle,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
@@ -17,16 +31,38 @@ import { StarRating } from "@/components/star-rating"
 import { getUserSubscription, type Subscription } from "@/utils/subscription"
 import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 
-interface TextCorrectionFormProps {
-  onTextCorrected?: () => void
+// Adicionar declaração de tipo para window.gtag
+declare global {
+  interface Window {
+    gtag?: (command: string, action: string, params: any) => void
+    dataLayer?: any[]
+  }
 }
 
-export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFormProps) {
+interface TextCorrectionFormProps {
+  onTextCorrected?: () => void
+  initialMode?: OperationMode
+}
+
+// Tipos para os modos de operação
+type OperationMode = "correct" | "rewrite"
+
+// Tipos para os estilos de reescrita
+type RewriteStyle = "formal" | "informal" | "academic" | "creative" | "childlike"
+
+// Interface para a avaliação de reescrita
+interface RewriteEvaluation {
+  styleApplied: string
+  changes: string[]
+}
+
+export default function TextCorrectionForm({ onTextCorrected, initialMode }: TextCorrectionFormProps) {
   const [originalText, setOriginalText] = useState("")
   const [charCount, setCharCount] = useState(0)
   const [result, setResult] = useState<{
@@ -37,6 +73,8 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       suggestions: string[]
       score: number
       toneChanges: string[]
+      styleApplied?: string
+      changes?: string[]
     }
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -52,6 +90,10 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
   const [selectedTone, setSelectedTone] = useState<
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico"
   >("Padrão")
+
+  // Novos estados para a funcionalidade de reescrita
+  const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
+  const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>("formal")
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -123,6 +165,12 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
     console.log(`Tom selecionado: ${tone}`)
   }
 
+  // Função para lidar com a mudança de estilo de reescrita
+  const handleRewriteStyleChange = (style: RewriteStyle) => {
+    setSelectedRewriteStyle(style)
+    console.log(`Estilo de reescrita selecionado: ${style}`)
+  }
+
   // Modificar a função sanitizeText para preservar acentuação
   const sanitizeText = (text: string) => {
     // Remover caracteres invisíveis e potencialmente perigosos
@@ -169,7 +217,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
     if (!originalText.trim()) {
       toast({
         title: "Texto vazio",
-        description: "Por favor, insira um texto para correção.",
+        description: "Por favor, insira um texto para processamento.",
         variant: "destructive",
       })
       return
@@ -204,7 +252,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       const waitTime = Math.ceil((MIN_REQUEST_INTERVAL - timeSinceLastRequest) / 1000)
       toast({
         title: "Muitas requisições",
-        description: `Por favor, aguarde ${waitTime} segundos antes de enviar outra correção.`,
+        description: `Por favor, aguarde ${waitTime} segundos antes de enviar outra solicitação.`,
         variant: "destructive",
       })
       return
@@ -216,7 +264,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
     // Sanitizar o texto antes de enviar
     const textToSend = sanitizeText(originalText)
 
-    // Gerar um ID único para a correção
+    // Gerar um ID único para a correção/reescrita
     const newCorrectionId = crypto.randomUUID()
     setCorrectionId(newCorrectionId)
 
@@ -241,25 +289,35 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
     setRequestTimer(timeoutId)
 
     try {
-      console.log("Cliente: Iniciando requisição para correção de texto")
+      console.log(
+        `Cliente: Iniciando requisição para ${operationMode === "correct" ? "correção" : "reescrita"} de texto`,
+      )
 
-      // Usar nossa API proxy em vez do webhook diretamente
+      // Configurar o controller para o timeout
       const controller = new AbortController()
       const signal = controller.signal
 
-      console.log("Cliente: Enviando texto para API")
-      const response = await fetch("/api/correct", {
+      // Determinar qual endpoint usar com base no modo de operação
+      const endpoint = operationMode === "correct" ? "/api/correct" : "/api/rewrite"
+
+      // Preparar o payload com base no modo de operação
+      const payload = {
+        text: textToSend,
+        isMobile: isMobile,
+        ...(operationMode === "correct" ? { tone: selectedTone } : { rewriteStyle: selectedRewriteStyle }),
+      }
+
+      console.log(`Cliente: Enviando texto para ${endpoint}`)
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          text: textToSend,
-          isMobile: isMobile,
-          tone: selectedTone, // Sempre enviar o tom selecionado, incluindo "Padrão"
-        }),
+        body: JSON.stringify(payload),
         signal,
       })
+
       console.log(`Cliente: Resposta recebida com status ${response.status}`)
 
       // Limpar o timeout se a resposta chegar
@@ -293,7 +351,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       // Processar a resposta
       console.log("Cliente: Processando resposta JSON")
       const data = await response.json()
-      console.log("Cliente: Resposta JSON processada com sucesso")
+      console.log("Cliente: Resposta JSON processada com sucesso", data)
 
       // Verificar se a resposta tem o formato esperado e criar estrutura padrão se necessário
       const processedData = {
@@ -304,26 +362,89 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
           suggestions: [],
           score: 7,
           toneChanges: [], // Adicionar o novo campo toneChanges
+          styleApplied: "", // Novo campo para o estilo aplicado na reescrita
+          changes: [], // Novo campo para as mudanças feitas na reescrita
         },
       }
 
-      if (data.correctedText) {
-        processedData.correctedText = data.correctedText
-      } else {
-        console.error("Cliente: Campo correctedText não encontrado na resposta")
-        throw new Error("Formato de resposta inválido: texto corrigido não encontrado")
-      }
+      // Processar a resposta com base no modo de operação
+      if (operationMode === "correct") {
+        // Modo de correção - formato tradicional
+        if (data.correctedText) {
+          processedData.correctedText = data.correctedText
+        }
 
-      if (data.evaluation) {
-        processedData.evaluation = {
-          strengths: data.evaluation.strengths || [],
-          weaknesses: data.evaluation.weaknesses || [],
-          suggestions: data.evaluation.suggestions || [],
-          score: data.evaluation.score || 7,
-          toneChanges: data.evaluation.toneChanges || [], // Adicionar o campo toneChanges
+        if (data.evaluation) {
+          processedData.evaluation = {
+            strengths: data.evaluation.strengths || [],
+            weaknesses: data.evaluation.weaknesses || [],
+            suggestions: data.evaluation.suggestions || [],
+            score: data.evaluation.score || 7,
+            toneChanges: data.evaluation.toneChanges || [],
+            styleApplied: "",
+            changes: [],
+          }
         }
       } else {
-        console.warn("Cliente: Campo evaluation não encontrado na resposta, usando padrão")
+        // Modo de reescrita - novo formato
+        console.log("Processando resposta de reescrita:", data)
+
+        // Verificar se a resposta está no formato de array com objeto output
+        if (Array.isArray(data) && data.length > 0 && data[0].output) {
+          const output = data[0].output
+
+          if (output.correctedText) {
+            processedData.correctedText = output.correctedText
+          }
+
+          if (output.evaluation) {
+            processedData.evaluation = {
+              strengths: [],
+              weaknesses: [],
+              suggestions: [],
+              score: 7,
+              toneChanges: [],
+              styleApplied: output.evaluation.styleApplied || selectedRewriteStyle,
+              changes: output.evaluation.changes || [],
+            }
+          }
+        } else if (data.output && data.output.correctedText) {
+          // Formato alternativo com objeto output no nível superior
+          processedData.correctedText = data.output.correctedText
+
+          if (data.output.evaluation) {
+            processedData.evaluation = {
+              ...processedData.evaluation,
+              styleApplied: data.output.evaluation.styleApplied || selectedRewriteStyle,
+              changes: data.output.evaluation.changes || [],
+            }
+          }
+        } else if (data.rewrittenText) {
+          // Formato alternativo
+          processedData.correctedText = data.rewrittenText
+
+          if (data.evaluation) {
+            processedData.evaluation = {
+              ...processedData.evaluation,
+              styleApplied: data.evaluation.styleApplied || selectedRewriteStyle,
+              changes: data.evaluation.changes || [],
+            }
+          }
+        } else if (data.correctedText) {
+          // Formato alternativo
+          processedData.correctedText = data.correctedText
+
+          if (data.evaluation) {
+            processedData.evaluation = {
+              ...processedData.evaluation,
+              styleApplied: data.evaluation.styleApplied || selectedRewriteStyle,
+              changes: data.evaluation.changes || [],
+            }
+          }
+        } else {
+          console.error("Cliente: Formato de resposta não reconhecido", data)
+          throw new Error("Formato de resposta não reconhecido")
+        }
       }
 
       // Processar o texto corrigido (remover aspas extras se necessário)
@@ -372,21 +493,39 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       window.dispatchEvent(new Event("storage"))
 
       // Enviar evento para o GTM
-      sendGTMEvent("text_corrected", {
+      sendGTMEvent(operationMode === "correct" ? "text_corrected" : "text_rewritten", {
         textLength: originalText.length,
         correctionScore: processedData.evaluation.score || 0,
-        tone: selectedTone,
+        mode: operationMode,
+        ...(operationMode === "correct" ? { tone: selectedTone } : { rewriteStyle: selectedRewriteStyle }),
       })
 
       // Rastrear evento de correção no Meta Pixel
-      trackPixelCustomEvent("TextCorrected", {
+      trackPixelCustomEvent(operationMode === "correct" ? "TextCorrected" : "TextRewritten", {
         text_length: originalText.length,
         correction_score: processedData.evaluation.score || 0,
-        tone: selectedTone,
+        mode: operationMode,
+        ...(operationMode === "correct" ? { tone: selectedTone } : { rewrite_style: selectedRewriteStyle }),
       })
 
+      // Adicionar evento específico para Google Analytics quando for reescrita
+      if (operationMode === "rewrite") {
+        // Verificar se o objeto window.gtag existe
+        if (typeof window !== "undefined" && window.gtag) {
+          window.gtag("event", "rewrite_text", {
+            event_category: "text_processing",
+            event_label: "Text Rewrite",
+            rewrite_style: selectedRewriteStyle,
+            applied_style: processedData.evaluation.styleApplied || selectedRewriteStyle,
+            text_length: originalText.length,
+          })
+
+          console.log("GA event sent: rewrite_text with style:", selectedRewriteStyle)
+        }
+      }
+
       toast({
-        title: "Texto corrigido com sucesso!",
+        title: operationMode === "correct" ? "Texto corrigido com sucesso!" : "Texto reescrito com sucesso!",
         description: "Confira os resultados abaixo.",
       })
 
@@ -402,7 +541,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       clearTimeout(timeoutId)
       setRequestTimer(null)
 
-      console.error("Cliente: Erro ao processar o texto:", error)
+      console.error(`Cliente: Erro ao processar o texto:`, error)
 
       // Mensagem de erro específica para AbortError (timeout do fetch)
       if (error.name === "AbortError") {
@@ -412,7 +551,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       } else if (error.message && error.message.includes("404")) {
         // Erro específico para webhook não encontrado
         setError(
-          "O serviço de correção está temporariamente indisponível. Estamos trabalhando para resolver o problema. Por favor, tente novamente mais tarde.",
+          "O serviço está temporariamente indisponível. Estamos trabalhando para resolver o problema. Por favor, tente novamente mais tarde.",
         )
       } else {
         setError(`Erro ao processar o texto: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
@@ -422,9 +561,11 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
       // setShowAdPopup(false)
 
       toast({
-        title: "Erro ao corrigir texto",
+        title: operationMode === "correct" ? "Erro ao corrigir texto" : "Erro ao reescrever texto",
         description:
-          error instanceof Error ? error.message : "Não foi possível processar a correção. Por favor, tente novamente.",
+          error instanceof Error
+            ? error.message
+            : "Não foi possível processar a solicitação. Por favor, tente novamente.",
         variant: "destructive",
       })
     } finally {
@@ -443,7 +584,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
 
       toast({
         title: "Copiado!",
-        description: "O texto corrigido foi copiado para a área de transferência.",
+        description: "O texto foi copiado para a área de transferência.",
       })
     }
   }
@@ -469,6 +610,110 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
     console.log(`Avaliação recebida: ${rating} estrelas`)
     // Aqui você pode implementar a lógica para enviar a avaliação para um backend
     // ou armazená-la de alguma forma
+  }
+
+  // Função para renderizar o seletor de estilo de reescrita
+  const renderRewriteStyleSelector = () => {
+    const styles = [
+      { value: "formal", label: "Formal", description: "Linguagem séria e profissional" },
+      { value: "informal", label: "Informal", description: "Tom casual e descontraído" },
+      { value: "academic", label: "Acadêmico", description: "Estilo técnico e científico" },
+      { value: "creative", label: "Criativo", description: "Linguagem expressiva e original" },
+      { value: "childlike", label: "Como uma Criança", description: "Linguagem simples e inocente" },
+    ]
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
+        {styles.map((style) => (
+          <div
+            key={style.value}
+            className={`p-3 border rounded-lg cursor-pointer transition-all ${
+              selectedRewriteStyle === style.value
+                ? "border-primary bg-primary/10 shadow-sm"
+                : "border-muted hover:border-primary/50 hover:bg-muted/50"
+            }`}
+            onClick={() => handleRewriteStyleChange(style.value as RewriteStyle)}
+          >
+            <div className="font-medium text-sm">{style.label}</div>
+            <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Função para renderizar o componente de avaliação de reescrita
+  const renderRewriteEvaluation = () => {
+    if (!result || !result.evaluation) {
+      return null
+    }
+
+    const { styleApplied, changes } = result.evaluation
+
+    return (
+      <div className="space-y-6">
+        {/* Estilo Aplicado */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-lg font-semibold flex items-center">
+              <Wand2 className="h-5 w-5 text-primary mr-2" />
+              Estilo Aplicado
+            </h4>
+            <Badge className="bg-primary text-primary-foreground px-3 py-1 text-sm font-medium">
+              {styleApplied
+                ? styleApplied.charAt(0).toUpperCase() + styleApplied.slice(1)
+                : selectedRewriteStyle.charAt(0).toUpperCase() + selectedRewriteStyle.slice(1)}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            O texto foi reescrito seguindo o estilo selecionado, adaptando o tom e a estrutura conforme necessário.
+          </p>
+        </div>
+
+        {/* Alterações Realizadas */}
+        {changes && changes.length > 0 && (
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center mb-4">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+              <h4 className="text-lg font-semibold">Alterações Realizadas</h4>
+            </div>
+            <ul className="space-y-3">
+              {changes.map((change, index) => (
+                <li key={index} className="bg-white dark:bg-slate-800 p-3 rounded-md border shadow-sm">
+                  <div className="flex items-start">
+                    <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <span className="text-foreground/90">{change}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(!changes || changes.length === 0) && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
+              <p className="text-yellow-800 dark:text-yellow-200">
+                Não foram fornecidos detalhes específicos sobre as alterações realizadas no texto.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Função para formatar o texto preservando quebras de linha e emojis
+  const formatText = (text: string) => {
+    return text.split("\n").map((line, i) => (
+      <React.Fragment key={i}>
+        {line}
+        {i < text.split("\n").length - 1 && <br />}
+      </React.Fragment>
+    ))
   }
 
   return (
@@ -504,16 +749,59 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
           </p>
         </div>
 
+        {/* Abas para alternar entre correção e reescrita */}
+        <Tabs
+          defaultValue={operationMode}
+          className="w-full mb-4"
+          onValueChange={(value) => setOperationMode(value as OperationMode)}
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-0.5 sm:p-1 rounded-lg">
+            <TabsTrigger
+              value="correct"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Corrigir Texto
+            </TabsTrigger>
+            <TabsTrigger
+              value="rewrite"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Reescrever Texto
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="correct" className="mt-0">
+            {/* Conteúdo da aba de correção */}
+          </TabsContent>
+
+          <TabsContent value="rewrite" className="mt-0">
+            {/* Conteúdo da aba de reescrita */}
+            <div className="mb-4">
+              <div className="flex items-center text-xs text-muted-foreground mb-2">
+                <Pencil className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                <span>Selecione o estilo de reescrita</span>
+              </div>
+              {renderRewriteStyleSelector()}
+            </div>
+          </TabsContent>
+        </Tabs>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Textarea
-              placeholder="Digite ou cole seu texto aqui para correção..."
+              placeholder={
+                operationMode === "correct"
+                  ? "Digite ou cole seu texto aqui para correção..."
+                  : "Digite ou cole seu texto aqui para reescrita..."
+              }
               className="min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground"
               value={originalText}
               onChange={handleTextChange}
               disabled={isLoading}
               maxLength={subscription?.features.characterLimit || FREE_CHARACTER_LIMIT}
-              aria-label="Texto para correção"
+              aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
             <div className="absolute top-3 right-3">
               <div
@@ -533,9 +821,11 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
           </div>
 
           {/* Adicionar o componente de ajuste de tom */}
-          <div className="mb-4">
-            <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
-          </div>
+          {operationMode === "correct" && (
+            <div className="mb-4">
+              <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
+            </div>
+          )}
 
           {/* Melhorar a responsividade dos botões */}
           <div className="flex flex-wrap gap-3 justify-end">
@@ -588,12 +878,12 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Corrigindo...
+                  {operationMode === "correct" ? "Corrigindo..." : "Reescrevendo..."}
                 </>
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  Corrigir
+                  {operationMode === "correct" ? "Corrigir" : "Reescrever"}
                 </>
               )}
             </Button>
@@ -621,7 +911,8 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
                   value="corrected"
                   className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <span className="hidden sm:inline">Texto </span>Corrigido
+                  <span className="hidden sm:inline">Texto </span>
+                  {operationMode === "correct" ? "Corrigido" : "Reescrito"}
                 </TabsTrigger>
                 <TabsTrigger
                   value="diff"
@@ -638,10 +929,10 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
               </TabsList>
 
               <TabsContent value="corrected" className="mt-0">
-                <Card>
-                  <CardContent className="p-2 sm:p-4 md:p-6">
-                    <div className="p-2 sm:p-4 bg-muted/30 rounded-lg whitespace-pre-wrap mb-4 text-foreground border text-left text-sm sm:text-base">
-                      {result.correctedText}
+                <Card className="shadow-sm">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="p-4 bg-muted/30 rounded-lg whitespace-pre-wrap mb-4 text-foreground border text-left text-sm sm:text-base leading-relaxed">
+                      {formatText(result.correctedText)}
                     </div>
                     {/* Melhorar a responsividade dos botões de ação */}
                     <div className="flex flex-col sm:flex-row gap-2 justify-end">
@@ -658,7 +949,7 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
                         onClick={() => {
                           // Registrar evento no GTM
                           sendGTMEvent("julinho_chat_click", {
-                            source: "text_correction_result",
+                            source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
                             textLength: result.correctedText.length,
                           })
 
@@ -686,8 +977,12 @@ export default function TextCorrectionForm({ onTextCorrected }: TextCorrectionFo
 
               <TabsContent value="evaluation" className="mt-0">
                 <Card>
-                  <CardContent className="p-2 sm:p-4 md:p-6">
-                    <TextEvaluation evaluation={result.evaluation} />
+                  <CardContent className="p-4 md:p-6">
+                    {operationMode === "correct" ? (
+                      <TextEvaluation evaluation={result.evaluation} />
+                    ) : (
+                      renderRewriteEvaluation()
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

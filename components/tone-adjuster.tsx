@@ -14,10 +14,12 @@ type ToneOption =
   | "Informal"
   | "Acadêmico"
   | "Criativo"
-  | "Conciso"
   | "Romântico"
   | "Narrativo"
-  | "Confiante"
+  | "Instagram"
+  | "WhatsApp"
+  | "Tweet"
+  | "Personalizado"
 
 const tones: { value: ToneOption; label: string; description: string }[] = [
   { value: "Padrão", label: "Padrão", description: "Tom de escrita neutro e geral." },
@@ -25,10 +27,12 @@ const tones: { value: ToneOption; label: string; description: string }[] = [
   { value: "Informal", label: "Informal", description: "Tom descontraído e casual." },
   { value: "Acadêmico", label: "Acadêmico", description: "Linguagem técnica para trabalhos científicos." },
   { value: "Criativo", label: "Criativo", description: "Tom original e imaginativo." },
-  { value: "Conciso", label: "Conciso", description: "Linguagem direta e objetiva." },
   { value: "Romântico", label: "Romântico", description: "Tom emotivo e apaixonado." },
   { value: "Narrativo", label: "Narrativo", description: "Tom narrativo para contar histórias." },
-  { value: "Confiante", label: "Confiante", description: "Tom assertivo e seguro." },
+  { value: "Instagram", label: "Instagram", description: "Estilo casual e envolvente para posts de redes sociais." },
+  { value: "WhatsApp", label: "WhatsApp", description: "Tom conversacional para mensagens diretas." },
+  { value: "Tweet", label: "Tweet", description: "Estilo conciso e impactante para mensagens curtas." },
+  { value: "Personalizado", label: "Personalizado", description: "Defina suas próprias instruções de tom." },
 ]
 
 interface ToneAdjusterProps {
@@ -39,13 +43,47 @@ interface ToneAdjusterProps {
 
 export function ToneAdjuster({ onToneChange, className, disabled = false }: ToneAdjusterProps) {
   const [selectedTone, setSelectedTone] = useState<ToneOption>("Padrão")
+  const [customToneInput, setCustomToneInput] = useState<string>("")
+  const [showCustomInput, setShowCustomInput] = useState<boolean>(false)
 
   const handleSelectTone = (tone: ToneOption) => {
     setSelectedTone(tone)
     sendGTMEvent("tone_selected", { tone: tone })
     trackPixelCustomEvent("ToneSelected", { tone: tone })
-    if (onToneChange) {
-      onToneChange(tone)
+
+    if (tone === "Personalizado") {
+      setShowCustomInput(true)
+    } else {
+      setShowCustomInput(false)
+      if (onToneChange) {
+        onToneChange(tone)
+      }
+    }
+  }
+
+  const handleCustomToneSubmit = () => {
+    if (customToneInput.trim()) {
+      // Send the custom tone instruction via webhook
+      fetch("/api/custom-tone-webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ customTone: customToneInput }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("Custom tone sent successfully:", data)
+          if (onToneChange) {
+            // Pass the custom tone to the parent component
+            onToneChange("Personalizado")
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending custom tone:", error)
+        })
+
+      setShowCustomInput(false)
     }
   }
 
@@ -89,6 +127,20 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        {showCustomInput && (
+          <div className="mt-2 flex flex-col gap-2">
+            <textarea
+              className="w-full p-2 text-sm border rounded-md"
+              placeholder="Descreva o tom desejado..."
+              value={customToneInput}
+              onChange={(e) => setCustomToneInput(e.target.value)}
+              rows={3}
+            />
+            <Button size="sm" onClick={handleCustomToneSubmit} className="self-end">
+              Aplicar
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )
