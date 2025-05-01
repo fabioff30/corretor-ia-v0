@@ -53,12 +53,10 @@ export function JulinhoChatPage() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
-  // Redirect desktop users back to the main page
+  // No longer redirecting desktop users
   useEffect(() => {
-    if (isDesktop) {
-      router.push("/")
-    }
-  }, [isDesktop, router])
+    // Desktop users can now access the chat page directly
+  }, [])
 
   // Initialize the chat
   useEffect(() => {
@@ -372,7 +370,10 @@ export function JulinhoChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-gray-100">
+    <div
+      className="flex flex-col h-screen max-h-screen overflow-hidden bg-gray-100 mx-auto"
+      style={{ maxWidth: isDesktop ? "768px" : "100%" }}
+    >
       {/* Header - WhatsApp style with fixed height */}
       <header className="bg-[#075E54] text-white p-3 flex items-center gap-3 shadow-md z-10 h-16 flex-shrink-0">
         <Button
