@@ -44,42 +44,49 @@ export async function POST(request: NextRequest) {
         revalidatePath(`/blog/${postSlug}`)
         // Também revalidar o índice do blog para atualizar as listagens
         revalidatePath("/blog")
+        // Revalidar o sitemap para incluir o novo post
+        revalidatePath("/sitemap.xml")
 
-        console.log(`Revalidado post: ${postSlug}`)
+        console.log(`Revalidado post: ${postSlug} e sitemap atualizado`)
         return NextResponse.json({
           revalidated: true,
-          message: `Post ${postSlug} revalidado com sucesso`,
+          message: `Post ${postSlug} revalidado e sitemap atualizado com sucesso`,
         })
       } else {
-        // Se não tiver slug, revalidar todo o blog
+        // Se não tiver slug, revalidar todo o blog e o sitemap
         revalidatePath("/blog")
-        console.log("Revalidado índice do blog")
+        revalidatePath("/sitemap.xml")
+        console.log("Revalidado índice do blog e sitemap")
         return NextResponse.json({
           revalidated: true,
-          message: "Índice do blog revalidado com sucesso",
+          message: "Índice do blog e sitemap revalidados com sucesso",
         })
       }
     }
 
     // Processar solicitações de revalidação manuais
     if (body.action === "refresh_all") {
-      // Revalidar todo o conteúdo do blog
+      // Revalidar todo o conteúdo do blog e o sitemap
       revalidatePath("/blog")
-      console.log("Revalidado todo o conteúdo do blog")
-      return NextResponse.json({ revalidated: true, path: "/blog" })
+      revalidatePath("/sitemap.xml")
+      console.log("Revalidado todo o conteúdo do blog e sitemap")
+      return NextResponse.json({ revalidated: true, path: "/blog", sitemap: true })
     } else if (body.slug) {
       // Revalidar post específico
       revalidatePath(`/blog/${body.slug}`)
       // Também revalidar índice do blog para atualizar listagens
       revalidatePath("/blog")
+      // Revalidar o sitemap
+      revalidatePath("/sitemap.xml")
 
-      console.log(`Revalidado post: ${body.slug}`)
-      return NextResponse.json({ revalidated: true, slug: body.slug })
+      console.log(`Revalidado post: ${body.slug} e sitemap atualizado`)
+      return NextResponse.json({ revalidated: true, slug: body.slug, sitemap: true })
     } else {
-      // Caso padrão - revalidar índice do blog
+      // Caso padrão - revalidar índice do blog e sitemap
       revalidatePath("/blog")
-      console.log("Revalidado índice do blog")
-      return NextResponse.json({ revalidated: true, path: "/blog" })
+      revalidatePath("/sitemap.xml")
+      console.log("Revalidado índice do blog e sitemap")
+      return NextResponse.json({ revalidated: true, path: "/blog", sitemap: true })
     }
   } catch (error) {
     console.error("Erro de revalidação:", error)
@@ -108,8 +115,14 @@ export async function GET(request: NextRequest) {
 
     // Revalidar o caminho especificado
     revalidatePath(path)
-    console.log(`Caminho revalidado: ${path}`)
+    // Também revalidar o sitemap se for uma atualização do blog
+    if (path.startsWith("/blog")) {
+      revalidatePath("/sitemap.xml")
+      console.log(`Caminho revalidado: ${path} e sitemap atualizado`)
+      return NextResponse.json({ revalidated: true, path, sitemap: true })
+    }
 
+    console.log(`Caminho revalidado: ${path}`)
     return NextResponse.json({ revalidated: true, path })
   } catch (error) {
     console.error("Erro de revalidação:", error)

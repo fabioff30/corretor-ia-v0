@@ -1,18 +1,11 @@
 import type { MetadataRoute } from "next"
-import { getPosts } from "@/utils/wordpress-api"
+import { getBlogPostUrlsForSitemap } from "@/utils/sitemap-utils"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.corretordetextoonline.com.br"
 
-  // Get blog posts for sitemap
-  const { posts } = await getPosts(1, 100) // Get up to 100 posts for sitemap
-
-  const blogPostsUrls = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.modified),
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }))
+  // Get blog posts for sitemap using our utility function
+  const blogPostsUrls = await getBlogPostUrlsForSitemap(baseUrl)
 
   return [
     {
@@ -86,6 +79,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/chat/julinho`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/reescrever-texto`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
     ...blogPostsUrls,
   ]

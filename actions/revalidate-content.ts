@@ -14,20 +14,24 @@ export async function revalidateContent(slug?: string): Promise<{ success: boole
       revalidatePath(`/blog/${slug}`, "page")
       // Também revalidar índice do blog para atualizar listagens
       revalidatePath("/blog", "page")
+      // Revalidar o sitemap para incluir o novo post
+      revalidatePath("/sitemap.xml", "page")
 
-      console.log(`Revalidated post: ${slug}`)
+      console.log(`Revalidated post: ${slug} and updated sitemap`)
       return {
         success: true,
-        message: `O post ${slug} foi atualizado com sucesso.`,
+        message: `O post ${slug} foi atualizado e o sitemap foi regenerado com sucesso.`,
       }
     } else {
       // Revalidar todo o conteúdo do blog com força total
       revalidatePath("/blog", "page")
+      // Revalidar o sitemap
+      revalidatePath("/sitemap.xml", "page")
 
-      console.log("Revalidated all blog content")
+      console.log("Revalidated all blog content and sitemap")
       return {
         success: true,
-        message: "Todo o conteúdo do blog foi atualizado com sucesso.",
+        message: "Todo o conteúdo do blog e o sitemap foram atualizados com sucesso.",
       }
     }
   } catch (error) {
