@@ -138,7 +138,7 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
                   posts={relatedPosts.map((p) => ({
                     title: p.title.rendered,
                     slug: p.slug,
-                    excerpt: extractExcerpt(p.excerpt.rendered, 120),
+                    excerpt: "", // Removing the excerpt
                   }))}
                   currentSlug={post.slug}
                 />

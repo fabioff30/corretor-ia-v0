@@ -28,7 +28,6 @@ export function RelatedPosts({ posts, currentSlug }: RelatedPostsProps) {
                 className="font-medium mb-2 hover:text-primary transition-colors"
                 dangerouslySetInnerHTML={{ __html: post.title }}
               />
-              <p className="text-sm text-foreground/70">{post.excerpt}</p>
               <p className="text-primary text-sm mt-2">Ler mais →</p>
             </Link>
           </div>
