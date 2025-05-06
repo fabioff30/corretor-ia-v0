@@ -9,13 +9,13 @@ import { SupportersSection } from "@/components/supporters-section"
 
 // Atualizar os metadados da página inicial
 export const metadata: Metadata = {
-  title: "CorretorIA - Correção Inteligente de Textos em Português",
+  title: "Corretor de Texto Online e Gratuito | CorretorIA",
   description:
     "Corrija erros de gramática, ortografia e estilo em seus textos em português com nossa ferramenta de inteligência artificial. Rápido, gratuito e preciso.",
   keywords:
     "corretor de texto, correção de texto, português, gramática, ortografia, IA, inteligência artificial, corretor online",
   openGraph: {
-    title: "CorretorIA - Correção Inteligente de Textos em Português",
+    title: "Corretor de Texto Online e Gratuito | CorretorIA",
     description:
       "Corrija erros de gramática, ortografia e estilo em seus textos em português com nossa ferramenta de inteligência artificial.",
     url: "https://www.corretordetextoonline.com.br",
