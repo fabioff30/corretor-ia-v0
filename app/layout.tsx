@@ -49,6 +49,27 @@ export default function RootLayout({
           `}
         </Script>
 
+        {/* Structured Data for Corretor de Texto */}
+        <Script id="structured-data-corretor" type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "Corretor de Texto CorretorIA",
+              "url": "https://www.corretordetextoonline.com.br",
+              "description": "Corretor de texto online gratuito com inteligência artificial para corrigir erros de gramática, ortografia e estilo em português.",
+              "applicationCategory": "UtilityApplication",
+              "operatingSystem": "Web",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "BRL"
+              },
+              "inLanguage": "pt-BR"
+            }
+          `}
+        </Script>
+
         {/* Meta Pixel Code */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`

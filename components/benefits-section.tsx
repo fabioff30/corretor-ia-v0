@@ -8,13 +8,13 @@ export function BenefitsSection() {
   const features = [
     {
       icon: <Check className="h-6 w-6 text-primary" />,
-      title: "Precisão Linguística",
+      title: "Corretor de Texto Preciso",
       description:
         "Correções precisas de gramática, ortografia e pontuação baseadas nas regras do português brasileiro e europeu.",
     },
     {
       icon: <Zap className="h-6 w-6 text-primary" />,
-      title: "Rapidez e Eficiência",
+      title: "Correção Rápida e Eficiente",
       description:
         "Obtenha resultados instantâneos com nossa tecnologia de processamento de linguagem natural de alta velocidade.",
     },
@@ -28,7 +28,7 @@ export function BenefitsSection() {
       icon: <Clock className="h-6 w-6 text-primary" />,
       title: "Disponibilidade 24/7",
       description:
-        "Acesse nossa ferramenta a qualquer hora, de qualquer lugar, sem necessidade de instalação ou cadastro.",
+        "Acesse nosso corretor de texto a qualquer hora, de qualquer lugar, sem necessidade de instalação ou cadastro.",
     },
   ]
 
@@ -39,9 +39,12 @@ export function BenefitsSection() {
           <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Recursos exclusivos
           </span>
-          <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">Benefícios do CorretorIA</h2>
+          <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">
+            Benefícios do Corretor de Texto CorretorIA
+          </h2>
           <p className="text-muted-foreground max-w-[700px] mx-auto">
-            Descubra por que milhares de pessoas escolhem nossa ferramenta para corrigir seus textos em português
+            Descubra por que milhares de pessoas escolhem nosso corretor de texto online para corrigir seus textos em
+            português
           </p>
         </div>
 

@@ -28,7 +28,7 @@ export function CTASection() {
           </div>
 
           <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text mt-4">
-            Melhore Seus Textos em Português
+            Melhore Seus Textos com Nosso Corretor de Texto
           </h2>
           <p className="text-muted-foreground max-w-[700px] mx-auto mb-8">
             Experimente nosso corretor de texto online e gratuito e veja a diferença na qualidade da sua escrita. Sem
@@ -47,14 +47,14 @@ export function CTASection() {
             asChild
           >
             <Link href="/apoiar">
-              Apoiar o CorretorIA
+              Apoiar o Corretor de Texto CorretorIA
               <Heart className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2">
             <span className="flex items-center">
               <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>
-              100% gratuito
+              Corretor de texto 100% gratuito
             </span>
             <span className="flex items-center">
               <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>

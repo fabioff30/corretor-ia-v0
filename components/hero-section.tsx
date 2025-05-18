@@ -19,7 +19,7 @@ export function HeroSection() {
             className="inline-flex items-center bg-primary/10 text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-full"
           >
             <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-            <span className="text-xs sm:text-sm font-medium">Corretor de texto com IA</span>
+            <span className="text-xs sm:text-sm font-medium">Corretor de Texto com IA</span>
           </motion.div>
 
           {/* Título */}
@@ -29,7 +29,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-balance gradient-text"
           >
-            Corrija seus textos com IA
+            Corretor de Texto Online Gratuito
           </motion.h1>
 
           {/* Subtítulo */}
@@ -39,8 +39,8 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-base sm:text-lg text-foreground/80 max-w-xl"
           >
-            Elimine erros gramaticais, ortográficos e de estilo em seus textos em português com nossa ferramenta de
-            inteligência artificial.
+            Use nosso corretor de texto inteligente para eliminar erros gramaticais, ortográficos e de estilo em seus
+            textos em português.
           </motion.p>
 
           {/* Adicionar o componente de estatísticas de avaliação */}
@@ -65,7 +65,7 @@ export function HeroSection() {
           >
             <div className="flex items-center">
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-primary" />
-              <span className="text-xs sm:text-sm text-foreground/80">100% Gratuito</span>
+              <span className="text-xs sm:text-sm text-foreground/80">Corretor de Texto Gratuito</span>
             </div>
             <div className="flex items-center">
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-primary" />
