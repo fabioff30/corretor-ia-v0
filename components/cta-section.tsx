@@ -23,16 +23,16 @@ export function CTASection() {
           <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
             <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full font-medium text-sm flex items-center">
               <Sparkles className="h-4 w-4 mr-2" />
-              Comece agora mesmo
+              Comece a usar agora
             </div>
           </div>
 
           <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text mt-4">
-            Melhore Seus Textos com Nosso Corretor de Texto
+            O Melhor Corretor de Texto Online para Português
           </h2>
           <p className="text-muted-foreground max-w-[700px] mx-auto mb-8">
-            Experimente nosso corretor de texto online e gratuito e veja a diferença na qualidade da sua escrita. Sem
-            cadastro, sem instalação, sem complicações.
+            Experimente nosso corretor de texto gratuito e veja a diferença na qualidade da sua escrita. Sem cadastro,
+            sem instalação, sem complicações - apenas correções precisas e instantâneas.
           </p>
           <Button
             size="lg"
@@ -58,11 +58,11 @@ export function CTASection() {
             </span>
             <span className="flex items-center">
               <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>
-              Sem cadastro
+              Sem cadastro necessário
             </span>
             <span className="flex items-center">
               <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>
-              Resultados instantâneos
+              Correções instantâneas
             </span>
           </p>
         </Card>

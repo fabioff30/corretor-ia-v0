@@ -10,25 +10,25 @@ export function BenefitsSection() {
       icon: <Check className="h-6 w-6 text-primary" />,
       title: "Corretor de Texto Preciso",
       description:
-        "Correções precisas de gramática, ortografia e pontuação baseadas nas regras do português brasileiro e europeu.",
+        "Correções precisas de gramática, ortografia e pontuação baseadas nas regras do português brasileiro e europeu, com análise contextual avançada.",
     },
     {
       icon: <Zap className="h-6 w-6 text-primary" />,
       title: "Correção Rápida e Eficiente",
       description:
-        "Obtenha resultados instantâneos com nossa tecnologia de processamento de linguagem natural de alta velocidade.",
+        "Nosso corretor de texto processa seu conteúdo instantaneamente, permitindo corrigir textos de qualquer tamanho em segundos.",
     },
     {
       icon: <Shield className="h-6 w-6 text-primary" />,
-      title: "Privacidade Total",
+      title: "Privacidade Garantida",
       description:
-        "Seus textos não são armazenados permanentemente em nossos servidores, garantindo a confidencialidade do seu conteúdo.",
+        "Seu texto não é armazenado permanentemente em nossos servidores após a correção, garantindo total confidencialidade do seu conteúdo.",
     },
     {
       icon: <Clock className="h-6 w-6 text-primary" />,
-      title: "Disponibilidade 24/7",
+      title: "Disponível 24/7",
       description:
-        "Acesse nosso corretor de texto a qualquer hora, de qualquer lugar, sem necessidade de instalação ou cadastro.",
+        "Acesse nosso corretor de texto a qualquer hora, de qualquer lugar, sem necessidade de instalação ou cadastro. Sempre disponível quando você precisar.",
     },
   ]
 
@@ -40,11 +40,11 @@ export function BenefitsSection() {
             Recursos exclusivos
           </span>
           <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">
-            Benefícios do Corretor de Texto CorretorIA
+            Por que escolher o Corretor de Texto CorretorIA
           </h2>
           <p className="text-muted-foreground max-w-[700px] mx-auto">
-            Descubra por que milhares de pessoas escolhem nosso corretor de texto online para corrigir seus textos em
-            português
+            Descubra por que milhares de pessoas escolhem nosso corretor de texto online para aprimorar a qualidade da
+            escrita em português
           </p>
         </div>
 

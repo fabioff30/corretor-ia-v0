@@ -19,7 +19,7 @@ export function HeroSection() {
             className="inline-flex items-center bg-primary/10 text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-full"
           >
             <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-            <span className="text-xs sm:text-sm font-medium">Corretor de Texto com IA</span>
+            <span className="text-xs sm:text-sm font-medium">Corretor de Texto com Inteligência Artificial</span>
           </motion.div>
 
           {/* Título */}
@@ -39,8 +39,8 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-base sm:text-lg text-foreground/80 max-w-xl"
           >
-            Use nosso corretor de texto inteligente para eliminar erros gramaticais, ortográficos e de estilo em seus
-            textos em português.
+            O corretor de texto mais avançado para português. Elimine erros gramaticais, ortográficos e de estilo com
+            nossa ferramenta de inteligência artificial.
           </motion.p>
 
           {/* Adicionar o componente de estatísticas de avaliação */}
