@@ -28,7 +28,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
 import { getUserSubscription, type Subscription } from "@/utils/subscription"
-import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
+import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL, JULINHO_DISABLED } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -945,6 +945,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                       </Button>
                       <Button
                         onClick={() => {
+                          if (JULINHO_DISABLED) return
+
                           // Registrar evento no GTM
                           sendGTMEvent("julinho_whatsapp_click", {
                             source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
@@ -963,7 +965,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                           window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank")
                         }}
                         size="sm"
-                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
+                        disabled={JULINHO_DISABLED}
+                        className={`w-full sm:w-auto text-xs sm:text-sm py-2 h-auto ${
+                          JULINHO_DISABLED
+                            ? "bg-gray-400 hover:bg-gray-500 cursor-not-allowed"
+                            : "bg-green-500 hover:bg-green-600"
+                        } text-white flex items-center justify-center`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -979,7 +986,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                         >
                           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                         </svg>
-                        Perguntar ao Julinho
+                        {JULINHO_DISABLED ? "Julinho Indisponível" : "Perguntar ao Julinho"}
                       </Button>
                     </div>
                   </CardContent>

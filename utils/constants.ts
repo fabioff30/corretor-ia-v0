@@ -18,3 +18,6 @@ export const GTM_ID = "GTM-5ZNJ85CP"
 export const WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/lh-corretoria/b2b76baf-b9ea-4bef-9f7c-556322a9042f"
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 export const FETCH_TIMEOUT = 55000 // 55 seconds
+
+// Julinho status
+export const JULINHO_DISABLED = true // Set to false to re-enable Julinho
