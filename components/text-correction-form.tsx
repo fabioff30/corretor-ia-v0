@@ -932,7 +932,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                     <div className="p-4 bg-muted/30 rounded-lg whitespace-pre-wrap mb-4 text-foreground border text-left text-sm sm:text-base leading-relaxed">
                       {formatText(result.correctedText)}
                     </div>
-                    {/* Melhorar a responsividade dos botões de ação */}
                     <div className="flex flex-col sm:flex-row gap-2 justify-end">
                       <Button
                         onClick={handleCopy}
@@ -946,20 +945,40 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                       <Button
                         onClick={() => {
                           // Registrar evento no GTM
-                          sendGTMEvent("donation_click", {
+                          sendGTMEvent("julinho_whatsapp_click", {
                             source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
                             textLength: result.correctedText.length,
-                            location: "result_actions",
                           })
+
+                          // Preparar mensagem com o texto corrigido
+                          const whatsappNumber = "+5584999401840"
+                          const message = encodeURIComponent(
+                            "Olá Julinho! Tenho uma dúvida sobre este texto corrigido:\n\n" +
+                              result.correctedText.substring(0, 500) +
+                              (result.correctedText.length > 500 ? "..." : ""),
+                          )
+
+                          // Abrir WhatsApp
+                          window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank")
                         }}
                         size="sm"
                         className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
-                        asChild
                       >
-                        <Link href="/apoiar">
-                          <Heart className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Apoiar o Projeto
-                        </Link>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-2"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                        Perguntar ao Julinho
                       </Button>
                     </div>
                   </CardContent>

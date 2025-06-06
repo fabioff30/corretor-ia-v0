@@ -20,4 +20,4 @@ export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-
 export const FETCH_TIMEOUT = 55000 // 55 seconds
 
 // Julinho status
-export const JULINHO_DISABLED = true // Set to false to re-enable Julinho
+export const JULINHO_DISABLED = false // Reativando o Julinho
