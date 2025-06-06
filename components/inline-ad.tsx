@@ -1,18 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import Image from "next/image"
+import { GOOGLE_ADSENSE_CLIENT } from "@/utils/constants"
 
 interface InlineAdProps {
   adSlot?: string
   className?: string
   format?: "auto" | "horizontal" | "vertical" | "rectangle"
+  useAdsense?: boolean // Nova propriedade para escolher entre banner próprio ou AdSense
 }
 
-export function InlineAd({ className = "", format = "auto" }: InlineAdProps) {
+export function InlineAd({ adSlot, className = "", format = "auto", useAdsense = false }: InlineAdProps) {
   const [hasConsent, setHasConsent] = useState(false)
+  const adRef = useRef<HTMLElement>(null)
+  const initRef = useRef(false)
 
   // Verificar consentimento de cookies
   useEffect(() => {
@@ -20,11 +24,55 @@ export function InlineAd({ className = "", format = "auto" }: InlineAdProps) {
     if (consentGiven === "accepted") {
       setHasConsent(true)
     }
+
+    // Listen for consent changes
+    const handleStorageChange = () => {
+      const consent = localStorage.getItem("cookie-consent")
+      if (consent === "accepted") {
+        setHasConsent(true)
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
   }, [])
+
+  // Initialize AdSense ad only once
+  useEffect(() => {
+    if (useAdsense && hasConsent && adSlot && !initRef.current && adRef.current && window.adsbygoogle) {
+      try {
+        const adElement = adRef.current
+        if (adElement && !adElement.hasAttribute("data-adsbygoogle-status")) {
+          ;(window.adsbygoogle = window.adsbygoogle || []).push({})
+          initRef.current = true
+        }
+      } catch (error) {
+        console.error("AdSense initialization error:", error)
+      }
+    }
+  }, [useAdsense, hasConsent, adSlot])
 
   // Se não tiver consentimento, não mostrar nada
   if (!hasConsent) return null
 
+  // Se useAdsense for true e tivermos um adSlot, mostrar anúncio do AdSense
+  if (useAdsense && adSlot) {
+    return (
+      <div className={`my-8 overflow-hidden min-h-[250px] rounded-lg ${className}`}>
+        <ins
+          ref={adRef}
+          className="adsbygoogle"
+          style={{ display: "block" }}
+          data-ad-client={GOOGLE_ADSENSE_CLIENT}
+          data-ad-slot={adSlot}
+          data-ad-format={format}
+          data-full-width-responsive="true"
+        ></ins>
+      </div>
+    )
+  }
+
+  // Caso contrário, mostrar banner próprio
   return (
     <div className={`my-8 overflow-hidden min-h-[250px] rounded-lg border ${className}`}>
       <Link

@@ -99,53 +99,30 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
   // Modificar o useEffect que controla a visibilidade do banner
   useEffect(() => {
     // Verificar se há um flag específico para mostrar o banner após correção
-    const showAdBanner = localStorage.getItem("show-ad-banner")
     const bannerClosed = localStorage.getItem("banner-closed")
-    const textCorrected = localStorage.getItem("text-corrected")
 
-    // Mostrar o banner se o flag estiver presente OU se o texto foi corrigido
-    if ((showAdBanner === "true" || textCorrected === "true") && !bannerClosed && shouldShow && !wasRecentlyClosed) {
-      console.log("Mostrando banner de anúncio após correção de texto")
+    // Mostrar o banner apenas se forçado explicitamente e não estiver fechado
+    if (forceShow && !bannerClosed && shouldShow && !wasRecentlyClosed) {
+      console.log("Mostrando banner apenas quando forceShow=true")
       setIsVisible(true)
-      // Remover o flag após mostrar o banner para evitar que ele apareça novamente sem uma nova correção
-      localStorage.removeItem("show-ad-banner")
     }
 
     // Adicionar um listener para o evento de storage para detectar mudanças em tempo real
     const handleStorageChange = () => {
-      const updatedShowAdBanner = localStorage.getItem("show-ad-banner")
-      const updatedTextCorrected = localStorage.getItem("text-corrected")
       const updatedBannerClosed = localStorage.getItem("banner-closed")
 
-      if (
-        (updatedShowAdBanner === "true" || updatedTextCorrected === "true") &&
-        !updatedBannerClosed &&
-        shouldShow &&
-        !wasRecentlyClosed
-      ) {
+      if (forceShow && !updatedBannerClosed && shouldShow && !wasRecentlyClosed) {
         console.log("Mostrando banner via evento de storage")
         setIsVisible(true)
-        localStorage.removeItem("show-ad-banner")
       }
     }
 
     window.addEventListener("storage", handleStorageChange)
 
-    // Também adicionar um listener para um evento personalizado
-    const handleCustomEvent = () => {
-      if (shouldShow && !wasRecentlyClosed && !bannerClosed) {
-        console.log("Mostrando banner via evento personalizado")
-        setIsVisible(true)
-      }
-    }
-
-    window.addEventListener("showAdBanner", handleCustomEvent)
-
     return () => {
       window.removeEventListener("storage", handleStorageChange)
-      window.removeEventListener("showAdBanner", handleCustomEvent)
     }
-  }, [shouldShow, wasRecentlyClosed, pathname])
+  }, [shouldShow, wasRecentlyClosed, forceShow])
 
   // Adicionar um novo useEffect para detectar cliques fora do banner
   useEffect(() => {

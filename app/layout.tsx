@@ -117,7 +117,8 @@ export default function RootLayout({
           }
         `}
         </Script>
-        {/* Google AdSense - Script */}
+
+        {/* Google AdSense - Script - Load only once */}
         <Script
           id="google-adsense"
           async
@@ -125,6 +126,32 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
+
+        {/* Initialize AdSense only once */}
+        <Script id="adsense-init" strategy="afterInteractive">
+          {`
+            // Initialize adsbygoogle array only if it doesn't exist
+            window.adsbygoogle = window.adsbygoogle || [];
+            
+            // Set up consent handling for AdSense
+            function handleAdsenseConsent() {
+              var adsenseConsent = localStorage.getItem('cookie-consent');
+              if (adsenseConsent === 'accepted') {
+                // User accepted personalized ads
+                window.adsbygoogle.requestNonPersonalizedAds = 0;
+              } else if (adsenseConsent === 'declined') {
+                // User declined personalized ads
+                window.adsbygoogle.requestNonPersonalizedAds = 1;
+              }
+            }
+            
+            // Handle initial consent
+            handleAdsenseConsent();
+            
+            // Listen for consent changes
+            window.addEventListener('storage', handleAdsenseConsent);
+          `}
+        </Script>
       </head>
       <body className={`${inter.className} antialiased`}>
         {/* Meta Pixel Code - noscript */}

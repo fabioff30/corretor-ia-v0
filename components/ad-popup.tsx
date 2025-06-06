@@ -12,10 +12,12 @@ export function AdPopup({ isOpen, onClose }: AdPopupProps) {
   // If the popup is open, track the view and display the banner
   if (isOpen) {
     // Register event for popup view
-    sendGTMEvent("popup_ad_viewed", {
-      ad_type: "supporter_banner",
-      source: "correction_form",
-    })
+    if (!localStorage.getItem("auto-popup")) {
+      sendGTMEvent("popup_ad_viewed", {
+        ad_type: "supporter_banner",
+        source: "correction_form",
+      })
+    }
 
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

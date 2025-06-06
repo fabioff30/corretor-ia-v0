@@ -13,29 +13,22 @@ export function AdController() {
 
   useEffect(() => {
     // Verificar inicialmente
-    const textCorrected = localStorage.getItem("text-corrected")
     const cookieConsent = localStorage.getItem("cookie-consent")
     const bannerClosed = localStorage.getItem("banner-closed")
 
-    // Só mostrar o banner se o texto foi corrigido, o usuário deu consentimento para cookies,
+    // Só mostrar o banner se o usuário deu consentimento para cookies,
     // o banner não foi fechado e não estamos na página de doação
-    if (textCorrected === "true" && cookieConsent === "accepted" && !bannerClosed && !shouldHideBasedOnPath) {
-      console.log("AdController: Mostrando banner após correção de texto")
+    if (cookieConsent === "accepted" && !bannerClosed && !shouldHideBasedOnPath) {
+      console.log("AdController: Mostrando banner apenas com consentimento de cookies")
       setShouldShowAd(true)
     }
 
     // Função para verificar mudanças no localStorage
     const checkStorage = () => {
-      const updatedTextCorrected = localStorage.getItem("text-corrected")
       const updatedCookieConsent = localStorage.getItem("cookie-consent")
       const updatedBannerClosed = localStorage.getItem("banner-closed")
 
-      if (
-        updatedTextCorrected === "true" &&
-        updatedCookieConsent === "accepted" &&
-        !updatedBannerClosed &&
-        !shouldHideBasedOnPath
-      ) {
+      if (updatedCookieConsent === "accepted" && !updatedBannerClosed && !shouldHideBasedOnPath) {
         console.log("AdController: Mostrando banner após evento de storage")
         setShouldShowAd(true)
       }
@@ -50,16 +43,10 @@ export function AdController() {
 
     // Adicionar listener para o evento personalizado
     const handleCustomEvent = () => {
-      const currentTextCorrected = localStorage.getItem("text-corrected")
       const currentCookieConsent = localStorage.getItem("cookie-consent")
       const currentBannerClosed = localStorage.getItem("banner-closed")
 
-      if (
-        currentTextCorrected === "true" &&
-        currentCookieConsent === "accepted" &&
-        !currentBannerClosed &&
-        !shouldHideBasedOnPath
-      ) {
+      if (currentCookieConsent === "accepted" && !currentBannerClosed && !shouldHideBasedOnPath) {
         console.log("AdController: Mostrando banner via evento personalizado")
         setShouldShowAd(true)
       }

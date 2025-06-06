@@ -16,7 +16,6 @@ import {
   Sparkles,
   Clock,
   Heart,
-  MessageSquare,
   FileText,
   Pencil,
   Wand2,
@@ -461,12 +460,14 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       // Modificar a parte onde definimos os flags após a correção bem-sucedida
       // Localizar a seção após setResult({...}) e antes do toast
 
-      // Marcar que o texto foi corrigido para exibir o widget de doação
+      // Anteriormente, aqui havia código para mostrar banners automáticos
+      // Removido para melhorar a experiência do usuário
+      // Mantemos apenas o registro de que o texto foi corrigido para fins de análise
       localStorage.setItem("text-corrected", "true")
-      // Limpar o flag "banner-closed" para permitir que o banner apareça novamente após uma nova correção
-      localStorage.removeItem("banner-closed")
-      // Definir um flag específico para mostrar o banner de anúncios
-      localStorage.setItem("show-ad-banner", "true")
+
+      // Não disparamos mais eventos para mostrar banners
+      // window.dispatchEvent(new Event("storage"))
+      // window.dispatchEvent(new CustomEvent("showAdBanner"))
 
       // Disparar eventos para notificar outras partes da aplicação
       window.dispatchEvent(new Event("storage"))
@@ -483,14 +484,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       // Mostrar o banner APENAS quando o texto for corrigido com sucesso
       // setShowAdPopup(true)
 
-      // Marcar que o texto foi corrigido para exibir o widget de doação
-      localStorage.setItem("text-corrected", "true")
-      // Limpar o flag "banner-closed" para permitir que o banner apareça novamente após uma nova correção
-      localStorage.removeItem("banner-closed")
-      // Definir um flag específico para mostrar o banner de anúncios
-      localStorage.setItem("show-ad-banner", "true")
-      // Disparar um evento para notificar outras partes da aplicação
-      window.dispatchEvent(new Event("storage"))
+      // Segundo bloco de código para banners removido
+      // localStorage.setItem("text-corrected", "true")
+      // localStorage.removeItem("banner-closed")
+      // localStorage.setItem("show-ad-banner", "true")
+      // window.dispatchEvent(new Event("storage"))
 
       // Enviar evento para o GTM
       sendGTMEvent(operationMode === "correct" ? "text_corrected" : "text_rewritten", {
@@ -758,14 +756,14 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
           <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-0.5 sm:p-1 rounded-lg">
             <TabsTrigger
               value="correct"
-              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
             >
               <FileText className="h-4 w-4 mr-2" />
               Corrigir Texto
             </TabsTrigger>
             <TabsTrigger
               value="rewrite"
-              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
             >
               <Pencil className="h-4 w-4 mr-2" />
               Reescrever Texto
@@ -909,20 +907,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               <TabsList className="grid w-full grid-cols-3 mb-4 md:mb-6 bg-muted/50 p-0.5 sm:p-1 rounded-lg text-xs sm:text-sm">
                 <TabsTrigger
                   value="corrected"
-                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
                 >
                   <span className="hidden sm:inline">Texto </span>
                   {operationMode === "correct" ? "Corrigido" : "Reescrito"}
                 </TabsTrigger>
                 <TabsTrigger
                   value="diff"
-                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
                 >
                   Comparação
                 </TabsTrigger>
                 <TabsTrigger
                   value="evaluation"
-                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
                 >
                   Avaliação
                 </TabsTrigger>
@@ -948,18 +946,39 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                       <Button
                         onClick={() => {
                           // Registrar evento no GTM
-                          sendGTMEvent("julinho_chat_click", {
+                          sendGTMEvent("julinho_whatsapp_click", {
                             source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
                             textLength: result.correctedText.length,
                           })
 
-                          // Redirecionar para a página do Julinho
-                          window.location.href = "/chat/julinho"
+                          // Preparar mensagem com o texto corrigido
+                          const whatsappNumber = "+5584999401840"
+                          const message = encodeURIComponent(
+                            "Olá Julinho! Tenho uma dúvida sobre este texto corrigido:\n\n" +
+                              result.correctedText.substring(0, 500) +
+                              (result.correctedText.length > 500 ? "..." : ""),
+                          )
+
+                          // Abrir WhatsApp
+                          window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank")
                         }}
                         size="sm"
-                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-yellow-500 hover:bg-yellow-600 text-white"
+                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
                       >
-                        <MessageSquare className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-2"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
                         Perguntar ao Julinho
                       </Button>
                     </div>

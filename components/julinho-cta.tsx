@@ -18,7 +18,6 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
 
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
-  const isDarkMode = false // Removed useTheme and hardcoded to false
   const [shouldRender, setShouldRender] = useState(true)
 
   useEffect(() => {
@@ -55,9 +54,9 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
   // Handle CTA click
   const handleClick = () => {
     // Track event in Google Analytics
-    sendGTMEvent("julinho_cta_click", {
+    sendGTMEvent("julinho_whatsapp_cta_click", {
       event_category: "Engagement",
-      event_label: "Julinho CTA Clicked",
+      event_label: "Julinho WhatsApp CTA Clicked",
     })
 
     // Mark as interacted
@@ -66,23 +65,7 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
     // Hide CTA
     setIsVisible(false)
 
-    // Check if on mobile and redirect if needed
-    const isMobile = window.innerWidth < 640
-    if (isMobile) {
-      // Get or create a session ID
-      const sessionId =
-        localStorage.getItem("julinho-session-id") ||
-        `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-      // Save the session ID
-      localStorage.setItem("julinho-session-id", sessionId)
-
-      // Redirect to the dedicated chat page
-      window.location.href = `/chat/julinho?session=${sessionId}`
-      return
-    }
-
-    // Open chat (desktop behavior)
+    // Open chat
     onOpenChat()
   }
 
@@ -123,9 +106,9 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
       >
         <div className={`rounded-lg shadow-lg overflow-hidden bg-white border border-gray-200`}>
           {/* Header */}
-          <div className="bg-yellow-400 p-3 flex items-center justify-between">
+          <div className="bg-green-500 p-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white relative">
                 <Image
                   src="/images/julinho-avatar.webp"
                   alt="Julinho"
@@ -133,33 +116,65 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
                   height={40}
                   className="w-full h-full object-cover"
                 />
+                <div className="absolute bottom-0 right-0 bg-green-600 rounded-full p-0.5 shadow-sm">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-white"
+                  >
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </div>
               </div>
               <div>
-                <h3 className="font-bold text-black">Julinho</h3>
-                <p className="text-xs text-gray-800">Tutor de Português</p>
+                <h3 className="font-bold text-white">Julinho no WhatsApp</h3>
+                <p className="text-xs text-white/90">Tutor de Português</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleDismiss}
-              className="h-6 w-6 rounded-full bg-yellow-500/20 hover:bg-yellow-500/40"
+              className="h-6 w-6 rounded-full bg-white/20 hover:bg-white/40 text-white"
             >
-              <X className="h-3 w-3 text-gray-800" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
 
           {/* Message */}
           <div className="p-4">
-            <div className="bg-yellow-50 rounded-lg p-3 mb-3 relative">
+            <div className="bg-green-50 rounded-lg p-3 mb-3 relative">
               <p className="text-sm text-gray-800">
-                Olá! Precisa de ajuda com português? Estou aqui para tirar suas dúvidas sobre gramática, ortografia e
-                muito mais!
+                Olá! Agora você pode tirar suas dúvidas de português diretamente pelo WhatsApp! Estou pronto para ajudar
+                com gramática, ortografia e muito mais!
               </p>
-              <div className="absolute -left-2 top-3 w-0 h-0 border-t-8 border-r-8 border-b-0 border-l-0 border-yellow-50 transform rotate-45"></div>
+              <div className="absolute -left-2 top-3 w-0 h-0 border-t-8 border-r-8 border-b-0 border-l-0 border-green-50 transform rotate-45"></div>
             </div>
 
-            <Button onClick={handleClick} className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-medium">
+            <Button
+              onClick={handleClick}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
               Conversar com o Julinho
             </Button>
           </div>
