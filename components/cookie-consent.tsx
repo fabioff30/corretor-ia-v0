@@ -40,6 +40,11 @@ export function CookieConsent() {
       window.fbq("init", "698603379497206")
       window.fbq("track", "PageView")
     }
+
+    // Ativar o Hotjar se o usuário aceitou cookies
+    if (window.hj && typeof window.hj === "function") {
+      window.hj("consent", "granted")
+    }
   }
 
   const declineCookies = () => {
@@ -54,6 +59,13 @@ export function CookieConsent() {
     // Configurar o Google Tag Manager para respeitar a recusa
     if (window.dataLayer) {
       window.dataLayer.push({ event: "cookie_consent_declined" })
+    }
+
+    // Desativar o Hotjar se o usuário recusou cookies
+    if (window.hj && typeof window.hj === "function") {
+      window.hj("consent", "denied")
+      window._hjSettings = null
+      window.hj = null
     }
   }
 
@@ -77,8 +89,9 @@ export function CookieConsent() {
               <div>
                 <h3 className="font-medium text-foreground mb-1">Este site utiliza cookies</h3>
                 <p className="text-sm text-muted-foreground">
-                  Utilizamos cookies para melhorar sua experiência, personalizar conteúdo e analisar o tráfego. Ao
-                  clicar em "Aceitar", você concorda com o uso de cookies conforme descrito em nossa{" "}
+                  Utilizamos cookies para melhorar sua experiência, personalizar conteúdo, analisar o tráfego e coletar
+                  dados de comportamento com Hotjar. Ao clicar em "Aceitar", você concorda com o uso de cookies conforme
+                  descrito em nossa{" "}
                   <Link href="/cookies" className="text-primary hover:underline">
                     Política de Cookies
                   </Link>{" "}
