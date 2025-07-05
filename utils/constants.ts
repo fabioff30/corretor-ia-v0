@@ -15,9 +15,12 @@ export const GOOGLE_ADSENSE_CLIENT = "ca-pub-9690140831352761"
 export const GTM_ID = "GTM-5ZNJ85CP"
 
 // API endpoints
-export const WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/lh-corretoria/b2b76baf-b9ea-4bef-9f7c-556322a9042f"
+export const WEBHOOK_URL = "https://my-corretoria.vercel.app/api/corrigir"
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 export const FETCH_TIMEOUT = 55000 // 55 seconds
+
+// Authentication
+export const AUTH_TOKEN = process.env.AUTH_TOKEN || ""
 
 // Julinho status
 export const JULINHO_DISABLED = false // Reativando o Julinho

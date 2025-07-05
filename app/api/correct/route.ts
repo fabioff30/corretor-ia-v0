@@ -4,11 +4,11 @@ import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
 // Atualizar a constante WEBHOOK_URL para o novo endpoint
 // Certifique-se de que a URL está exatamente como fornecida
-const WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/lh-corretoria/b2b76baf-b9ea-4bef-9f7c-556322a9042f"
+const WEBHOOK_URL = "https://my-corretoria.vercel.app/api/corrigir"
 
 // Adicionar um fallback para o webhook original caso o novo falhe
 const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
-import { FETCH_TIMEOUT } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
 
 // Função para fazer fetch com timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -104,12 +104,12 @@ export async function POST(request: NextRequest) {
       const webhookUrl =
         tone === "Padrão"
           ? "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
-          : "https://auto.ffmedia.com.br/webhook/lh-corretoria/b2b76baf-b9ea-4bef-9f7c-556322a9042f"
+          : "https://my-corretoria.vercel.app/api/corrigir"
 
       console.log(`API: Usando webhook: ${webhookUrl}`, requestId)
 
       // Preparar o corpo da requisição
-      const requestBody = {
+      const requestBody: any = {
         text: text,
         source: isMobile ? "mobile" : "desktop",
       }
@@ -117,6 +117,12 @@ export async function POST(request: NextRequest) {
       // Adicionar o tom apenas se não for "Padrão"
       if (tone !== "Padrão") {
         requestBody.tone = tone
+      }
+
+      // Adicionar authToken apenas para o webhook principal de correção (novo webhook)
+      if (webhookUrl === "https://my-corretoria.vercel.app/api/corrigir" && AUTH_TOKEN) {
+        requestBody.authToken = AUTH_TOKEN
+        console.log("API: Adicionando authToken à requisição", requestId)
       }
 
       response = await fetchWithTimeout(
@@ -140,7 +146,7 @@ export async function POST(request: NextRequest) {
       const fallbackUrl = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
-      // No fallback, não enviamos o parâmetro de tom para manter compatibilidade
+      // No fallback, não enviamos o parâmetro de tom nem authToken para manter compatibilidade
       response = await fetchWithTimeout(
         fallbackUrl,
         {
