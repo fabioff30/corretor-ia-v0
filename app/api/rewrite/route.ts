@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
+import { FETCH_TIMEOUT } from "@/utils/constants"
 
 // URL do webhook para reescrita
 const REWRITE_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/reescrever/c5d85e34-988a-4be8-bcae-e79451476f7e"
@@ -138,15 +138,9 @@ export async function POST(request: NextRequest) {
         text: text,
         style: rewriteStyle, // Usar o estilo extraído diretamente do corpo da requisição
         source: isMobile ? "mobile" : "desktop",
-        // Sempre incluir authToken quando disponível
-        ...(AUTH_TOKEN && { authToken: AUTH_TOKEN }),
       }
 
-      console.log(
-        `API: Corpo da requisição para o webhook:`,
-        JSON.stringify({ ...requestBody, authToken: requestBody.authToken ? "[REDACTED]" : undefined }),
-        requestId,
-      )
+      console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
       const response = await fetchWithTimeout(
         REWRITE_WEBHOOK_URL,
