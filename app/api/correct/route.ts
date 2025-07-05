@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
         requestBody.tone = tone
       }
 
-      // Adicionar authToken apenas para o webhook principal de correção (novo webhook)
-      if (webhookUrl === "https://my-corretoria.vercel.app/api/corrigir" && AUTH_TOKEN) {
+      // Sempre adicionar authToken quando disponível, independente do webhook
+      if (AUTH_TOKEN) {
         requestBody.authToken = AUTH_TOKEN
         console.log("API: Adicionando authToken à requisição", requestId)
       }
@@ -146,7 +146,18 @@ export async function POST(request: NextRequest) {
       const fallbackUrl = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
-      // No fallback, não enviamos o parâmetro de tom nem authToken para manter compatibilidade
+      // No fallback, também enviamos authToken se disponível
+      const fallbackRequestBody: any = {
+        text: text,
+        source: isMobile ? "mobile" : "desktop",
+      }
+
+      // Adicionar authToken se disponível
+      if (AUTH_TOKEN) {
+        fallbackRequestBody.authToken = AUTH_TOKEN
+        console.log("API: Adicionando authToken à requisição de fallback", requestId)
+      }
+
       response = await fetchWithTimeout(
         fallbackUrl,
         {
@@ -155,10 +166,7 @@ export async function POST(request: NextRequest) {
             "Content-Type": "application/json; charset=utf-8",
             "X-Request-ID": requestId,
           },
-          body: JSON.stringify({
-            text: text,
-            source: isMobile ? "mobile" : "desktop",
-          }),
+          body: JSON.stringify(fallbackRequestBody),
         },
         FETCH_TIMEOUT,
       )
