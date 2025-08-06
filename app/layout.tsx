@@ -1,7 +1,7 @@
 import type React from "react"
 import "@/app/globals.css"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -150,6 +150,40 @@ export default function RootLayout({
             
             // Escutar mudanças no consentimento
             window.addEventListener('storage', initializeHotjar);
+          `}
+        </Script>
+
+        {/* CleverWebServer Script */}
+        <Script id="clever-webserver" strategy="afterInteractive">
+          {`
+            // Verificar consentimento de cookies antes de inicializar o CleverWebServer
+            function initializeCleverWebServer() {
+              var cleverConsent = localStorage.getItem('cookie-consent');
+              if (cleverConsent === 'accepted') {
+                (function (document, window) {
+                  var a, c = document.createElement("script"), f = window.frameElement;
+                  c.id = "CleverCoreLoader94925";
+                  c.src = "https://scripts.cleverwebserver.com/5e874cbae3c8b61578de0cb6869547be.js";
+                  c.async = true;
+                  c.type = "text/javascript";
+                  c.setAttribute("data-target", window.name || (f && f.getAttribute("id")));
+                  c.setAttribute("data-cfasync", "false");
+                  try {
+                    a = parent.document.getElementsByTagName("script")[0] || document.getElementsByTagName("script")[0];
+                  } catch (e) {
+                    a = false;
+                  }
+                  a || (a = document.getElementsByTagName("head")[0] || document.getElementsByTagName("body")[0]);
+                  a.parentNode.insertBefore(c, a);
+                })(document, window);
+              }
+            }
+            
+            // Inicializar se já houver consentimento
+            initializeCleverWebServer();
+            
+            // Escutar mudanças no consentimento
+            window.addEventListener('storage', initializeCleverWebServer);
           `}
         </Script>
 
