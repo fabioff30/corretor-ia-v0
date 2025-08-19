@@ -77,9 +77,9 @@ export function validateEnvVars(): EnvConfig {
       .map(([key]) => key)
     
     if (missing.length > 0) {
+      // Throwing here will be handled by callers; avoid process.exit on Edge.
       throw new Error(
-        `Critical environment variables missing or using insecure defaults in production: ${missing.join(', ')}\n` +
-        'Please configure these variables with secure values.'
+        `Critical environment variables missing or using insecure defaults in production: ${missing.join(', ')}`
       )
     }
   }
@@ -162,15 +162,5 @@ export function isDevelopment(): boolean {
   return true // Default to development on client
 }
 
-// Validate environment on module load (server-side only)
-if (typeof process !== 'undefined') {
-  try {
-    getEnvConfig()
-  } catch (error) {
-    const err = error as Error
-    console.error('❌ Environment validation failed:', err.message)
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1)
-    }
-  }
-}
+// Note: Do not auto-validate on module load during build/Edge runtime.
+// Call validateEnvVars()/getEnvConfig() from server entrypoints as needed.

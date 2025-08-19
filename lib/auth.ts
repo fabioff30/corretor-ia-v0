@@ -5,12 +5,11 @@
 
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-import { getEnvConfig } from '@/utils/env-validation'
-
 // Configuration
-const JWT_SECRET = new TextEncoder().encode(
-  getEnvConfig().AUTH_TOKEN || 'fallback-key-for-development-only'
-)
+function getJwtSecret(): Uint8Array {
+  const key = process.env.AUTH_TOKEN || 'fallback-key-for-development-only'
+  return new TextEncoder().encode(key)
+}
 const COOKIE_NAME = 'admin_session'
 const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 
@@ -36,7 +35,7 @@ export async function createAdminToken(adminId: string = 'admin'): Promise<strin
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
-    .sign(JWT_SECRET)
+    .sign(getJwtSecret())
 
   return token
 }
@@ -46,7 +45,7 @@ export async function createAdminToken(adminId: string = 'admin'): Promise<strin
  */
 export async function verifyAdminToken(token: string): Promise<AdminUser | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     
     const user = payload as AdminUser
     
@@ -116,18 +115,13 @@ export function clearAdminSession() {
  * Validate admin password (server-side only)
  */
 export function validateAdminPassword(password: string): boolean {
-  const envConfig = getEnvConfig()
-  
-  // In development, we'll use a simple password check
-  // In production, this should use proper hashing
+  // In development, allow NEXT_PUBLIC_ADMIN_PASSWORD (local-only convenience)
   if (process.env.NODE_ENV === 'development') {
-    return password === (envConfig.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123')
+    return password === (process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123')
   }
-  
-  // In production, we should use bcrypt or similar
-  // For now, we'll use the environment variable
-  const adminPassword = process.env.ADMIN_PASSWORD || envConfig.NEXT_PUBLIC_ADMIN_PASSWORD
-  return password === adminPassword
+  // In production, prefer ADMIN_PASSWORD
+  const adminPassword = process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+  return !!adminPassword && password === adminPassword
 }
 
 /**
