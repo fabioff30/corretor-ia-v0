@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -23,16 +23,16 @@ export function AdminRefreshButton({
 }: AdminRefreshButtonProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
-  const { isAdmin, isLoading } = useAdminAuth()
+  const { isAuthenticated, isLoading } = useAdminAuth()
   const router = useRouter()
   const [renderButton, setRenderButton] = useState(false)
 
   // Determine whether to render the button based on admin status and loading state
-  useState(() => {
-    if (isAdmin !== undefined && !isLoading) {
-      setRenderButton(isAdmin)
+  useEffect(() => {
+    if (!isLoading) {
+      setRenderButton(!!isAuthenticated)
     }
-  }, [isAdmin, isLoading])
+  }, [isAuthenticated, isLoading])
 
   // Se não for admin ou ainda estiver carregando, não renderiza o botão
   if (!renderButton) return null

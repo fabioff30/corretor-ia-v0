@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { createSafeHtml } from "@/utils/html-sanitizer"
 
 interface RelatedPost {
   title: string
@@ -26,7 +27,7 @@ export function RelatedPosts({ posts, currentSlug }: RelatedPostsProps) {
             <Link href={`/blog/${post.slug}`} className="block">
               <h4
                 className="font-medium mb-2 hover:text-primary transition-colors"
-                dangerouslySetInnerHTML={{ __html: post.title }}
+                dangerouslySetInnerHTML={createSafeHtml(post.title, 'STRICT')}
               />
               <p className="text-primary text-sm mt-2">Ler mais →</p>
             </Link>

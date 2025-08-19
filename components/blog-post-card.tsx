@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { CalendarIcon, Clock } from "lucide-react"
 import { type WPPost, formatWpDate, calculateReadingTime } from "@/utils/wordpress-api"
+import { createSafeHtml } from "@/utils/html-sanitizer"
 
 interface BlogPostCardProps {
   post: WPPost
@@ -35,10 +36,10 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
         <Link href={`/blog/${post.slug}`} className="block">
           <h2
             className="text-2xl font-bold mb-2 hover:text-primary transition-colors"
-            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+            dangerouslySetInnerHTML={createSafeHtml(post.title.rendered, 'STRICT')}
           />
         </Link>
-        <div className="text-foreground/80 mb-4" dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }} />
+        <div className="text-foreground/80 mb-4" dangerouslySetInnerHTML={createSafeHtml(post.excerpt.rendered, 'BLOG')} />
       </CardContent>
       <CardFooter className="border-t pt-4 text-sm text-foreground/60 flex flex-wrap items-center gap-4">
         <div className="flex items-center">

@@ -139,7 +139,8 @@ export async function POST(request: NextRequest) {
       )
       console.log(`API: Resposta recebida do webhook com status ${response.status}`, requestId)
     } catch (webhookError) {
-      console.error(`API: Erro ao acessar o webhook: ${webhookError.message}`, requestId)
+      const we = webhookError as Error
+      console.error(`API: Erro ao acessar o webhook: ${we.message}`, requestId)
       console.log("API: Tentando webhook de fallback", requestId)
 
       // Se falhar, tentar o webhook de fallback (sempre o webhook original)
@@ -231,7 +232,7 @@ export async function POST(request: NextRequest) {
         console.log("API: Tentando encontrar campos necessários em qualquer lugar da resposta", requestId)
 
         // Função para buscar recursivamente os campos necessários
-        const findFields = (obj) => {
+        const findFields = (obj: any): any => {
           if (!obj || typeof obj !== "object") return null
 
           // Verificar se o objeto atual tem os campos necessários
@@ -309,11 +310,12 @@ export async function POST(request: NextRequest) {
       // Retornar a resposta para o cliente
       return NextResponse.json(processedData)
     } catch (processingError) {
-      console.error("API: Erro ao processar dados da resposta:", processingError, requestId)
+      const pe = processingError as Error
+      console.error("API: Erro ao processar dados da resposta:", pe, requestId)
 
       logError(requestId, {
         status: 500,
-        message: `Processing error: ${processingError.message}`,
+        message: `Processing error: ${pe.message}`,
         ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
       })
 
@@ -328,13 +330,14 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    console.error("API: Erro ao processar a correção:", error, requestId)
+    const err = error as Error
+    console.error("API: Erro ao processar a correção:", err, requestId)
 
     // Enhanced error logging with more details
     logError(requestId, {
-      status: error.name === "AbortError" ? 504 : 500,
-      message: error.message || "Unknown error",
-      stack: error.stack,
+      status: err.name === "AbortError" ? 504 : 500,
+      message: err.message || "Unknown error",
+      stack: err.stack,
       ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
     })
 
@@ -351,7 +354,7 @@ export async function POST(request: NextRequest) {
       console.error("API: Erro ao criar resposta de fallback para erro geral:", fallbackError, requestId)
 
       // If all else fails, return a specific error based on the error type
-      if (error.name === "AbortError") {
+      if (err.name === "AbortError") {
         return NextResponse.json(
           {
             error: "Tempo limite excedido",
@@ -361,7 +364,7 @@ export async function POST(request: NextRequest) {
           },
           { status: 504 },
         )
-      } else if (error.name === "SyntaxError") {
+      } else if (err.name === "SyntaxError") {
         return NextResponse.json(
           {
             error: "Erro de formato",
@@ -374,7 +377,7 @@ export async function POST(request: NextRequest) {
         // Default error response
         return NextResponse.json(
           {
-            error: error instanceof Error ? error.message : "Erro desconhecido",
+            error: err instanceof Error ? err.message : "Erro desconhecido",
             message:
               "Erro ao processar o texto. Por favor, verifique se o texto contém apenas caracteres válidos e tente novamente.",
             code: "GENERAL_ERROR",

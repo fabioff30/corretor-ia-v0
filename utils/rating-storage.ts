@@ -1,21 +1,7 @@
-import { Redis } from "@upstash/redis"
+import { getRedisClient, testRedisConnection } from "./redis-client"
 
 // Chave para armazenar as avaliações detalhadas no Redis
 const RATINGS_DETAILED_KEY = "correction:ratings_detailed"
-
-// Inicializar o cliente Redis
-let redis: Redis | null = null
-
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  }
-} catch (error) {
-  console.error("Erro ao conectar ao Redis:", error)
-}
 
 /**
  * Interface para os dados de avaliação
@@ -35,6 +21,8 @@ export interface RatingData {
  * Armazena uma avaliação detalhada no banco de dados
  */
 export async function storeRatingDetails(data: Omit<RatingData, "id">): Promise<string | null> {
+  const redis = getRedisClient()
+  
   if (!redis) {
     console.warn("Redis não configurado. Não foi possível armazenar a avaliação.")
     return null
@@ -71,6 +59,8 @@ export async function storeRatingDetails(data: Omit<RatingData, "id">): Promise<
  * @param offset Índice a partir do qual começar a retornar avaliações
  */
 export async function getRatingDetails(limit = 50, offset = 0): Promise<RatingData[]> {
+  const redis = getRedisClient()
+  
   if (!redis) {
     console.warn("Redis não configurado. Não foi possível obter as avaliações.")
     return []
@@ -93,6 +83,8 @@ export async function getRatingDetails(limit = 50, offset = 0): Promise<RatingDa
  * Obtém uma avaliação específica pelo ID
  */
 export async function getRatingById(id: string): Promise<RatingData | null> {
+  const redis = getRedisClient()
+  
   if (!redis) {
     console.warn("Redis não configurado. Não foi possível obter a avaliação.")
     return null

@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { getEnvConfig } from "@/utils/env-validation"
 
-// Secret token for authorization
-const REVALIDATION_TOKEN = process.env.REVALIDATION_TOKEN || "default-secure-token-change-this"
+// Use secure revalidation token
+const envConfig = getEnvConfig()
+const REVALIDATION_TOKEN = envConfig.REVALIDATION_TOKEN
 
 export async function POST(request: NextRequest) {
   try {

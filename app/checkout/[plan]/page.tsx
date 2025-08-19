@@ -48,7 +48,8 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     },
   }
 
-  const plan = planDetails[params.plan] || planDetails["premium-mensal"]
+  const planKey = (params.plan in planDetails ? params.plan : "premium-mensal") as keyof typeof planDetails
+  const plan = planDetails[planKey]
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -102,7 +103,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                     </span>
                   </div>
 
-                  {plan.discount && (
+                  {'discount' in plan && plan.discount && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Desconto</span>
                       <span className="font-medium">{plan.discount}</span>

@@ -36,13 +36,7 @@ import Link from "next/link"
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 
-// Adicionar declaração de tipo para window.gtag
-declare global {
-  interface Window {
-    gtag?: (command: string, action: string, params: any) => void
-    dataLayer?: any[]
-  }
-}
+// Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
   onTextCorrected?: () => void
@@ -535,24 +529,25 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         onTextCorrected()
       }
     } catch (error) {
+      const err = error as Error
       // Limpar o timeout se ocorrer um erro
       clearTimeout(timeoutId)
       setRequestTimer(null)
 
-      console.error(`Cliente: Erro ao processar o texto:`, error)
+      console.error(`Cliente: Erro ao processar o texto:`, err)
 
       // Mensagem de erro específica para AbortError (timeout do fetch)
-      if (error.name === "AbortError") {
+      if (err.name === "AbortError") {
         setError(
           "O servidor demorou muito para responder. Por favor, tente novamente com um texto menor ou mais tarde.",
         )
-      } else if (error.message && error.message.includes("404")) {
+      } else if (err.message && err.message.includes("404")) {
         // Erro específico para webhook não encontrado
         setError(
           "O serviço está temporariamente indisponível. Estamos trabalhando para resolver o problema. Por favor, tente novamente mais tarde.",
         )
       } else {
-        setError(`Erro ao processar o texto: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+        setError(`Erro ao processar o texto: ${err instanceof Error ? err.message : "Erro desconhecido"}`)
       }
 
       // Garantir que o banner não seja exibido em caso de erro
@@ -561,8 +556,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       toast({
         title: operationMode === "correct" ? "Erro ao corrigir texto" : "Erro ao reescrever texto",
         description:
-          error instanceof Error
-            ? error.message
+          err instanceof Error
+            ? err.message
             : "Não foi possível processar a solicitação. Por favor, tente novamente.",
         variant: "destructive",
       })

@@ -8,6 +8,7 @@ import { InlineAd } from "@/components/inline-ad"
 import { type WPPost, formatWpDate, calculateReadingTime, getRelatedPosts } from "@/utils/wordpress-api"
 import { Suspense } from "react"
 import { SupportButton } from "@/components/support-button"
+import { createSafeHtml } from "@/utils/html-sanitizer"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
 
 interface BlogPostContentProps {
@@ -50,7 +51,7 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
 
           <h1
             className="text-3xl md:text-4xl font-bold mb-4"
-            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+            dangerouslySetInnerHTML={createSafeHtml(post.title.rendered, 'STRICT')}
           />
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-foreground/70 mb-6">
@@ -108,7 +109,7 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
           <div>
             <div
               className="prose prose-lg max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: processedContent }}
+              dangerouslySetInnerHTML={createSafeHtml(processedContent, 'BLOG')}
             />
 
             <InlineAd className="my-8" />

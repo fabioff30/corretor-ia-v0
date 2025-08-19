@@ -1,23 +1,22 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { getCanonicalUrl } from "@/utils/canonical-url"
 
 export function canonicalMiddleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const response = NextResponse.next()
 
-  // Base canonical domain
-  const canonicalDomain = "https://www.corretordetextoonline.com.br"
-
   // Build the canonical path with query parameters if needed
   let canonicalPath = url.pathname
 
-  // Add search params for paginated pages or other query parameters that should be preserved
+  // Create search params object if they exist
+  let searchParams: Record<string, string> | undefined
   if (url.search) {
-    canonicalPath += url.search
+    searchParams = Object.fromEntries(url.searchParams.entries())
   }
 
-  // Construct the full canonical URL
-  const canonicalUrl = `${canonicalDomain}${canonicalPath}`
+  // Generate canonical URL using the utility
+  const canonicalUrl = getCanonicalUrl(canonicalPath, searchParams)
 
   // Add the canonical URL as a Link header
   response.headers.set("Link", `<${canonicalUrl}>; rel="canonical"`)

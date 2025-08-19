@@ -8,7 +8,11 @@ import fetch from "node-fetch"
 async function updateSitemap() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.corretordetextoonline.com.br"
-    const revalidationToken = process.env.REVALIDATION_TOKEN || "default-secure-token-change-this"
+    const revalidationToken = process.env.REVALIDATION_TOKEN
+    
+    if (!revalidationToken) {
+      throw new Error("REVALIDATION_TOKEN is required")
+    }
 
     console.log("Updating sitemap...")
 

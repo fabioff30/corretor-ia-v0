@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { getEnvConfig } from "@/utils/env-validation"
 
-// Secret token para autorização
-const REVALIDATION_TOKEN = process.env.REVALIDATION_TOKEN || "default-secure-token-change-this"
+// Use secure revalidation token
+const envConfig = getEnvConfig()
+const REVALIDATION_TOKEN = envConfig.REVALIDATION_TOKEN
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +15,8 @@ export async function POST(request: NextRequest) {
     // (WordPress enviará seu próprio token de segurança)
     const isWordPressWebhook = request.headers.get("x-wp-webhook") === "true"
 
-    // Adicione esta verificação na função POST
-    const webhookSecret = process.env.WEBHOOK_SECRET || "seu-segredo-compartilhado"
+    // Use secure webhook secret
+    const webhookSecret = envConfig.WEBHOOK_SECRET
     const receivedSecret = request.headers.get("x-webhook-secret")
 
     if (isWordPressWebhook && receivedSecret !== webhookSecret) {

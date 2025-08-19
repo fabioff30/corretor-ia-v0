@@ -8,7 +8,7 @@ import * as React from "react"
 
 export function Toaster() {
   const { toasts, dismiss } = useToast()
-  const toastRefs = React.useRef<Map<string, HTMLDivElement>>(new Map())
+  const toastRefs = React.useRef<Map<string, HTMLElement>>(new Map())
 
   // Adicionar efeito para detectar cliques fora do toast
   React.useEffect(() => {
@@ -33,7 +33,7 @@ export function Toaster() {
           key={id}
           {...props}
           ref={(el) => {
-            if (el) toastRefs.current.set(id, el)
+            if (el) toastRefs.current.set(id, el as unknown as HTMLElement)
             else toastRefs.current.delete(id)
           }}
         >
@@ -46,7 +46,6 @@ export function Toaster() {
         </Toast>
       ))}
       <ToastPrimitives.Viewport
-        ref={React.useRef()}
         className={cn(
           "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:top-0 sm:right-0 sm:flex-col md:max-w-[420px]",
         )}

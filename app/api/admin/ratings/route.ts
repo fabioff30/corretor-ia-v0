@@ -1,17 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getRatingDetails } from "@/utils/rating-storage"
+import { protectedAdminApiHandler } from "@/middleware/admin-auth"
 
-// Chave de API para proteger o endpoint (deve ser configurada como variável de ambiente)
-const API_KEY = process.env.ADMIN_API_KEY || ""
-
-export async function GET(request: NextRequest) {
-  // Verificar a chave de API
-  const authHeader = request.headers.get("authorization")
-  const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null
-
-  if (!API_KEY || !apiKey || apiKey !== API_KEY) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-  }
+// Protected admin endpoint using secure session-based auth
+const handler = protectedAdminApiHandler(async (request: NextRequest, session) => {
 
   try {
     // Obter parâmetros de paginação da query string
@@ -41,4 +33,7 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     )
   }
-}
+})
+
+// Export the protected handler as GET
+export const GET = handler

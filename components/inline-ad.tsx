@@ -15,7 +15,7 @@ interface InlineAdProps {
 
 export function InlineAd({ adSlot, className = "", format = "auto", useAdsense = false }: InlineAdProps) {
   const [hasConsent, setHasConsent] = useState(false)
-  const adRef = useRef<HTMLElement>(null)
+  const adRef = useRef<HTMLModElement>(null)
   const initRef = useRef(false)
 
   // Verificar consentimento de cookies

@@ -154,11 +154,12 @@ export async function POST(req: Request) {
       })
     }
   } catch (error) {
-    console.error("Erro na API Julinho:", error)
+    const err = error as Error
+    console.error("Erro na API Julinho:", err)
     return NextResponse.json(
       {
         error: "Erro ao processar a solicitação",
-        message: error.message,
+        message: err.message,
       },
       { status: 500 },
     )

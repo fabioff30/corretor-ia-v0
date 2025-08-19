@@ -1,55 +1,317 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { logSecurityEvent } from "@/utils/logger"
+import { containsDangerousContent } from "@/utils/html-sanitizer"
 
-// Atualizar o esquema de validação para incluir o tom
+/**
+ * Enhanced Input Validation with Security Focus
+ * Comprehensive validation and sanitization for all user inputs
+ */
+
+// Comprehensive suspicious patterns for security
+const SECURITY_PATTERNS = [
+  // Script injection attempts
+  /<script[^>]*>/i,
+  /<\/script>/i,
+  /javascript:/i,
+  /vbscript:/i,
+  /data:[^,]*script/i,
+  
+  // Event handlers
+  /on\w+\s*=/i,
+  /onerror\s*=/i,
+  /onload\s*=/i,
+  /onclick\s*=/i,
+  /onmouseover\s*=/i,
+  
+  // JavaScript functions
+  /eval\s*\(/i,
+  /function\s*\(/i,
+  /setTimeout\s*\(/i,
+  /setInterval\s*\(/i,
+  /alert\s*\(/i,
+  /confirm\s*\(/i,
+  /prompt\s*\(/i,
+  
+  // DOM manipulation
+  /document\./i,
+  /window\./i,
+  /\.innerHTML/i,
+  /\.outerHTML/i,
+  /createElement/i,
+  
+  // Storage access
+  /localStorage/i,
+  /sessionStorage/i,
+  /document\.cookie/i,
+  
+  // Network requests
+  /fetch\s*\(/i,
+  /XMLHttpRequest/i,
+  /\.ajax/i,
+  
+  // Iframe and object tags
+  /<iframe[^>]*>/i,
+  /<object[^>]*>/i,
+  /<embed[^>]*>/i,
+  /<link[^>]*>/i,
+  /<meta[^>]*>/i,
+  
+  // CSS injection
+  /expression\s*\(/i,
+  /url\s*\(/i,
+  /@import/i,
+  
+  // SQL injection patterns
+  /union\s+select/i,
+  /drop\s+table/i,
+  /insert\s+into/i,
+  /delete\s+from/i,
+  /update\s+set/i,
+  
+  // Command injection
+  /\|\s*\w+/,
+  /;\s*\w+/,
+  /&&\s*\w+/,
+  /\$\(/,
+  /`[^`]*`/,
+  
+  // Path traversal
+  /\.\.\//,
+  /\.\.[\\\/]/,
+  
+  // Encoding bypasses
+  /&#x/i,
+  /&#\d/,
+  /%3c/i,
+  /%3e/i,
+  /%22/i,
+  /%27/i,
+]
+
+// Allowed tones for tone adjustment
+const ALLOWED_TONES = [
+  'Padrão',
+  'Formal',
+  'Informal',
+  'Técnico',
+  'Criativo',
+  'Persuasivo',
+  'Objetivo'
+]
+
+// Base text validation schema
+const baseTextValidation = z
+  .string()
+  .min(1, "O texto não pode estar vazio")
+  .max(5000, "O texto não pode exceder 5000 caracteres")
+  .refine((text) => {
+    // Check for dangerous content using the HTML sanitizer utility
+    return !containsDangerousContent(text)
+  }, "O texto contém conteúdo potencialmente perigoso")
+  .refine((text) => {
+    // Additional security pattern check
+    return !SECURITY_PATTERNS.some((pattern) => pattern.test(text))
+  }, "O texto contém padrões não permitidos")
+  .refine((text) => {
+    // Check for excessive repetition (potential spam)
+    const words = text.split(/\s+/)
+    if (words.length > 10) {
+      const uniqueWords = new Set(words.map(w => w.toLowerCase()))
+      const repetitionRatio = uniqueWords.size / words.length
+      return repetitionRatio > 0.3 // At least 30% unique words
+    }
+    return true
+  }, "O texto contém repetição excessiva")
+  .refine((text) => {
+    // Check for control characters and non-printable characters
+    // Allow common whitespace and line breaks
+    const allowedControlChars = /[\n\r\t]/g
+    const cleanText = text.replace(allowedControlChars, '')
+    return !/[\x00-\x1F\x7F-\x9F]/.test(cleanText)
+  }, "O texto contém caracteres não permitidos")
+
+// Main correction request schema
 const correctionRequestSchema = z.object({
-  text: z
-    .string()
-    .min(1, "O texto não pode estar vazio")
-    .max(5000, "O texto não pode exceder 5000 caracteres")
-    .refine((text) => {
-      // Verificar se o texto contém conteúdo suspeito
-      const suspiciousPatterns = [
-        /<script>/i,
-        /javascript:/i,
-        /onerror=/i,
-        /onload=/i,
-        /eval\(/i,
-        /document\.cookie/i,
-        /fetch\(/i,
-        /localStorage/i,
-        /sessionStorage/i,
-      ]
-
-      return !suspiciousPatterns.some((pattern) => pattern.test(text))
-    }, "O texto contém conteúdo não permitido"),
-  isMobile: z.boolean().optional(),
-  tone: z.string().optional(),
+  text: baseTextValidation,
+  isMobile: z.boolean().optional().default(false),
+  tone: z.string()
+    .optional()
+    .refine((tone) => {
+      if (!tone) return true
+      return ALLOWED_TONES.includes(tone)
+    }, `Tom deve ser um dos seguintes: ${ALLOWED_TONES.join(', ')}`)
+    .default('Padrão'),
 })
 
-export async function validateInput(req: NextRequest) {
+// Rewrite request schema
+const rewriteRequestSchema = z.object({
+  text: baseTextValidation,
+  style: z.string()
+    .min(1, "Estilo não pode estar vazio")
+    .max(100, "Estilo muito longo")
+    .refine((style) => {
+      // Basic validation for style parameter
+      return !SECURITY_PATTERNS.some((pattern) => pattern.test(style))
+    }, "Estilo contém conteúdo não permitido"),
+  isMobile: z.boolean().optional().default(false),
+})
+
+// Contact form schema
+const contactFormSchema = z.object({
+  name: z.string()
+    .min(1, "Nome é obrigatório")
+    .max(100, "Nome muito longo")
+    .refine((name) => /^[a-zA-ZÀ-ÿ\s\-']+$/.test(name), "Nome contém caracteres inválidos"),
+  email: z.string()
+    .email("Email inválido")
+    .max(254, "Email muito longo"), // RFC 5321 limit
+  message: z.string()
+    .min(10, "Mensagem muito curta")
+    .max(1000, "Mensagem muito longa")
+    .refine((message) => {
+      return !SECURITY_PATTERNS.some((pattern) => pattern.test(message))
+    }, "Mensagem contém conteúdo não permitido"),
+})
+
+/**
+ * Enhanced input validation with security logging
+ */
+export async function validateInput(req: NextRequest | Request) {
+  const requestId = crypto.randomUUID()
+  const ip = (req as any).ip || (req as Request).headers.get("x-forwarded-for") || "unknown"
+  const userAgent = (req as Request).headers.get("user-agent") || "unknown"
+  
   try {
-    const body = await req.json()
-    const result = correctionRequestSchema.safeParse(body)
+    const body = await (req as Request).json()
+    
+    // Determine which schema to use based on the request
+    let schema: any = correctionRequestSchema
+    const pathname = (req as any).nextUrl?.pathname ?? new URL((req as Request).url).pathname
+    
+    if (pathname.includes('/rewrite')) {
+      schema = rewriteRequestSchema
+    } else if (pathname.includes('/contact')) {
+      schema = contactFormSchema
+    }
+    
+    const result = schema.safeParse(body)
 
     if (!result.success) {
+      // Log validation failure
+      logSecurityEvent('Input validation failed', {
+        requestId,
+        ip,
+        userAgent,
+        endpoint: pathname,
+        errors: result.error.errors.map((e: any) => e.message)
+      })
+      
       return NextResponse.json(
         {
           error: "Erro de validação",
-          message: result.error.errors.map((e) => e.message).join(", "),
+          message: result.error.errors.map((e: any) => e.message).join(", "),
         },
         { status: 400 },
       )
     }
 
-    return result.data
+    // Additional runtime security checks
+    const validatedData = result.data
+    
+    // Check if text contains potential security threats
+    if ('text' in validatedData && typeof validatedData.text === 'string') {
+      // Log if suspicious patterns were detected but passed initial validation
+      const suspiciousPatterns = SECURITY_PATTERNS.filter(pattern => 
+        pattern.test(validatedData.text)
+      )
+      
+      if (suspiciousPatterns.length > 0) {
+        logSecurityEvent('Suspicious content detected', {
+          requestId,
+          ip,
+          userAgent,
+          endpoint: pathname,
+          patterns: suspiciousPatterns.length,
+          textLength: validatedData.text.length
+        })
+        
+        return NextResponse.json(
+          {
+            error: "Conteúdo suspeito detectado",
+            message: "O texto contém padrões que podem ser perigosos. Por favor, revise seu texto.",
+          },
+          { status: 400 },
+        )
+      }
+    }
+
+    return validatedData
   } catch (error) {
+    // Log parsing errors
+    logSecurityEvent('JSON parsing failed', {
+      requestId,
+      ip,
+      userAgent,
+      endpoint: ((req as any).nextUrl?.pathname ?? new URL((req as Request).url).pathname),
+          error: error instanceof Error ? error.message : 'Unknown parsing error'
+    })
+    
     return NextResponse.json(
       {
         error: "Erro ao validar entrada",
-        message: error instanceof Error ? error.message : "Erro desconhecido",
+        message: "Formato de dados inválido",
       },
       { status: 400 },
     )
   }
+}
+
+/**
+ * Validate file uploads
+ */
+export function validateFileUpload(file: File): { valid: boolean; error?: string } {
+  // Check file size (max 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: "Arquivo muito grande (máximo 10MB)" }
+  }
+  
+  // Check file type
+  const allowedTypes = [
+    'text/plain',
+    'text/csv',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+  
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: "Tipo de arquivo não permitido" }
+  }
+  
+  // Check filename for suspicious patterns
+  if (SECURITY_PATTERNS.some(pattern => pattern.test(file.name))) {
+    return { valid: false, error: "Nome do arquivo contém caracteres não permitidos" }
+  }
+  
+  return { valid: true }
+}
+
+/**
+ * Validate URL parameters
+ */
+export function validateUrlParams(params: Record<string, string>): boolean {
+  for (const [key, value] of Object.entries(params)) {
+    // Check for suspicious patterns in both key and value
+    if (SECURITY_PATTERNS.some(pattern => pattern.test(key) || pattern.test(value))) {
+      return false
+    }
+    
+    // Check for excessive length
+    if (key.length > 100 || value.length > 1000) {
+      return false
+    }
+  }
+  
+  return true
 }

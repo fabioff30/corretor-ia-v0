@@ -21,7 +21,6 @@ export function AdminLogin() {
       toast({
         title: "Login bem-sucedido",
         description: "Você está autenticado como administrador.",
-        variant: "success",
       })
       setAdminPassword("")
     } else {

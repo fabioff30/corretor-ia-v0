@@ -1,43 +1,16 @@
-import { Redis } from "@upstash/redis"
+import { getRedisClient, testRedisConnection } from "./redis-client"
 
 // Chaves para armazenar as estatísticas no Redis
 const TOTAL_RATINGS_KEY = "correction:total_ratings"
 const SUM_RATINGS_KEY = "correction:sum_ratings"
 const RATINGS_COUNT_KEY = "correction:ratings_count"
 
-// Inicializar o cliente Redis
-let redis: Redis | null = null
-
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  }
-} catch (error) {
-  console.error("Erro ao conectar ao Redis:", error)
-}
-
-/**
- * Testa a conexão com o Redis
- */
-async function testRedisConnection(): Promise<boolean> {
-  if (!redis) return false
-
-  try {
-    await redis.ping()
-    return true
-  } catch (error) {
-    console.error("Erro ao testar conexão Redis:", error)
-    return false
-  }
-}
-
 /**
  * Adiciona uma nova avaliação e atualiza as estatísticas
  */
 export async function addRating(rating: number): Promise<boolean> {
+  const redis = getRedisClient()
+  
   if (!redis) {
     console.warn("Redis não configurado. Não foi possível salvar a avaliação.")
     return false
@@ -84,6 +57,8 @@ export async function getRatingStats(): Promise<{
   totalRatings: number
   ratingCounts: Record<string, number>
 }> {
+  const redis = getRedisClient()
+  
   // Retornar dados padrão se Redis não estiver configurado
   if (!redis) {
     console.warn("Redis não configurado. Retornando estatísticas padrão.")

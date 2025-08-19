@@ -15,7 +15,7 @@ interface AdsenseAdProps {
 export function AdsenseAd({ adSlot, format = "auto", className = "", style = {}, responsive = true }: AdsenseAdProps) {
   const [hasConsent, setHasConsent] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const adRef = useRef<HTMLElement>(null)
+  const adRef = useRef<HTMLModElement>(null)
   const initRef = useRef(false)
 
   // Verificar consentimento de cookies

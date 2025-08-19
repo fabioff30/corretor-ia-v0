@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
           console.log("API: Tentando encontrar campos necessários em qualquer lugar da resposta", requestId)
 
           // Função para buscar recursivamente os campos necessários
-          const findFields = (obj) => {
+          const findFields = (obj: any): any => {
             if (!obj || typeof obj !== "object") return null
 
             // Verificar se o objeto atual tem os campos necessários
@@ -290,11 +290,12 @@ export async function POST(request: NextRequest) {
         // Retornar a resposta para o cliente
         return NextResponse.json(processedData)
       } catch (processingError) {
-        console.error("API: Erro ao processar dados da resposta:", processingError, requestId)
+        const pe = processingError as Error
+        console.error("API: Erro ao processar dados da resposta:", pe, requestId)
 
         logError(requestId, {
           status: 500,
-          message: `Processing error: ${processingError.message}`,
+          message: `Processing error: ${pe.message}`,
           ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
         })
 
@@ -309,13 +310,14 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.error("API: Erro ao processar a reescrita:", error, requestId)
+      const err = error as Error
+      console.error("API: Erro ao processar a reescrita:", err, requestId)
 
       // Enhanced error logging with more details
       logError(requestId, {
-        status: error.name === "AbortError" ? 504 : 500,
-        message: error.message || "Unknown error",
-        stack: error.stack,
+        status: err.name === "AbortError" ? 504 : 500,
+        message: err.message || "Unknown error",
+        stack: err.stack,
         ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
       })
 
@@ -328,7 +330,7 @@ export async function POST(request: NextRequest) {
         console.error("API: Erro ao criar resposta de fallback para erro geral:", fallbackError, requestId)
 
         // If all else fails, return a specific error based on the error type
-        if (error.name === "AbortError") {
+        if (err.name === "AbortError") {
           return NextResponse.json(
             {
               error: "Tempo limite excedido",
@@ -342,7 +344,7 @@ export async function POST(request: NextRequest) {
           // Default error response
           return NextResponse.json(
             {
-              error: error instanceof Error ? error.message : "Erro desconhecido",
+              error: err instanceof Error ? err.message : "Erro desconhecido",
               message:
                 "Erro ao processar o texto. Por favor, verifique se o texto contém apenas caracteres válidos e tente novamente.",
               code: "GENERAL_ERROR",
@@ -353,20 +355,21 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    console.error("API: Erro ao processar a requisição:", error, requestId)
+    const err = error as Error
+    console.error("API: Erro ao processar a requisição:", err, requestId)
 
     // Enhanced error logging with more details
     logError(requestId, {
       status: 500,
-      message: error.message || "Unknown error",
-      stack: error.stack,
+      message: err.message || "Unknown error",
+      stack: err.stack,
       ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
     })
 
     // Default error response
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Erro desconhecido",
+        error: err instanceof Error ? err.message : "Erro desconhecido",
         message:
           "Erro ao processar o texto. Por favor, verifique se o texto contém apenas caracteres válidos e tente novamente.",
         code: "GENERAL_ERROR",

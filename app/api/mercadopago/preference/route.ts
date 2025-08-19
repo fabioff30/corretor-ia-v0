@@ -139,21 +139,23 @@ export async function POST(request: Request) {
         initPoint: result.init_point,
       })
     } catch (apiError) {
-      console.error("Erro na API do Mercado Pago:", apiError)
+      const ae = apiError as Error
+      console.error("Erro na API do Mercado Pago:", ae)
       return NextResponse.json(
         {
           error: "Erro na API do Mercado Pago",
-          details: apiError.message,
+          details: ae.message,
         },
         { status: 500 },
       )
     }
   } catch (error) {
-    console.error("Erro ao criar preferência:", error)
+    const err = error as Error
+    console.error("Erro ao criar preferência:", err)
     return NextResponse.json(
       {
         error: "Erro ao criar preferência de pagamento",
-        details: error.message,
+        details: err.message,
       },
       { status: 500 },
     )
