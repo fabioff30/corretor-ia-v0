@@ -36,7 +36,7 @@ const tones: { value: ToneOption; label: string; description: string }[] = [
 ]
 
 interface ToneAdjusterProps {
-  onToneChange?: (tone: ToneOption) => void
+  onToneChange?: (tone: ToneOption, customInstruction?: string) => void
   className?: string
   disabled?: boolean
 }
@@ -63,7 +63,7 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
 
   const handleCustomToneSubmit = () => {
     if (customToneInput.trim()) {
-      // Send the custom tone instruction via webhook
+      // Send the custom tone instruction via webhook for analytics/logging
       fetch("/api/custom-tone-webhook", {
         method: "POST",
         headers: {
@@ -74,15 +74,16 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
         .then((response) => response.json())
         .then((data) => {
           console.log("Custom tone sent successfully:", data)
-          if (onToneChange) {
-            // Pass the custom tone to the parent component
-            onToneChange("Personalizado")
-          }
         })
         .catch((error) => {
           console.error("Error sending custom tone:", error)
         })
 
+      // Pass the custom tone instruction directly to the parent component
+      if (onToneChange) {
+        onToneChange("Personalizado", customToneInput.trim())
+      }
+      
       setShowCustomInput(false)
     }
   }

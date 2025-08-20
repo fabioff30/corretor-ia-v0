@@ -4,6 +4,9 @@ import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
 import { FETCH_TIMEOUT } from "@/utils/constants"
 
+// Prevent static generation for this dynamic route
+export const dynamic = 'force-dynamic'
+
 // URL do webhook para reescrita
 const REWRITE_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/reescrever/c5d85e34-988a-4be8-bcae-e79451476f7e"
 
@@ -140,6 +143,7 @@ export async function POST(request: NextRequest) {
         source: isMobile ? "mobile" : "desktop",
       }
 
+      console.log(`API: Enviando para webhook ${REWRITE_WEBHOOK_URL}`)
       console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
       const response = await fetchWithTimeout(
@@ -180,89 +184,28 @@ export async function POST(request: NextRequest) {
       const data = await response.json()
       console.log("API: Resposta JSON processada com sucesso", requestId)
 
-      // Verificar se a resposta tem o formato esperado
+      // Processar resposta do webhook
       let processedData
 
       try {
         // Adicionar log detalhado da resposta para diagnóstico
-        console.log("API: Resposta bruta recebida:", JSON.stringify(data).substring(0, 500), requestId)
+        console.log("API: Resposta bruta recebida:", JSON.stringify(data), requestId)
 
-        // Verificar diferentes formatos possíveis
-        if (data.rewrittenText || data.correctedText) {
-          processedData = {
-            rewrittenText: data.rewrittenText || data.correctedText,
-            evaluation: data.evaluation || {
-              strengths: ["Texto reescrito com sucesso"],
-              weaknesses: [],
-              suggestions: [],
-              score: 7,
-            },
-          }
-        } else if (Array.isArray(data) && data.length > 0 && data[0].output) {
-          // Formato antigo: [{ output: { rewrittenText/correctedText, evaluation } }]
-          console.log("API: Detectado formato de array com output", requestId)
-          processedData = data[0].output
-          if (!processedData.rewrittenText && processedData.correctedText) {
-            processedData.rewrittenText = processedData.correctedText
-          }
-        } else if (data.output && typeof data.output === "object") {
-          // Formato alternativo: { output: { rewrittenText/correctedText, evaluation } }
-          console.log("API: Detectado formato com objeto output", requestId)
-          processedData = data.output
-          if (!processedData.rewrittenText && processedData.correctedText) {
-            processedData.rewrittenText = processedData.correctedText
-          }
-        } else {
-          // Tentar encontrar os campos necessários em qualquer lugar da resposta
-          console.log("API: Tentando encontrar campos necessários em qualquer lugar da resposta", requestId)
-
-          // Função para buscar recursivamente os campos necessários
-          const findFields = (obj: any): any => {
-            if (!obj || typeof obj !== "object") return null
-
-            // Verificar se o objeto atual tem os campos necessários
-            if (obj.rewrittenText || obj.correctedText) {
-              return {
-                rewrittenText: obj.rewrittenText || obj.correctedText,
-                evaluation: obj.evaluation || {
-                  strengths: ["Texto reescrito com sucesso"],
-                  weaknesses: [],
-                  suggestions: [],
-                  score: 7,
-                },
-              }
-            }
-
-            // Buscar em todas as propriedades do objeto
-            for (const key in obj) {
-              if (typeof obj[key] === "object") {
-                const result = findFields(obj[key])
-                if (result) return result
-              }
-            }
-
-            return null
-          }
-
-          const foundData = findFields(data)
-          if (foundData) {
-            console.log("API: Campos necessários encontrados em estrutura aninhada", requestId)
-            processedData = foundData
-          } else {
-            console.warn("API: Formato de resposta não reconhecido:", JSON.stringify(data).substring(0, 200), requestId)
-            throw new Error("Formato de resposta não reconhecido")
-          }
+        // O webhook retorna formato: { correctedText: string, evaluation: object }
+        if (!data.correctedText) {
+          console.error("API: Campo correctedText não encontrado na resposta", requestId)
+          throw new Error("Campo correctedText não encontrado na resposta do webhook")
         }
 
-        // Verificar se os campos necessários existem
-        if (!processedData.rewrittenText && !processedData.correctedText) {
-          console.error("API: Campo rewrittenText/correctedText não encontrado nos dados processados", requestId)
-          throw new Error("Campo de texto reescrito não encontrado na resposta")
-        }
-
-        // Garantir que temos um campo rewrittenText
-        if (!processedData.rewrittenText && processedData.correctedText) {
-          processedData.rewrittenText = processedData.correctedText
+        // Mapear a resposta para o formato esperado pelo frontend
+        processedData = {
+          rewrittenText: data.correctedText,
+          evaluation: {
+            strengths: data.evaluation?.changes || ["Texto reescrito com sucesso"],
+            weaknesses: [],
+            suggestions: data.evaluation?.styleApplied ? [`Estilo aplicado: ${data.evaluation.styleApplied}`] : [],
+            score: 7,
+          },
         }
 
         if (!processedData.evaluation) {

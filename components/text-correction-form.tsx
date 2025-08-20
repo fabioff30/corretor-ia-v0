@@ -81,8 +81,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   const [correctionId, setCorrectionId] = useState<string>("")
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [selectedTone, setSelectedTone] = useState<
-    "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico"
+    "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
+  const [customTone, setCustomTone] = useState<string>("")
 
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
@@ -152,9 +153,13 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     }
   }
 
-  // Modificar a função handleToneChange para tratar o caso "Padrão" de forma especial
-  const handleToneChange = (tone: string) => {
-    setSelectedTone(tone as "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico")
+  // Modificar a função handleToneChange para tratar tom personalizado
+  const handleToneChange = (tone: string, customInstruction?: string) => {
+    setSelectedTone(tone as "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado")
+    if (tone === "Personalizado" && customInstruction) {
+      setCustomTone(customInstruction)
+      console.log(`Tom personalizado definido: ${customInstruction}`)
+    }
     console.log(`Tom selecionado: ${tone}`)
   }
 
@@ -297,7 +302,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       const payload = {
         text: textToSend,
         isMobile: isMobile,
-        ...(operationMode === "correct" ? { tone: selectedTone } : { rewriteStyle: selectedRewriteStyle }),
+        ...(operationMode === "correct" 
+          ? { 
+              tone: selectedTone === "Personalizado" ? customTone : selectedTone 
+            } 
+          : { rewriteStyle: selectedRewriteStyle }
+        ),
       }
 
       console.log(`Cliente: Enviando texto para ${endpoint}`)
