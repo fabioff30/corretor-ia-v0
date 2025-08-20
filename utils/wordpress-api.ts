@@ -80,10 +80,7 @@ export async function getPosts(
     console.log(`Fetching posts: page ${page}, perPage ${perPage}, forceRefresh: ${forceRefresh}`)
 
     const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&page=${page}&per_page=${perPage}`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
+      next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
     })
 
     if (!response.ok) {
@@ -122,10 +119,7 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
     console.log(`Fetching post by slug: ${slug}, forceRefresh: ${forceRefresh}`)
 
     const response = await fetch(`${API_URL}/posts?slug=${slug}&_embed=author,wp:featuredmedia`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
+      next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
     })
 
     if (!response.ok) {
@@ -159,10 +153,7 @@ export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefre
     console.log(`Fetching related posts (excluding ${currentSlug}), forceRefresh: ${forceRefresh}`)
 
     const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&per_page=${limit}`, {
-      next: {
-        revalidate: forceRefresh ? 0 : DEFAULT_REVALIDATION_TIME, // 0 for force refresh, 5 minutes otherwise
-      },
-      cache: forceRefresh ? "no-store" : "default",
+      next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
     })
 
     if (!response.ok) {

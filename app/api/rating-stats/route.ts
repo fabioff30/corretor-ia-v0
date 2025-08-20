@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { getRatingStats } from "@/utils/rating-stats"
 
+// Prevent static generation for this dynamic route
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const stats = await getRatingStats()

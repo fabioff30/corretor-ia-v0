@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 
+// Prevent static generation for this dynamic route
+export const dynamic = 'force-dynamic'
+
 // URL do webhook do n8n
 const WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 

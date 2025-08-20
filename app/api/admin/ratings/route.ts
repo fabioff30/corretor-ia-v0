@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getRatingDetails } from "@/utils/rating-storage"
 import { protectedAdminApiHandler } from "@/middleware/admin-auth"
 
+// Prevent static generation for this dynamic route
+export const dynamic = 'force-dynamic'
+
 // Protected admin endpoint using secure session-based auth
 const handler = protectedAdminApiHandler(async (request: NextRequest, session) => {
 
