@@ -2,24 +2,46 @@ import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getEnvConfig } from "@/utils/env-validation"
 
-// Use secure revalidation token
-const envConfig = getEnvConfig()
-const REVALIDATION_TOKEN = envConfig.REVALIDATION_TOKEN
+// Lazy-load environment configuration to avoid build-time validation issues
+function getEnvTokens(): { REVALIDATION_TOKEN?: string; WEBHOOK_SECRET?: string } {
+  try {
+    const envConfig = getEnvConfig()
+    return {
+      REVALIDATION_TOKEN: envConfig.REVALIDATION_TOKEN,
+      WEBHOOK_SECRET: envConfig.WEBHOOK_SECRET
+    }
+  } catch (error) {
+    // During build time, return empty to prevent build failures
+    console.warn("Failed to load environment tokens during build:", error)
+    return {}
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Get environment tokens
+    const { REVALIDATION_TOKEN, WEBHOOK_SECRET } = getEnvTokens()
+
     // Verificar se a requisição é legítima com verificação de token
     const token = request.headers.get("x-revalidate-token")
 
     // Verificar o token apenas se não for uma requisição do WordPress
     // (WordPress enviará seu próprio token de segurança)
     const isWordPressWebhook = request.headers.get("x-wp-webhook") === "true"
-
-    // Use secure webhook secret
-    const webhookSecret = envConfig.WEBHOOK_SECRET
     const receivedSecret = request.headers.get("x-webhook-secret")
 
-    if (isWordPressWebhook && receivedSecret !== webhookSecret) {
+    // Check if tokens are configured
+    if (isWordPressWebhook && !WEBHOOK_SECRET) {
+      console.error("Webhook secret not configured")
+      return NextResponse.json({ error: "Service not configured" }, { status: 503 })
+    }
+
+    if (!isWordPressWebhook && !REVALIDATION_TOKEN) {
+      console.error("Revalidation token not configured")
+      return NextResponse.json({ error: "Service not configured" }, { status: 503 })
+    }
+
+    if (isWordPressWebhook && receivedSecret !== WEBHOOK_SECRET) {
       console.warn("Tentativa de webhook com segredo inválido")
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
@@ -105,10 +127,18 @@ export async function POST(request: NextRequest) {
 // Também suporta requisições GET para testes mais fáceis
 export async function GET(request: NextRequest) {
   try {
+    // Get environment tokens
+    const { REVALIDATION_TOKEN } = getEnvTokens()
+    
     // Verificar token na query string para requisições GET
     const { searchParams } = new URL(request.url)
     const token = searchParams.get("token")
     const path = searchParams.get("path") || "/blog"
+
+    if (!REVALIDATION_TOKEN) {
+      console.error("Revalidation token not configured")
+      return NextResponse.json({ error: "Service not configured" }, { status: 503 })
+    }
 
     if (token !== REVALIDATION_TOKEN) {
       console.warn("Tentativa de revalidação não autorizada com token incorreto")

@@ -1,0 +1,112 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Common Development Commands
+
+### Development Server
+```bash
+npm run dev         # Start Next.js development server
+npm run build       # Build for production
+npm run start       # Start production server
+npm run lint        # Run ESLint
+```
+
+### Testing
+No specific test commands are configured in package.json. Check if tests exist before implementing new features.
+
+## Architecture Overview
+
+This is a **Next.js 14** application built with the **App Router** architecture, implementing a Portuguese text correction service with AI integration.
+
+### Core Technologies
+- **Framework**: Next.js 14 with App Router
+- **UI Components**: Radix UI primitives with Tailwind CSS
+- **AI Integration**: OpenAI API via AI SDK (@ai-sdk/openai)
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Animations**: Framer Motion
+- **Form Handling**: React Hook Form with Zod validation
+- **State Management**: React hooks (no global state management)
+
+### Key Application Features
+
+#### Text Processing Modes
+The app supports two main operations:
+1. **Text Correction** (`correct`): Grammar, spelling, and punctuation fixes
+2. **Text Rewriting** (`rewrite`): Style transformation (formal, humanized, academic, creative, childlike)
+
+#### Subscription System
+- **Free tier**: 1500 character limit
+- **Premium tier**: 5000 character limit
+- Subscription logic in `utils/subscription.ts`
+
+#### API Endpoints
+- `/api/correct` - Text correction service
+- `/api/rewrite` - Text rewriting service
+- `/api/julinho` - AI assistant chat
+- `/api/mercadopago/*` - Payment processing
+- `/api/admin/*` - Admin functionality
+
+### Project Structure
+
+#### Core Directories
+- `app/` - Next.js App Router pages and API routes
+- `components/` - React components (UI and business logic)
+- `actions/` - Server actions for form handling
+- `utils/` - Utility functions and constants
+- `middleware/` - Custom middleware (canonical URLs, rate limiting)
+- `types/` - TypeScript type definitions
+
+#### Key Components
+- `TextCorrectionForm` - Main text processing interface with dual modes
+- `TextDiff` - Visual diff component for showing changes
+- `TextEvaluation` - AI evaluation display
+- `JulinhoAssistant` - AI chat assistant
+- `AdController` - Advertisement management
+
+#### Important Configuration Files
+- Character limits in `utils/constants.ts`
+- API timeouts: 60s request timeout, 5s min interval between requests
+- Authentication via `AUTH_TOKEN` environment variable
+
+### Development Guidelines
+
+#### Working with Text Processing
+- Text sanitization is critical - check `sanitizeText()` function in TextCorrectionForm
+- All text operations include suspicious content detection
+- Rate limiting is enforced (5-second intervals between requests)
+- Character limits enforced based on subscription tier
+
+#### API Integration
+- Primary AI service uses OpenAI GPT-3.5-turbo
+- Webhook fallback system in place
+- All API responses must be validated with Zod schemas
+- Error handling includes specific timeout and rate limit messaging
+
+#### UI Components
+- Follow shadcn/ui patterns for new components
+- Use Tailwind CSS classes consistently
+- All interactive elements should have loading states
+- Mobile-first responsive design approach
+
+#### Analytics & Tracking
+- Google Tag Manager integration (GTM_ID in constants)
+- Meta Pixel tracking for custom events
+- Event tracking for all major user actions (corrections, donations, ratings)
+
+#### Payment & Monetization
+- MercadoPago integration for donations
+- AdSense integration with consent management
+- Cookie consent system affects tracking initialization
+
+### Environment Variables Required
+- `OPENAI_API_KEY` - OpenAI API access
+- `AUTH_TOKEN` - Webhook authentication
+- Additional variables for payment processing and analytics
+
+### Important Notes
+- TypeScript build errors are ignored in production (`ignoreBuildErrors: true`)
+- ESLint errors are ignored during builds
+- Images are unoptimized (`images: { unoptimized: true }`)
+- Server actions have 2MB body size limit
+- All API routes have no-cache headers

@@ -63,8 +63,18 @@ export function validateEnvVars(): EnvConfig {
   const isProduction = env.NODE_ENV === 'production'
   const isDevelopment = env.NODE_ENV === 'development'
   
-  // Critical validations for production
-  if (isProduction) {
+  // Check if we're in build time (Next.js static generation)
+  const isBuildTime = !!(env.NEXT_PHASE === 'phase-production-build' || 
+                        env.__NEXT_PRIVATE_PREBUNDLED_REACT === 'next' ||
+                        process.env.npm_lifecycle_event === 'build')
+  
+  // During build time, be more permissive with missing environment variables
+  if (isBuildTime) {
+    console.log("🔨 Build time detected - skipping strict environment validation")
+  }
+  
+  // Critical validations for production (skip during build time)
+  if (isProduction && !isBuildTime) {
     const criticalVars = {
       OPENAI_API_KEY: env.OPENAI_API_KEY,
       AUTH_TOKEN: env.AUTH_TOKEN,
@@ -82,17 +92,21 @@ export function validateEnvVars(): EnvConfig {
         `Critical environment variables missing or using insecure defaults in production: ${missing.join(', ')}`
       )
     }
+  } else if (isProduction && isBuildTime) {
+    console.warn("⚠️ Production build detected but environment variables not validated (build time)")
   }
   
-  // Validate token security
+  // Validate token security (skip strict validation during build time)
   const validateToken = (token: string | undefined, name: string): string | undefined => {
     if (!token) return undefined
     
     if (token.includes('default') || token.includes('change-this') || token.length < 16) {
-      if (isProduction) {
+      if (isProduction && !isBuildTime) {
         throw new Error(`Insecure ${name}: must be at least 16 characters and cannot contain 'default' or 'change-this'`)
       }
-      console.warn(`⚠️ Insecure ${name} detected. In production, this will cause startup failure.`)
+      if (!isBuildTime) {
+        console.warn(`⚠️ Insecure ${name} detected. In production, this will cause startup failure.`)
+      }
     }
     
     return token
