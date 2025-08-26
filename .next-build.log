@@ -1,0 +1,35 @@
+
+> my-v0-project@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.16
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/32) ...
+Mercado Pago public key not found in environment variables
+   Generating static pages (8/32) 
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+   Generating static pages (16/32) 
+   Generating static pages (24/32) 
+ ✓ Generating static pages (32/32)
+unhandledRejection Error: kill EPERM
+    at ChildProcess.kill (node:internal/child_process:511:26)
+    at cleanupWorkers (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/lib/worker.js:18:85)
+    at Worker.end (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/lib/worker.js:109:9)
+    at Object.endWorker [as end] (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/build/index.js:1691:54)
+    at exportAppImpl (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/export/index.js:545:38)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/export/index.js:623:16
+    at async Span.traceAsyncFn (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/trace/trace.js:154:20)
+    at async /Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/build/index.js:1695:42
+    at async Span.traceAsyncFn (/Users/fabioff30/Documents/CorretorIA/node_modules/next/dist/trace/trace.js:154:20) {
+  errno: -1,
+  code: 'EPERM',
+  syscall: 'kill'
+}

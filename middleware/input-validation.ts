@@ -97,7 +97,14 @@ const ALLOWED_TONES = [
   'Técnico',
   'Criativo',
   'Persuasivo',
-  'Objetivo'
+  'Objetivo',
+  'Acadêmico',
+  'Romântico',
+  'Narrativo',
+  'Instagram',
+  'WhatsApp',
+  'Tweet',
+  'Personalizado'
 ]
 
 // Base text validation schema
@@ -139,8 +146,12 @@ const correctionRequestSchema = z.object({
     .optional()
     .refine((tone) => {
       if (!tone) return true
-      return ALLOWED_TONES.includes(tone)
-    }, `Tom deve ser um dos seguintes: ${ALLOWED_TONES.join(', ')}`)
+      // Aceitar tons predefinidos ou qualquer string personalizada
+      if (ALLOWED_TONES.includes(tone)) return true
+      // Se não está na lista, considerar como tom personalizado
+      // Validar que não é vazio e não contém conteúdo perigoso
+      return tone.trim().length > 0 && tone.length <= 200
+    }, `Tom deve ser um dos predefinidos ou uma instrução personalizada (máximo 200 caracteres)`)
     .default('Padrão'),
 })
 

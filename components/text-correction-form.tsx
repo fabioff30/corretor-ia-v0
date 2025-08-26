@@ -68,6 +68,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       toneChanges: string[]
       styleApplied?: string
       changes?: string[]
+      toneApplied?: string
     }
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -295,18 +296,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       const controller = new AbortController()
       const signal = controller.signal
 
-      // Determinar qual endpoint usar com base no modo de operação
-      const endpoint = operationMode === "correct" ? "/api/correct" : "/api/rewrite"
+      // Determinar qual endpoint usar com base no modo de operação e tom selecionado
+      const currentTone = selectedTone === "Personalizado" ? customTone : selectedTone
+      const endpoint = operationMode === "correct" 
+        ? (currentTone !== "Padrão" ? "/api/tone" : "/api/correct")
+        : "/api/rewrite"
 
       // Preparar o payload com base no modo de operação
       const payload = {
         text: textToSend,
         isMobile: isMobile,
         ...(operationMode === "correct" 
-          ? { 
-              tone: selectedTone === "Personalizado" ? customTone : selectedTone 
-            } 
-          : { rewriteStyle: selectedRewriteStyle }
+          ? { tone: currentTone } 
+          : { style: selectedRewriteStyle }
         ),
       }
 
@@ -370,22 +372,44 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         },
       }
 
-      // Processar a resposta com base no modo de operação
+      // Processar a resposta com base no endpoint usado
       if (operationMode === "correct") {
-        // Modo de correção - formato tradicional
-        if (data.correctedText) {
-          processedData.correctedText = data.correctedText
-        }
+        if (endpoint === "/api/tone") {
+          // Modo de ajuste de tom dentro da correção
+          console.log("Processando resposta de ajuste de tom:", data)
 
-        if (data.evaluation) {
-          processedData.evaluation = {
-            strengths: data.evaluation.strengths || [],
-            weaknesses: data.evaluation.weaknesses || [],
-            suggestions: data.evaluation.suggestions || [],
-            score: data.evaluation.score || 7,
-            toneChanges: data.evaluation.toneChanges || [],
-            styleApplied: "",
-            changes: [],
+          if (data.adjustedText) {
+            processedData.correctedText = data.adjustedText
+          }
+
+          if (data.evaluation) {
+            processedData.evaluation = {
+              strengths: [],
+              weaknesses: [],
+              suggestions: data.evaluation.suggestions || [],
+              score: 0,
+              toneChanges: data.evaluation.changes || [],
+              styleApplied: "",
+              changes: data.evaluation.changes || [],
+              toneApplied: data.evaluation.toneApplied || currentTone,
+            }
+          }
+        } else {
+          // Modo de correção padrão - formato tradicional
+          if (data.correctedText) {
+            processedData.correctedText = data.correctedText
+          }
+
+          if (data.evaluation) {
+            processedData.evaluation = {
+              strengths: data.evaluation.strengths || [],
+              weaknesses: data.evaluation.weaknesses || [],
+              suggestions: data.evaluation.suggestions || [],
+              score: data.evaluation.score || 7,
+              toneChanges: data.evaluation.toneChanges || [],
+              styleApplied: "",
+              changes: [],
+            }
           }
         }
       } else {
@@ -423,23 +447,31 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
             }
           }
         } else if (data.rewrittenText) {
-          // Formato alternativo
+          // Formato atual do API /api/rewrite
           processedData.correctedText = data.rewrittenText
 
           if (data.evaluation) {
             processedData.evaluation = {
-              ...processedData.evaluation,
-              styleApplied: data.evaluation.styleApplied || selectedRewriteStyle,
-              changes: data.evaluation.changes || [],
+              strengths: [],
+              weaknesses: [],
+              suggestions: data.evaluation.suggestions || [],
+              score: 0,
+              toneChanges: [],
+              styleApplied: selectedRewriteStyle,
+              changes: data.evaluation.strengths || [],
             }
           }
         } else if (data.correctedText) {
-          // Formato alternativo
+          // Formato alternativo - resposta do n8n webhook
           processedData.correctedText = data.correctedText
 
           if (data.evaluation) {
             processedData.evaluation = {
-              ...processedData.evaluation,
+              strengths: [],
+              weaknesses: [],
+              suggestions: data.evaluation.suggestions || [],
+              score: 0,
+              toneChanges: [],
               styleApplied: data.evaluation.styleApplied || selectedRewriteStyle,
               changes: data.evaluation.changes || [],
             }

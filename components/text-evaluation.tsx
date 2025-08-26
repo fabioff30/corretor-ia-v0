@@ -7,19 +7,19 @@ interface TextEvaluationProps {
     suggestions: string[]
     score: number
     toneChanges?: string[] // Adicionar o campo opcional toneChanges
+    styleApplied?: string // Para reescrita
+    changes?: string[] // Para reescrita e ajuste de tom
+    toneApplied?: string // Para ajuste de tom
   }
 }
 
 export function TextEvaluation({ evaluation }: TextEvaluationProps) {
-  const { strengths, weaknesses, suggestions, score, toneChanges } = evaluation
+  const { strengths, weaknesses, suggestions, score, toneChanges, styleApplied, changes, toneApplied } = evaluation
 
-  // Verificar se estamos no modo de apenas ajustes de tom
-  const isToneOnlyMode =
-    toneChanges &&
-    toneChanges.length > 0 &&
-    strengths.length === 0 &&
-    weaknesses.length === 0 &&
-    suggestions.length === 0
+  // Verificar o modo de operação
+  const isToneOnlyMode = toneApplied && changes && changes.length > 0
+  const isRewriteMode = styleApplied && !toneApplied
+  const isCorrectionMode = !isToneOnlyMode && !isRewriteMode
 
   const getScoreColor = () => {
     if (score >= 8) return "text-green-500"
@@ -36,8 +36,10 @@ export function TextEvaluation({ evaluation }: TextEvaluationProps) {
   return (
     <div className="space-y-6 text-foreground">
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-medium">{isToneOnlyMode ? "Ajustes de Tom" : "Pontuação Geral"}</h4>
-        {!isToneOnlyMode && (
+        <h4 className="text-lg font-medium">
+          {isToneOnlyMode ? "Ajuste de Tom" : isRewriteMode ? "Reescrita" : "Pontuação Geral"}
+        </h4>
+        {isCorrectionMode && (
           <div
             className={`text-2xl font-bold ${getScoreColor()} px-4 py-2 rounded-full ${getScoreBackground()} border`}
           >
@@ -108,8 +110,48 @@ export function TextEvaluation({ evaluation }: TextEvaluationProps) {
         </>
       )}
 
-      {/* Sempre mostrar a seção de ajustes de tom quando disponível */}
-      {toneChanges && toneChanges.length > 0 && (
+      {/* Seção de ajuste de tom */}
+      {isToneOnlyMode && toneApplied && (
+        <div className="bg-muted/30 rounded-lg p-4 border text-left">
+          <div className="flex items-center mb-3">
+            <Wand2 className="h-5 w-5 text-purple-500 mr-2" />
+            <h4 className="text-base font-medium text-purple-500">Tom Aplicado: {toneApplied}</h4>
+          </div>
+          {changes && changes.length > 0 && (
+            <ul className="space-y-2">
+              {changes.map((change, index) => (
+                <li key={index} className="text-foreground/90 flex items-start">
+                  <span className="inline-block w-4 h-4 mr-2 mt-1 rounded-full bg-purple-500/20 flex-shrink-0"></span>
+                  {change}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Seção de reescrita */}
+      {isRewriteMode && styleApplied && (
+        <div className="bg-muted/30 rounded-lg p-4 border text-left">
+          <div className="flex items-center mb-3">
+            <Wand2 className="h-5 w-5 text-purple-500 mr-2" />
+            <h4 className="text-base font-medium text-purple-500">Estilo Aplicado: {styleApplied}</h4>
+          </div>
+          {changes && changes.length > 0 && (
+            <ul className="space-y-2">
+              {changes.map((change, index) => (
+                <li key={index} className="text-foreground/90 flex items-start">
+                  <span className="inline-block w-4 h-4 mr-2 mt-1 rounded-full bg-purple-500/20 flex-shrink-0"></span>
+                  {change}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Sempre mostrar a seção de ajustes de tom quando disponível (modo correção) */}
+      {toneChanges && toneChanges.length > 0 && isCorrectionMode && (
         <div className="bg-muted/30 rounded-lg p-4 border text-left">
           <div className="flex items-center mb-3">
             <Wand2 className="h-5 w-5 text-purple-500 mr-2" />

@@ -20,7 +20,7 @@ export const WEBHOOK_URL = "https://my-corretoria.vercel.app/api/corrigir"
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 
 // Authentication - Server-side only
-export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOKEN || "") : ""
+export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOKEN || "ex5B31uQHm2rPHsWt1RwUo9ct35qFAjczdKqbCIMZh5D1qovSmotGtQUQaRXJtvg") : ""
 
 // Julinho status
 export const JULINHO_DISABLED = false // Reativando o Julinho

@@ -100,11 +100,8 @@ export async function POST(request: NextRequest) {
     console.log(`API: Enviando requisição para o webhook, tom selecionado: ${tone}`, requestId)
     let response
     try {
-      // Escolher o webhook com base no tom selecionado
-      const webhookUrl =
-        tone === "Padrão"
-          ? "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
-          : "https://my-corretoria.vercel.app/api/corrigir"
+      // Usar sempre o novo endpoint principal primeiro
+      const webhookUrl = WEBHOOK_URL
 
       console.log(`API: Usando webhook: ${webhookUrl}`, requestId)
 
@@ -119,8 +116,8 @@ export async function POST(request: NextRequest) {
         requestBody.tone = tone
       }
 
-      // Adicionar authToken apenas para o webhook principal de correção (novo webhook)
-      if (webhookUrl === "https://my-corretoria.vercel.app/api/corrigir" && AUTH_TOKEN) {
+      // Adicionar authToken para autenticação
+      if (AUTH_TOKEN) {
         requestBody.authToken = AUTH_TOKEN
         console.log("API: Adicionando authToken à requisição", requestId)
       }
@@ -143,8 +140,8 @@ export async function POST(request: NextRequest) {
       console.error(`API: Erro ao acessar o webhook: ${we.message}`, requestId)
       console.log("API: Tentando webhook de fallback", requestId)
 
-      // Se falhar, tentar o webhook de fallback (sempre o webhook original)
-      const fallbackUrl = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
+      // Se falhar, tentar o webhook de fallback (n8n)
+      const fallbackUrl = FALLBACK_WEBHOOK_URL
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
       // No fallback, não enviamos o parâmetro de tom nem authToken para manter compatibilidade

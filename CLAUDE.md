@@ -18,7 +18,9 @@ This project uses `pnpm` as the package manager based on `pnpm-lock.yaml`. Use `
 Jest is configured with:
 - React Testing Library for component testing
 - jsdom environment for DOM testing
-- Test setup with proper mocking
+- Test setup with proper mocking and polyfills (`jest.setup.ts`)
+- API endpoint testing with mock implementations
+- Utility function testing (e.g., logger, format utilities)
 
 ## Architecture Overview
 
@@ -48,11 +50,13 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 ### Key API Endpoints
 - `/api/correct` - Main text correction endpoint with comprehensive error handling
 - `/api/rewrite` - Text rewriting functionality  
+- `/api/custom-tone-webhook` - Custom tone adjustment processing with external webhook integration
 - `/api/feedback` - User feedback collection
 - `/api/mercadopago/*` - Payment processing integration
 - `/api/admin/*` - Administrative functions with JWT authentication
 - `/api/admin/auth` - Secure admin authentication endpoint
 - `/api/revalidate` - Content revalidation with token protection
+- `/api/revalidate/webhook` - Webhook-based content revalidation for blog posts
 
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
@@ -60,6 +64,8 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 - **Form Components**: `TextCorrectionForm` as main interaction point
 - **UI Components**: Comprehensive Radix UI component library in `/components/ui/`
 - **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat)
+- **Result Components**: `TextCorrectionTabs` for tabbed display of correction results
+- **Advertisement Components**: Smart banner system with frequency control and user engagement tracking
 
 ### Configuration & Constants
 Key configuration in `utils/constants.ts`:
@@ -69,11 +75,13 @@ Key configuration in `utils/constants.ts`:
 - Feature flags (e.g., `JULINHO_DISABLED`)
 
 ### External Integrations
-- **AI Services**: Primary and fallback webhook endpoints for text correction
+- **AI Services**: Primary and fallback webhook endpoints for text correction and custom tone adjustment
 - **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
-- **Monetization**: Google AdSense with consent management
+- **Monetization**: Google AdSense with consent management, CleverWebServer script integration
+- **Advertisement**: Smart banner system with engagement tracking and frequency control
 - **Payments**: MercadoPago integration
 - **Email**: React Email components for notifications
+- **Content Management**: WordPress API integration for blog content with automatic revalidation
 
 ### Middleware & Security
 
@@ -110,6 +118,9 @@ Robust error handling with multiple fallback levels:
 - React Strict Mode enabled
 - Extensive tracking and analytics integration
 - Mobile-responsive design with device detection
+- Server Actions for content revalidation with Next.js cache management
+- Dynamic banner display system with localStorage-based frequency control
+- Enhanced user engagement tracking for advertisement optimization
 
 ## 🔧 Environment Setup
 
@@ -141,4 +152,29 @@ MERCADO_PAGO_ACCESS_TOKEN=your-token
 - **CONFIGURATION.md** - Environment setup and configuration
 - **AGENTS.md** - AI agent integration documentation
 - **jest.config.js** - Testing configuration
+- **jest.setup.ts** - Test environment setup with polyfills and mocks
 - **vercel.json** - Deployment configuration
+- **actions/revalidate-content.ts** - Server Actions for content cache management
+
+## 🆕 Recent Feature Additions
+
+### Custom Tone Adjustment
+- New `/api/custom-tone-webhook` endpoint for processing custom tone instructions
+- External webhook integration with fallback handling
+- Graceful error handling to maintain user experience
+
+### Enhanced Banner System
+- Smart advertisement banner rotation system with engagement tracking
+- Frequency control to avoid banner fatigue (`utils/banner-frequency.ts`)
+- User interaction tracking for optimized display timing (`utils/track-banner-interaction.ts`)
+- Multiple banner variants with UTM parameter tracking
+
+### Content Management Improvements
+- Server Actions for efficient content revalidation
+- WordPress integration with automatic cache invalidation
+- Blog content synchronization with sitemap regeneration
+
+### Testing Infrastructure
+- Comprehensive test setup with polyfills for Node.js/JSDOM environment
+- API endpoint testing framework
+- Utility function test coverage

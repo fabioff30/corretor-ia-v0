@@ -2,13 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
 
-// URL do webhook para reescrita
-const REWRITE_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/reescrever/c5d85e34-988a-4be8-bcae-e79451476f7e"
+// URL do webhook para ajuste de tom
+const TONE_WEBHOOK_URL = "https://my-corretoria.vercel.app/api/reescrever"
 
 // Função para fazer fetch com timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -33,15 +33,14 @@ export const maxDuration = 60 // Configurar o tempo máximo de execução da fun
 // Função para criar uma resposta padrão em caso de erro
 const createFallbackResponse = (originalText: string) => {
   return {
-    rewrittenText: originalText, // Retorna o texto original como fallback
+    adjustedText: originalText, // Retorna o texto original como fallback
     evaluation: {
-      strengths: ["O texto foi processado parcialmente"],
-      weaknesses: ["Não foi possível realizar uma reescrita completa devido a um erro no serviço"],
+      toneApplied: "Padrão",
+      changes: ["Não foi possível aplicar o ajuste de tom devido a um erro no serviço"],
       suggestions: [
         "Tente novamente mais tarde ou com um texto menor",
         "Verifique se o texto contém caracteres especiais ou formatação complexa",
       ],
-      score: 5,
     },
   }
 }
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inicializar requestData com valores padrão
-    let requestData = { rewriteStyle: "formal" }
+    let requestData = { tone: "Padrão" }
 
     try {
       // Tentar ler o corpo da requisição como texto primeiro
@@ -104,14 +103,14 @@ export async function POST(request: NextRequest) {
       return validatedInput
     }
 
-    const { text, isMobile, style } = validatedInput
+    const { text, isMobile } = validatedInput
 
-    // Obter o estilo da validação
-    const rewriteStyle = style || "formal"
+    // Obter o tom diretamente do objeto requestData
+    const tone = requestData.tone || "Padrão"
 
-    console.log(`API: Estilo de reescrita selecionado: ${rewriteStyle}`, requestId)
+    console.log(`API: Tom selecionado: ${tone}`, requestId)
 
-    console.log("API: Iniciando processamento de reescrita", requestId)
+    console.log("API: Iniciando processamento de ajuste de tom", requestId)
 
     // Verificar tamanho do texto
     if (text.length > 5000) {
@@ -133,21 +132,22 @@ export async function POST(request: NextRequest) {
     )
 
     // Enviar o texto para o webhook com timeout estendido
-    console.log(`API: Enviando requisição para o webhook de reescrita, estilo selecionado: ${rewriteStyle}`, requestId)
+    console.log(`API: Enviando requisição para o webhook de ajuste de tom, tom selecionado: ${tone}`, requestId)
 
     try {
       // Preparar o corpo da requisição
       const requestBody = {
         text: text,
-        style: rewriteStyle, // Usar o estilo extraído diretamente do corpo da requisição
+        style: tone, // Usar o tom como estilo para o webhook de reescrita
         source: isMobile ? "mobile" : "desktop",
+        authToken: AUTH_TOKEN,
       }
 
-      console.log(`API: Enviando para webhook ${REWRITE_WEBHOOK_URL}`)
+      console.log(`API: Enviando para webhook ${TONE_WEBHOOK_URL}`)
       console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
       const response = await fetchWithTimeout(
-        REWRITE_WEBHOOK_URL,
+        TONE_WEBHOOK_URL,
         {
           method: "POST",
           headers: {
@@ -191,31 +191,40 @@ export async function POST(request: NextRequest) {
         // Adicionar log detalhado da resposta para diagnóstico
         console.log("API: Resposta bruta recebida:", JSON.stringify(data), requestId)
 
-        // O webhook retorna formato: { correctedText: string, evaluation: object }
-        if (!data.correctedText) {
-          console.error("API: Campo correctedText não encontrado na resposta", requestId)
-          throw new Error("Campo correctedText não encontrado na resposta do webhook")
+        // Verificar diferentes formatos possíveis de resposta
+        let webhookResponse
+        if (Array.isArray(data) && data.length > 0 && data[0].output) {
+          // Formato: [{ output: { rewrittenText, evaluation } }]
+          webhookResponse = data[0].output
+        } else if (data.rewrittenText && data.evaluation) {
+          // Formato direto: { rewrittenText, evaluation }
+          webhookResponse = data
+        } else {
+          throw new Error("Formato de resposta não reconhecido")
+        }
+
+        if (!webhookResponse.rewrittenText) {
+          console.error("API: Campo rewrittenText não encontrado na resposta", requestId)
+          throw new Error("Campo rewrittenText não encontrado na resposta do webhook")
         }
 
         // Mapear a resposta para o formato esperado pelo frontend
         processedData = {
-          rewrittenText: data.correctedText,
+          adjustedText: webhookResponse.rewrittenText,
           evaluation: {
-            strengths: data.evaluation?.changes || ["Texto reescrito com sucesso"],
-            weaknesses: [],
-            suggestions: data.evaluation?.styleApplied ? [`Estilo aplicado: ${data.evaluation.styleApplied}`] : [],
-            score: 7,
+            toneApplied: webhookResponse.evaluation?.styleApplied || tone,
+            changes: webhookResponse.evaluation?.changes || ["Tom aplicado com sucesso"],
+            suggestions: [],
           },
         }
 
         if (!processedData.evaluation) {
           console.error("API: Campo evaluation não encontrado nos dados processados", requestId)
-          // Se tiver o texto reescrito mas não a avaliação, criar uma avaliação padrão
+          // Se tiver o texto ajustado mas não a avaliação, criar uma avaliação padrão
           processedData.evaluation = {
-            strengths: ["Texto reescrito com sucesso"],
-            weaknesses: [],
+            toneApplied: tone,
+            changes: ["Tom aplicado com sucesso"],
             suggestions: [],
-            score: 7,
           }
           console.log("API: Criada avaliação padrão para substituir campo ausente", requestId)
         }
@@ -254,7 +263,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       const err = error as Error
-      console.error("API: Erro ao processar a reescrita:", err, requestId)
+      console.error("API: Erro ao processar o ajuste de tom:", err, requestId)
 
       // Enhanced error logging with more details
       logError(requestId, {
