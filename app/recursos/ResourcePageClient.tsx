@@ -9,8 +9,6 @@ import { ExampleUseCases } from "@/components/example-use-cases"
 import { FAQSection } from "@/components/faq-section"
 import TextCorrectionForm from "@/components/text-correction-form"
 import { motion } from "framer-motion"
-// Importar o componente InlineAd
-import { InlineAd } from "@/components/inline-ad"
 
 export default function ResourcePageClient() {
   return (
@@ -271,7 +269,6 @@ export default function ResourcePageClient() {
                   <ToolComparison />
                 </div>
 
-                <InlineAd format="rectangle" className="my-12" />
 
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-gradient mb-6">

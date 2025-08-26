@@ -4,7 +4,6 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { SharePost } from "@/components/share-post"
 import { RelatedPosts } from "@/components/related-posts"
 import { TableOfContents } from "@/components/table-of-contents"
-import { InlineAd } from "@/components/inline-ad"
 import { type WPPost, formatWpDate, calculateReadingTime, getRelatedPosts } from "@/utils/wordpress-api"
 import { Suspense } from "react"
 import { SupportButton } from "@/components/support-button"
@@ -112,7 +111,6 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
               dangerouslySetInnerHTML={createSafeHtml(processedContent, 'BLOG')}
             />
 
-            <InlineAd className="my-8" />
 
             <div className="bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30 rounded-lg p-6 my-8">
               <h3 className="font-bold text-xl mb-3">Gostou deste conteúdo?</h3>
@@ -149,7 +147,6 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
 
           <aside className="space-y-8">
             <TableOfContents content={post.content.rendered} />
-            <InlineAd />
           </aside>
         </div>
       </article>
