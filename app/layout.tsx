@@ -10,7 +10,6 @@ import Script from "next/script"
 import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
-import { AdController } from "@/components/ad-controller"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -231,7 +230,6 @@ export default function RootLayout({
           <Toaster />
           <CookieConsent />
           <JulinhoAssistant />
-          <AdController />
         </ThemeProvider>
       </body>
     </html>
