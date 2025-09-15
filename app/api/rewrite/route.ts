@@ -3,6 +3,7 @@ import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
 import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL } from "@/utils/constants"
+import { fetchWithRetry, fetchWithTimeout } from "@/utils/fetch-retry"
 
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
@@ -10,23 +11,7 @@ const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
 
-// Função para fazer fetch com timeout
-const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
-  const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), timeout)
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    })
-    clearTimeout(id)
-    return response
-  } catch (error) {
-    clearTimeout(id)
-    throw error
-  }
-}
+// Função fetchWithTimeout agora importada de @/utils/fetch-retry
 
 export const maxDuration = 60 // Configurar o tempo máximo de execução da função para 60 segundos
 
@@ -49,6 +34,24 @@ const createFallbackResponse = (originalText: string) => {
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
+  
+  // Ler o body uma vez apenas no início - declarado no escopo da função
+  let requestBody: any
+  try {
+    requestBody = await request.json()
+    console.log("API: Dados JSON parseados com sucesso:", JSON.stringify(requestBody), requestId)
+  } catch (parseError) {
+    console.error("API: Erro ao fazer parse do JSON:", parseError, requestId)
+    logRequest(requestId, {
+      status: 400,
+      message: "Invalid JSON in request body",
+      ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+    })
+    return NextResponse.json(
+      { error: "Formato JSON inválido", message: "Corpo da requisição deve ser um JSON válido" },
+      { status: 400 }
+    )
+  }
 
   try {
     // Aplicar rate limiting
@@ -62,39 +65,14 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse
     }
 
-    // Inicializar requestData com valores padrão
-    let requestData = { rewriteStyle: "formal" }
-
-    try {
-      // Tentar ler o corpo da requisição como texto primeiro
-      const bodyText = await request.text()
-      console.log("API: Corpo da requisição recebido:", bodyText, requestId)
-
-      // Verificar se o corpo não está vazio antes de tentar fazer o parse
-      if (bodyText && bodyText.trim()) {
-        try {
-          requestData = JSON.parse(bodyText)
-          console.log("API: Dados JSON parseados com sucesso:", JSON.stringify(requestData), requestId)
-        } catch (parseError) {
-          console.error("API: Erro ao fazer parse do JSON:", parseError, requestId)
-          // Manter os valores padrão se o parse falhar
-        }
-      } else {
-        console.warn("API: Corpo da requisição vazio ou inválido", requestId)
-      }
-    } catch (readError) {
-      console.error("API: Erro ao ler o corpo da requisição:", readError, requestId)
-      // Continuar com os valores padrão
-    }
-
-    // Validar e sanitizar a entrada usando uma nova requisição com o mesmo corpo
-    const newRequest = new Request(request.url, {
+    // Criar uma nova requisição com o body já lido para validação
+    const mockRequest = new Request(request.url, {
       method: request.method,
       headers: request.headers,
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(requestBody),
     })
 
-    const validatedInput = await validateInput(newRequest)
+    const validatedInput = await validateInput(mockRequest)
     if (validatedInput instanceof NextResponse) {
       logRequest(requestId, {
         status: 400,
@@ -112,6 +90,21 @@ export async function POST(request: NextRequest) {
     console.log(`API: Estilo de reescrita selecionado: ${rewriteStyle}`, requestId)
 
     console.log("API: Iniciando processamento de reescrita", requestId)
+    
+    // Logs de debugging melhorados
+    const debugInfo = {
+      requestId,
+      ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+      userAgent: request.headers.get("user-agent") || "unknown",
+      origin: request.headers.get("origin") || "unknown",
+      referer: request.headers.get("referer") || "unknown",
+      textLength: text.length,
+      isMobile,
+      rewriteStyle,
+      webhookUrl: REWRITE_WEBHOOK_URL
+    }
+    
+    console.log("API: Request debug info:", JSON.stringify(debugInfo), requestId)
 
     // Verificar tamanho do texto
     if (text.length > 5000) {
@@ -155,14 +148,18 @@ export async function POST(request: NextRequest) {
       console.log(`API: Headers:`, JSON.stringify(headers), requestId)
       console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
-      let response = await fetchWithTimeout(
+      let response = await fetchWithRetry(
         webhookUrl,
         {
           method: "POST",
           headers,
           body: JSON.stringify(requestBody),
         },
-        FETCH_TIMEOUT,
+        {
+          maxRetries: 3,
+          timeout: FETCH_TIMEOUT,
+          retryDelay: 2000,
+        },
       )
 
       console.log(`API: Resposta recebida do webhook com status ${response.status}`, requestId)
@@ -265,8 +262,19 @@ export async function POST(request: NextRequest) {
         })
 
         console.log("API: Enviando resposta processada para o cliente", requestId)
-        // Retornar a resposta para o cliente
-        return NextResponse.json(processedData)
+        
+        // Retornar a resposta com headers de debug
+        const apiResponse = NextResponse.json(processedData)
+        
+        // Adicionar headers de debug úteis
+        apiResponse.headers.set('X-API-Version', '2.0')
+        apiResponse.headers.set('X-Service', 'CorretorIA-Rewrite')
+        apiResponse.headers.set('X-Request-ID', requestId)
+        apiResponse.headers.set('X-Processing-Time', `${Date.now() - startTime}ms`)
+        apiResponse.headers.set('X-Text-Length', text.length.toString())
+        apiResponse.headers.set('X-Style-Applied', rewriteStyle)
+        
+        return apiResponse
       } catch (processingError) {
         const pe = processingError as Error
         console.error("API: Erro ao processar dados da resposta:", pe, requestId)
@@ -301,7 +309,9 @@ export async function POST(request: NextRequest) {
 
       // Try to use fallback response for any error
       try {
-        const fallbackResponse = createFallbackResponse(text)
+        // Use the original text from the already read request body
+        const originalText = requestBody?.text || ""
+        const fallbackResponse = createFallbackResponse(originalText)
         console.log("API: Usando resposta de fallback devido a erro geral", requestId)
         return NextResponse.json(fallbackResponse)
       } catch (fallbackError) {

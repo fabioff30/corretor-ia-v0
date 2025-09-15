@@ -3,27 +3,12 @@ import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
 import { FETCH_TIMEOUT, AUTH_TOKEN, WEBHOOK_URL, FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { fetchWithRetry, fetchWithTimeout } from "@/utils/fetch-retry"
 
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 
-// Função para fazer fetch com timeout
-const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
-  const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), timeout)
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    })
-    clearTimeout(id)
-    return response
-  } catch (error) {
-    clearTimeout(id)
-    throw error
-  }
-}
+// Função fetchWithTimeout agora importada de @/utils/fetch-retry
 
 export const maxDuration = 60 // Configurar o tempo máximo de execução da função para 60 segundos (máximo permitido)
 
@@ -46,6 +31,22 @@ const createFallbackResponse = (originalText: string) => {
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
+  
+  // Ler o body uma vez apenas no início - declarado no escopo da função
+  let requestBody: any
+  try {
+    requestBody = await request.json()
+  } catch (parseError) {
+    logRequest(requestId, {
+      status: 400,
+      message: "Invalid JSON in request body",
+      ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+    })
+    return NextResponse.json(
+      { error: "Formato JSON inválido", message: "Corpo da requisição deve ser um JSON válido" },
+      { status: 400 }
+    )
+  }
 
   try {
     // Aplicar rate limiting
@@ -59,8 +60,15 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse
     }
 
+    // Criar uma nova requisição com o body já lido para validação
+    const mockRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: JSON.stringify(requestBody),
+    })
+
     // Validar e sanitizar a entrada
-    const validatedInput = await validateInput(request)
+    const validatedInput = await validateInput(mockRequest)
     if (validatedInput instanceof NextResponse) {
       logRequest(requestId, {
         status: 400,
@@ -73,6 +81,21 @@ export async function POST(request: NextRequest) {
     const { text, isMobile, tone = "Padrão" } = validatedInput
 
     console.log("API: Iniciando processamento de correção", requestId)
+    
+    // Logs de debugging melhorados
+    const debugInfo = {
+      requestId,
+      ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+      userAgent: request.headers.get("user-agent") || "unknown",
+      origin: request.headers.get("origin") || "unknown",
+      referer: request.headers.get("referer") || "unknown",
+      textLength: text.length,
+      isMobile,
+      tone,
+      webhookUrl: WEBHOOK_URL
+    }
+    
+    console.log("API: Request debug info:", JSON.stringify(debugInfo), requestId)
 
     // Verificar tamanho do texto
     if (text.length > 5000) {
@@ -141,14 +164,18 @@ export async function POST(request: NextRequest) {
 
       console.log(`API: Headers:`, JSON.stringify(headers), requestId)
 
-      response = await fetchWithTimeout(
+      response = await fetchWithRetry(
         webhookUrl,
         {
           method: "POST",
           headers,
           body: JSON.stringify(requestBody),
         },
-        FETCH_TIMEOUT,
+        {
+          maxRetries: 3,
+          timeout: FETCH_TIMEOUT,
+          retryDelay: 2000,
+        },
       )
       console.log(`API: Resposta recebida do webhook com status ${response.status}`, requestId)
     } catch (webhookError) {
@@ -161,7 +188,7 @@ export async function POST(request: NextRequest) {
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
       // No fallback, não enviamos o parâmetro de tom nem authToken para manter compatibilidade
-      response = await fetchWithTimeout(
+      response = await fetchWithRetry(
         fallbackUrl,
         {
           method: "POST",
@@ -174,7 +201,11 @@ export async function POST(request: NextRequest) {
             source: isMobile ? "mobile" : "desktop",
           }),
         },
-        FETCH_TIMEOUT,
+        {
+          maxRetries: 2,
+          timeout: FETCH_TIMEOUT,
+          retryDelay: 1000,
+        },
       )
       console.log(`API: Resposta recebida do webhook de fallback com status ${response.status}`, requestId)
     }
@@ -186,7 +217,7 @@ export async function POST(request: NextRequest) {
       const fallbackUrl = FALLBACK_WEBHOOK_URL
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
-      response = await fetchWithTimeout(
+      response = await fetchWithRetry(
         fallbackUrl,
         {
           method: "POST",
@@ -199,7 +230,11 @@ export async function POST(request: NextRequest) {
             source: isMobile ? "mobile" : "desktop",
           }),
         },
-        FETCH_TIMEOUT,
+        {
+          maxRetries: 2,
+          timeout: FETCH_TIMEOUT,
+          retryDelay: 1000,
+        },
       )
       console.log(`API: Resposta recebida do webhook de fallback com status ${response.status}`, requestId)
     }
@@ -345,8 +380,19 @@ export async function POST(request: NextRequest) {
       })
 
       console.log("API: Enviando resposta processada para o cliente", requestId)
-      // Retornar a resposta para o cliente
-      return NextResponse.json(processedData)
+      
+      // Retornar a resposta com headers de debug
+      const apiResponse = NextResponse.json(processedData)
+      
+      // Adicionar headers de debug úteis
+      apiResponse.headers.set('X-API-Version', '2.0')
+      apiResponse.headers.set('X-Service', 'CorretorIA-Correction')
+      apiResponse.headers.set('X-Request-ID', requestId)
+      apiResponse.headers.set('X-Processing-Time', `${Date.now() - startTime}ms`)
+      apiResponse.headers.set('X-Text-Length', text.length.toString())
+      apiResponse.headers.set('X-Tone-Applied', tone)
+      
+      return apiResponse
     } catch (processingError) {
       const pe = processingError as Error
       console.error("API: Erro ao processar dados da resposta:", pe, requestId)
@@ -381,9 +427,8 @@ export async function POST(request: NextRequest) {
 
     // Try to use fallback response for any error
     try {
-      // Get the original text from the request
-      const body = await request.json()
-      const originalText = body.text || ""
+      // Use the original text from the already read request body
+      const originalText = requestBody?.text || ""
 
       const fallbackResponse = createFallbackResponse(originalText)
       console.log("API: Usando resposta de fallback devido a erro geral", requestId)
