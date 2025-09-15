@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-// Atualizar a constante WEBHOOK_URL para o novo endpoint
-// Certifique-se de que a URL está exatamente como fornecida
-const WEBHOOK_URL = "https://my-corretoria.vercel.app/api/corrigir"
+import { FETCH_TIMEOUT, AUTH_TOKEN, WEBHOOK_URL, FALLBACK_WEBHOOK_URL } from "@/utils/constants"
 
-// Adicionar um fallback para o webhook original caso o novo falhe
-const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
-import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
+// Token de bypass para autenticação Vercel
+const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 
 // Função para fazer fetch com timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -100,8 +97,28 @@ export async function POST(request: NextRequest) {
     console.log(`API: Enviando requisição para o webhook, tom selecionado: ${tone}`, requestId)
     let response
     try {
-      // Usar sempre o novo endpoint principal primeiro
-      const webhookUrl = WEBHOOK_URL
+      // Preparar headers com token de bypass se disponível
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Request-ID": requestId,
+      }
+
+      let webhookUrl = WEBHOOK_URL
+      
+      // Adicionar token de bypass apenas se não for localhost e se o token estiver disponível
+      if (VERCEL_BYPASS_TOKEN && !webhookUrl.includes('localhost')) {
+        // Tentar ambas as abordagens: query params E headers
+        const urlObj = new URL(webhookUrl)
+        urlObj.searchParams.set('x-vercel-set-bypass-cookie', 'true')
+        urlObj.searchParams.set('x-vercel-protection-bypass', VERCEL_BYPASS_TOKEN)
+        webhookUrl = urlObj.toString()
+        
+        // Também adicionar como headers
+        headers['x-vercel-protection-bypass'] = VERCEL_BYPASS_TOKEN
+        headers['x-vercel-set-bypass-cookie'] = 'true'
+        
+        console.log(`API: Adicionando token de bypass do Vercel (query params + headers)`, requestId)
+      }
 
       console.log(`API: Usando webhook: ${webhookUrl}`, requestId)
 
@@ -122,14 +139,13 @@ export async function POST(request: NextRequest) {
         console.log("API: Adicionando authToken à requisição", requestId)
       }
 
+      console.log(`API: Headers:`, JSON.stringify(headers), requestId)
+
       response = await fetchWithTimeout(
         webhookUrl,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "X-Request-ID": requestId,
-          },
+          headers,
           body: JSON.stringify(requestBody),
         },
         FETCH_TIMEOUT,
@@ -145,6 +161,31 @@ export async function POST(request: NextRequest) {
       console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
 
       // No fallback, não enviamos o parâmetro de tom nem authToken para manter compatibilidade
+      response = await fetchWithTimeout(
+        fallbackUrl,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify({
+            text: text,
+            source: isMobile ? "mobile" : "desktop",
+          }),
+        },
+        FETCH_TIMEOUT,
+      )
+      console.log(`API: Resposta recebida do webhook de fallback com status ${response.status}`, requestId)
+    }
+
+    // Se a resposta principal der 401, tentar fallback imediatamente
+    if (!response.ok && response.status === 401) {
+      console.log("API: Status 401 detectado, tentando fallback automaticamente", requestId)
+      
+      const fallbackUrl = FALLBACK_WEBHOOK_URL
+      console.log(`API: Usando webhook de fallback: ${fallbackUrl}`, requestId)
+
       response = await fetchWithTimeout(
         fallbackUrl,
         {

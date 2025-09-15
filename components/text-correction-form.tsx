@@ -416,34 +416,39 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         // Modo de reescrita - novo formato
         console.log("Processando resposta de reescrita:", data)
 
-        // Verificar se a resposta está no formato de array com objeto output
+        // Verificar se a resposta está no formato da nova API: [{ output: { adjustedText, evaluation } }]
         if (Array.isArray(data) && data.length > 0 && data[0].output) {
           const output = data[0].output
 
-          if (output.correctedText) {
-            processedData.correctedText = output.correctedText
+          // Nova API usa adjustedText em vez de correctedText
+          if (output.adjustedText) {
+            processedData.correctedText = output.adjustedText
           }
 
           if (output.evaluation) {
             processedData.evaluation = {
               strengths: [],
               weaknesses: [],
-              suggestions: [],
-              score: 7,
+              suggestions: output.evaluation.suggestions || [],
+              score: 0, // Score 0 para reescrita conforme documentação
               toneChanges: [],
-              styleApplied: output.evaluation.styleApplied || selectedRewriteStyle,
+              styleApplied: output.evaluation.toneApplied || selectedRewriteStyle,
               changes: output.evaluation.changes || [],
+              toneApplied: output.evaluation.toneApplied
             }
           }
-        } else if (data.output && data.output.correctedText) {
-          // Formato alternativo com objeto output no nível superior
-          processedData.correctedText = data.output.correctedText
+        } else if (data.output && data.output.adjustedText) {
+          // Formato alternativo com objeto output no nível superior (nova API)
+          processedData.correctedText = data.output.adjustedText
 
           if (data.output.evaluation) {
             processedData.evaluation = {
               ...processedData.evaluation,
-              styleApplied: data.output.evaluation.styleApplied || selectedRewriteStyle,
+              styleApplied: data.output.evaluation.toneApplied || selectedRewriteStyle,
               changes: data.output.evaluation.changes || [],
+              suggestions: data.output.evaluation.suggestions || [],
+              score: 0,
+              toneApplied: data.output.evaluation.toneApplied
             }
           }
         } else if (data.rewrittenText) {

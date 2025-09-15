@@ -2,13 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL } from "@/utils/constants"
+
+// Token de bypass para autenticação Vercel
+const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
-
-// URL do webhook para reescrita
-const REWRITE_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/reescrever/c5d85e34-988a-4be8-bcae-e79451476f7e"
 
 // Função para fazer fetch com timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -136,24 +136,30 @@ export async function POST(request: NextRequest) {
     console.log(`API: Enviando requisição para o webhook de reescrita, estilo selecionado: ${rewriteStyle}`, requestId)
 
     try {
-      // Preparar o corpo da requisição
+      // Preparar o corpo da requisição conforme nova API
       const requestBody = {
         text: text,
         style: rewriteStyle, // Usar o estilo extraído diretamente do corpo da requisição
-        source: isMobile ? "mobile" : "desktop",
+        authToken: AUTH_TOKEN
       }
 
-      console.log(`API: Enviando para webhook ${REWRITE_WEBHOOK_URL}`)
+      // Configurar headers com token de bypass se disponível
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Request-ID": requestId,
+      }
+
+      let webhookUrl = REWRITE_WEBHOOK_URL
+
+      console.log(`API: Enviando para webhook ${webhookUrl}`)
+      console.log(`API: Headers:`, JSON.stringify(headers), requestId)
       console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
-      const response = await fetchWithTimeout(
-        REWRITE_WEBHOOK_URL,
+      let response = await fetchWithTimeout(
+        webhookUrl,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "X-Request-ID": requestId,
-          },
+          headers,
           body: JSON.stringify(requestBody),
         },
         FETCH_TIMEOUT,
@@ -191,20 +197,49 @@ export async function POST(request: NextRequest) {
         // Adicionar log detalhado da resposta para diagnóstico
         console.log("API: Resposta bruta recebida:", JSON.stringify(data), requestId)
 
-        // O webhook retorna formato: { correctedText: string, evaluation: object }
-        if (!data.correctedText) {
-          console.error("API: Campo correctedText não encontrado na resposta", requestId)
-          throw new Error("Campo correctedText não encontrado na resposta do webhook")
+        // A nova API retorna formato: [{ output: { adjustedText: string, evaluation: object } }]
+        let adjustedText = ""
+        let evaluation = null
+
+        if (Array.isArray(data) && data.length > 0 && data[0].output) {
+          // Formato da nova API
+          adjustedText = data[0].output.adjustedText
+          evaluation = data[0].output.evaluation
+        } else if (data.correctedText) {
+          // Formato de fallback/antigo (correção sendo usada como reescrita)
+          adjustedText = data.correctedText
+          evaluation = data.evaluation
+          
+          // Adaptar avaliação de correção para reescrita
+          if (evaluation) {
+            evaluation = {
+              toneApplied: rewriteStyle,
+              changes: evaluation.suggestions || [`Texto reescrito no estilo ${rewriteStyle}`],
+              suggestions: []
+            }
+          }
+          
+          console.log("API: Usando resposta de correção adaptada para reescrita", requestId)
+        } else {
+          console.error("API: Formato de resposta não reconhecido", requestId)
+          throw new Error("Formato de resposta não reconhecido da nova API")
+        }
+
+        if (!adjustedText) {
+          console.error("API: Campo adjustedText não encontrado na resposta", requestId)
+          throw new Error("Campo adjustedText não encontrado na resposta do webhook")
         }
 
         // Mapear a resposta para o formato esperado pelo frontend
         processedData = {
-          rewrittenText: data.correctedText,
+          rewrittenText: adjustedText,
           evaluation: {
-            strengths: data.evaluation?.changes || ["Texto reescrito com sucesso"],
+            strengths: evaluation?.changes || ["Texto reescrito com sucesso"],
             weaknesses: [],
-            suggestions: data.evaluation?.styleApplied ? [`Estilo aplicado: ${data.evaluation.styleApplied}`] : [],
+            suggestions: evaluation?.suggestions || [],
             score: 7,
+            toneApplied: evaluation?.toneApplied || rewriteStyle,
+            changes: evaluation?.changes || []
           },
         }
 

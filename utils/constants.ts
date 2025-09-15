@@ -15,8 +15,9 @@ export const POPUP_CONTENT_Z_INDEX = 10000
 export const GOOGLE_ADSENSE_CLIENT = "ca-pub-9690140831352761"
 export const GTM_ID = "GTM-5ZNJ85CP"
 
-// API endpoints
-export const WEBHOOK_URL = "https://my-corretoria.vercel.app/api/corrigir"
+// API endpoints - URLs atualizadas para nova API
+export const WEBHOOK_URL = process.env.CORRECTION_API_URL || "https://my-corretoria-hab2a25sc-fabioff30s-projects.vercel.app/api/corrigir"
+export const REWRITE_WEBHOOK_URL = process.env.REWRITE_API_URL || "https://my-corretoria.vercel.app/api/reescrever"
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 
 // Authentication - Server-side only
