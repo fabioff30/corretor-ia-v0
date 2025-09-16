@@ -195,50 +195,94 @@ export async function POST(request: NextRequest) {
         // Adicionar log detalhado da resposta para diagnóstico
         console.log("API: Resposta bruta recebida:", JSON.stringify(data), requestId)
 
-        // A nova API retorna formato: [{ output: { adjustedText: string, evaluation: object } }]
-        let adjustedText = ""
-        let evaluation = null
+        // A nova API pode retornar diferentes formatos; normalizamos para reescrita
+        let rewrittenText = ""
+        let evaluation: any = null
 
-        if (Array.isArray(data) && data.length > 0 && data[0].output) {
-          // Formato da nova API
-          adjustedText = data[0].output.adjustedText
-          evaluation = data[0].output.evaluation
-        } else if (data.correctedText) {
-          // Formato de fallback/antigo (correção sendo usada como reescrita)
-          adjustedText = data.correctedText
-          evaluation = data.evaluation
-          
-          // Adaptar avaliação de correção para reescrita
-          if (evaluation) {
-            evaluation = {
-              toneApplied: rewriteStyle,
-              changes: evaluation.suggestions || [`Texto reescrito no estilo ${rewriteStyle}`],
-              suggestions: []
-            }
+        const tryExtractOutput = (payload: any) => {
+          if (!payload) return false
+          const textCandidate =
+            payload.rewrittenText ||
+            payload.adjustedText ||
+            payload.correctedText ||
+            payload.text
+
+          if (textCandidate) {
+            rewrittenText = textCandidate
+            evaluation = payload.evaluation || null
+            return true
           }
-          
-          console.log("API: Usando resposta de correção adaptada para reescrita", requestId)
+          return false
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+          const primaryOutput = data[0].output || data[0]
+          if (!tryExtractOutput(primaryOutput)) {
+            console.error("API: Formato inesperado dentro do array de resposta", requestId)
+            throw new Error("Formato de resposta não reconhecido da nova API")
+          }
+        } else if (typeof data === "object" && data) {
+          if (!tryExtractOutput(data)) {
+            console.error("API: Formato de objeto não contém texto reescrito", requestId)
+            throw new Error("Formato de resposta não reconhecido da nova API")
+          }
         } else {
-          console.error("API: Formato de resposta não reconhecido", requestId)
+          console.error("API: Resposta do webhook não é objeto ou array", requestId)
           throw new Error("Formato de resposta não reconhecido da nova API")
         }
 
-        if (!adjustedText) {
-          console.error("API: Campo adjustedText não encontrado na resposta", requestId)
-          throw new Error("Campo adjustedText não encontrado na resposta do webhook")
+        if (!rewrittenText) {
+          console.warn("API: Texto reescrito ausente na resposta, usando entrada original como fallback", requestId)
+          rewrittenText = text
+          evaluation = evaluation || {
+            toneApplied: rewriteStyle,
+            styleApplied: rewriteStyle,
+            changes: [`Texto reescrito no estilo ${rewriteStyle}`],
+            suggestions: [],
+          }
+        }
+
+        // Adaptar avaliações alternativas (ex.: respostas de correção reutilizadas)
+        if (!evaluation && typeof data === "object" && data && (data.evaluation || data.suggestions)) {
+          const suggestions = Array.isArray((data as any).suggestions)
+            ? (data as any).suggestions
+            : data.evaluation?.suggestions
+
+          evaluation = {
+            toneApplied: rewriteStyle,
+            styleApplied: rewriteStyle,
+            changes: suggestions || [`Texto reescrito no estilo ${rewriteStyle}`],
+            suggestions: suggestions || [],
+          }
+          console.log("API: Adicionando avaliação derivada do formato antigo", requestId)
+        }
+
+        const normalizedEvaluation = {
+          strengths: evaluation && Array.isArray(evaluation.strengths) ? evaluation.strengths : [],
+          weaknesses: evaluation && Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [],
+          suggestions: evaluation && Array.isArray(evaluation.suggestions) ? evaluation.suggestions : [],
+          score: evaluation && typeof evaluation.score === "number" ? evaluation.score : 7,
+          toneApplied: evaluation?.toneApplied || evaluation?.styleApplied || rewriteStyle,
+          styleApplied: evaluation?.styleApplied || rewriteStyle,
+          changes: evaluation && Array.isArray(evaluation.changes) ? evaluation.changes : [],
+        }
+
+        if (normalizedEvaluation.strengths.length === 0 && normalizedEvaluation.changes.length > 0) {
+          normalizedEvaluation.strengths = normalizedEvaluation.changes
+        }
+
+        if (normalizedEvaluation.strengths.length === 0) {
+          normalizedEvaluation.strengths = ["Texto reescrito com sucesso"]
+        }
+
+        if (normalizedEvaluation.suggestions.length === 0 && normalizedEvaluation.changes.length > 0) {
+          normalizedEvaluation.suggestions = normalizedEvaluation.changes
         }
 
         // Mapear a resposta para o formato esperado pelo frontend
         processedData = {
-          rewrittenText: adjustedText,
-          evaluation: {
-            strengths: evaluation?.changes || ["Texto reescrito com sucesso"],
-            weaknesses: [],
-            suggestions: evaluation?.suggestions || [],
-            score: 7,
-            toneApplied: evaluation?.toneApplied || rewriteStyle,
-            changes: evaluation?.changes || []
-          },
+          rewrittenText,
+          evaluation: normalizedEvaluation,
         }
 
         if (!processedData.evaluation) {
