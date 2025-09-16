@@ -4,6 +4,7 @@ import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
 import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL } from "@/utils/constants"
 import { fetchWithRetry, fetchWithTimeout } from "@/utils/fetch-retry"
+import { sanitizeHeaderValue } from "@/utils/http-headers"
 
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
@@ -272,7 +273,8 @@ export async function POST(request: NextRequest) {
         apiResponse.headers.set('X-Request-ID', requestId)
         apiResponse.headers.set('X-Processing-Time', `${Date.now() - startTime}ms`)
         apiResponse.headers.set('X-Text-Length', text.length.toString())
-        apiResponse.headers.set('X-Style-Applied', rewriteStyle)
+        const sanitizedStyle = sanitizeHeaderValue(rewriteStyle) || 'default'
+        apiResponse.headers.set('X-Style-Applied', sanitizedStyle)
         
         return apiResponse
       } catch (processingError) {
