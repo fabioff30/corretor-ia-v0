@@ -20,6 +20,8 @@ import {
   Pencil,
   Wand2,
   CheckCircle,
+  Crown,
+  User,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -29,8 +31,11 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
 import { getUserSubscription, type Subscription } from "@/utils/subscription"
 import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
+import { useSubscription, useFeatureAccess } from "@/hooks/use-subscription"
+import { useAuth } from "@/contexts/auth-context"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
+import { SupabaseConfigNotice } from "@/components/supabase-config-notice"
 import Link from "next/link"
 
 // Importar o utilitário do Meta Pixel
@@ -80,7 +85,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [legacySubscription, setLegacySubscription] = useState<Subscription | null>(null)
+  const subscription = useSubscription()
+  const { characterLimit } = useFeatureAccess()
+  const { user } = useAuth()
   const [selectedTone, setSelectedTone] = useState<
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
@@ -120,21 +128,24 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     setCharCount(originalText.length)
   }, [originalText])
 
-  // Carregar a assinatura do usuário
+  // Carregar a assinatura legacy como fallback
   useEffect(() => {
-    const loadSubscription = async () => {
-      const userSubscription = await getUserSubscription()
-      setSubscription(userSubscription)
+    const loadLegacySubscription = async () => {
+      // Só carrega subscription legacy se não há usuário autenticado
+      if (!user) {
+        const userSubscription = await getUserSubscription()
+        setLegacySubscription(userSubscription)
+      }
     }
 
-    loadSubscription()
-  }, [])
+    loadLegacySubscription()
+  }, [user])
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
     // Limitar o texto ao número máximo de caracteres
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (newText.length <= characterLimit) {
+    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+    if (newText.length <= currentCharLimit) {
       setOriginalText(newText)
       // Atualizar o estado isTyping quando o usuário começar a digitar
       if (newText.length > 0 && !isTyping) {
@@ -144,11 +155,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       }
     } else {
       // Se o usuário tentar colar um texto maior que o limite, cortar para o tamanho máximo
-      setOriginalText(newText.slice(0, characterLimit))
+      setOriginalText(newText.slice(0, currentCharLimit))
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
-        description: `O texto foi limitado a ${characterLimit} caracteres.`,
+        description: `O texto foi limitado a ${currentCharLimit} caracteres.`,
         variant: "destructive",
       })
     }
@@ -184,9 +195,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     sanitized = sanitized.replace(/<(?!br\s*\/?)[^>]+>/gi, "")
 
     // Limitar o comprimento para evitar problemas com textos muito longos
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (sanitized.length > characterLimit) {
-      sanitized = sanitized.substring(0, characterLimit)
+    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+    if (sanitized.length > currentCharLimit) {
+      sanitized = sanitized.substring(0, currentCharLimit)
     }
 
     return sanitized
@@ -223,11 +234,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     }
 
     // Verificar limite de caracteres
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (originalText.length > characterLimit) {
+    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+    if (originalText.length > currentCharLimit) {
       toast({
         title: "Texto muito longo",
-        description: `Por favor, reduza o texto para no máximo ${characterLimit} caracteres.`,
+        description: `Por favor, reduza o texto para no máximo ${currentCharLimit} caracteres.`,
         variant: "destructive",
       })
       return
@@ -634,9 +645,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
 
   // Calcular a cor do contador de caracteres
   const getCounterColor = () => {
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (charCount > characterLimit * 0.9) return "text-red-500"
-    if (charCount > characterLimit * 0.7) return "text-yellow-500"
+    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+    if (charCount > currentCharLimit * 0.9) return "text-red-500"
+    if (charCount > currentCharLimit * 0.7) return "text-yellow-500"
     return "text-muted-foreground"
   }
 
@@ -754,6 +765,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   return (
     <Card className="w-full shadow-sm">
       <CardContent className="p-4 sm:p-6">
+        {/* Aviso de configuração do Supabase */}
+        <SupabaseConfigNotice />
+
         {error && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive/30">
             <AlertTriangle className="h-4 w-4" />
@@ -762,27 +776,56 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
           </Alert>
         )}
 
-        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-start">
-          <Heart className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-foreground/80">
-            Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX. Sua contribuição é
-            fundamental para continuarmos oferecendo correções de texto de qualidade.{" "}
-            <Link
-              href="/apoiar"
-              onClick={() => {
-                sendGTMEvent("donation_click", {
-                  location: "correction_form",
-                  element_type: "notice_link",
-                  section: "form_header",
-                })
-              }}
-              className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
-            >
-              Faça sua doação aqui
-            </Link>
-            .
-          </p>
-        </div>
+        {!user || !subscription.isPremium ? (
+          <div className="mb-4 bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-purple-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start">
+            <div className="flex-shrink-0 mr-2 mt-0.5">
+              {!user ? (
+                <User className="h-5 w-5 text-amber-500" />
+              ) : (
+                <Heart className="h-5 w-5 text-green-500" />
+              )}
+            </div>
+            <div className="text-sm text-foreground/80">
+              {!user ? (
+                <p>
+                  <strong>Crie sua conta gratuita</strong> para acessar mais recursos, ou{" "}
+                  <Link
+                    href="/upgrade"
+                    className="font-medium text-amber-500 hover:text-amber-600 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-amber-500/10"
+                  >
+                    upgrade para CorretorIA Pro
+                  </Link>
+                  {" "}e tenha 10.000 caracteres, sem anúncios e processamento prioritário por apenas R$ 19,90/mês.
+                </p>
+              ) : (
+                <p>
+                  Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX.{" "}
+                  <Link
+                    href="/apoiar"
+                    onClick={() => {
+                      sendGTMEvent("donation_click", {
+                        location: "correction_form",
+                        element_type: "notice_link",
+                        section: "form_header",
+                      })
+                    }}
+                    className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
+                  >
+                    Faça sua doação aqui
+                  </Link>
+                  .
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 rounded-lg p-3 flex items-center">
+            <Crown className="h-5 w-5 text-amber-500 mr-2" />
+            <p className="text-sm text-foreground/80">
+              <strong>CorretorIA Pro ativado!</strong> Você tem acesso a 10.000 caracteres, sem anúncios e processamento prioritário.
+            </p>
+          </div>
+        )}
 
         {/* Abas para alternar entre correção e reescrita */}
         <Tabs
@@ -835,7 +878,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               value={originalText}
               onChange={handleTextChange}
               disabled={isLoading}
-              maxLength={subscription?.features.characterLimit || FREE_CHARACTER_LIMIT}
+              maxLength={user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
             <div className="absolute top-3 right-3">
@@ -852,7 +895,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
 
           {/* Contador de caracteres */}
           <div className={`text-xs text-right ${getCounterColor()}`}>
-            {charCount}/{subscription?.features.characterLimit || FREE_CHARACTER_LIMIT} caracteres
+            {charCount}/{user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)} caracteres
+            {user && subscription.isPremium && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                Premium
+              </Badge>
+            )}
           </div>
 
           {/* Adicionar o componente de ajuste de tom */}
@@ -906,7 +954,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               disabled={
                 isLoading ||
                 !originalText.trim() ||
-                charCount > (subscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+                charCount > (user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT))
               }
               className="px-6 relative overflow-hidden group w-full sm:w-auto order-1 sm:order-3"
             >

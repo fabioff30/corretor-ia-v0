@@ -1,6 +1,11 @@
 // Character limits
 export const FREE_CHARACTER_LIMIT = 1500
-export const PREMIUM_CHARACTER_LIMIT = 5000
+export const PREMIUM_CHARACTER_LIMIT = 10000
+
+// Premium Plan Configuration
+export const PREMIUM_PLAN_PRICE = 19.90
+export const PREMIUM_PLAN_CURRENCY = "BRL"
+export const PREMIUM_PLAN_NAME = "CorretorIA Pro"
 
 // API timeouts - Optimized for better performance
 export const API_REQUEST_TIMEOUT = 30000 // 30 seconds (reduced from 60s)
