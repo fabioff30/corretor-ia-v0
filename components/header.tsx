@@ -12,6 +12,7 @@ import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { UserMenu } from "@/components/auth/user-menu"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -101,6 +102,9 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
+          {/* User Menu */}
+          <UserMenu />
+          
           {/* Admin Access Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -153,9 +157,7 @@ export function Header() {
           </DropdownMenu>
 
           <ModeToggle />
-          <Button asChild className="hidden md:flex">
-            <Link href="/apoiar">Apoiar</Link>
-          </Button>
+          
           <button className="md:hidden" onClick={toggleMenu} aria-label="Toggle Menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>

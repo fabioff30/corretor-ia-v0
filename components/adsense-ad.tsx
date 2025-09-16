@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { GOOGLE_ADSENSE_CLIENT } from "@/utils/constants"
+import { useFeatureAccess } from "@/hooks/use-subscription"
 
 interface AdsenseAdProps {
   adSlot: string
@@ -17,6 +18,7 @@ export function AdsenseAd({ adSlot, format = "auto", className = "", style = {},
   const [isLoaded, setIsLoaded] = useState(false)
   const adRef = useRef<HTMLModElement>(null)
   const initRef = useRef(false)
+  const { canAvoidAds } = useFeatureAccess()
 
   // Verificar consentimento de cookies
   useEffect(() => {
@@ -54,8 +56,8 @@ export function AdsenseAd({ adSlot, format = "auto", className = "", style = {},
     }
   }, [hasConsent])
 
-  // Se não tiver consentimento, não mostrar nada
-  if (!hasConsent) return null
+  // Se não tiver consentimento ou usuário premium, não mostrar nada
+  if (!hasConsent || canAvoidAds) return null
 
   return (
     <div className={`my-4 overflow-hidden ${className}`} style={style}>

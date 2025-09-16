@@ -41,6 +41,7 @@
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "@react-email/components": "latest",
+    "@supabase/supabase-js": "^2.56.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/jsdom": "^21.1.7",
     "@upstash/redis": "latest",
