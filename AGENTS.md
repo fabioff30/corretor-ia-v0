@@ -1,38 +1,19 @@
 # Repository Guidelines
 
-## Project Structure & Modules
-- Source: `app/` (Next.js App Router, pages, layouts, API routes), UI in `components/`, hooks in `hooks/`, utilities in `utils/`, shared types in `types/`.
-- Assets: `public/` (images, icons), global styles in `app/globals.css`, Tailwind config in `tailwind.config.ts`.
-- Config: `next.config.mjs`, `tsconfig.json`, env examples in `.env.example`.
+## Project Structure & Module Organization
+Core application logic lives in `app/`, using the Next.js App Router for pages, layouts, and API routes. Shared UI primitives reside in `components/ui/`, while feature components sit in `components/`. Custom hooks stay under `hooks/`, utilities under `utils/`, and shared types in `types/`. Assets belong in `public/`, with global styles in `app/globals.css` and Tailwind setup in `tailwind.config.ts`. Keep integration scripts and workflows inside `actions/` and `scripts/`, and store email templates in `emails/`.
 
-## Build, Test, and Development
-- `npm run dev`: Start the Next.js dev server.
-- `npm run build`: Create a production build.
-- `npm run start`: Serve the production build.
-- `npm run lint`: Run Next.js/ESLint checks.
-Tip: Use one package manager consistently. Given `package-lock.json`, default to `npm`.
+## Build, Test, and Development Commands
+Use `npm run dev` for the local development server with hot reload. `npm run build` creates the production bundle and surfaces type issues. Follow up with `npm run start` to validate the optimized build. `npm run lint` enforces ESLint and Next.js rules; run it before raising a PR. If you introduce tests, wire them to `npm test` so the command stays the single source of truth.
 
-## Coding Style & Conventions
-- Language: TypeScript (strict mode). React Server Components by default; add `"use client"` when needed.
-- Formatting: Two-space indentation, no semicolons, double quotes. Keep imports ordered; prefer alias `@/` for internal modules.
-- Filenames: kebab-case (e.g., `text-correction-form.tsx`).
-- Components: PascalCase exports; colocate UI elements under `components/` and primitives under `components/ui/`.
-- Hooks: `hooks/` with `use-*` naming.
-- Utilities: `utils/` with focused, testable functions.
+## Coding Style & Naming Conventions
+Write strict TypeScript with double quotes and no semicolons. Format files with two-space indentation and keep imports ordered (external, then `@/`). Components export PascalCase symbols, files use kebab-case (`text-correction-form.tsx`), and hooks start with `use-`. Default to server components; add `"use client"` only when browser APIs are required. Prefer the `@/` alias instead of long relative paths.
 
 ## Testing Guidelines
-- Framework: Not configured yet. If adding tests, prefer Vitest or Jest with React Testing Library.
-- Location: `__tests__/` or alongside files as `*.test.ts(x)`.
-- Coverage: Aim for critical flows (sanitization, env validation, rating stats). Add a minimal CI job later.
-- Run: Document test commands in `package.json` (e.g., `npm test`).
+Jest with React Testing Library is prepped via `jest.config.js` and `jest.setup.ts`. Add unit or integration specs under `__tests__/` or alongside the file as `*.test.ts(x)`. Target critical behavior first: sanitization utilities, environment validation, caching logic, and rating workflows. Document any new test command in `package.json` so contributors can run `npm test` consistently.
 
-## Commit & Pull Requests
-- Commits: Use concise, present-tense, conventional types: `feat:`, `fix:`, `chore:`, `refactor:`. Include a short scope when helpful.
-- PRs: Provide summary, rationale, and screenshots/GIFs for UI changes. Link issues, list breaking changes, and note any env or migration steps.
-- Checks: Ensure `npm run lint` and build succeed before requesting review.
+## Commit & Pull Request Guidelines
+Commits follow conventional prefixes such as `feat:`, `fix:`, `chore:`, and `refactor:`; keep messages short and present tense. PRs should include a concise summary, implementation notes, linked issues, and screenshots or GIFs for UI updates. Highlight migrations, config changes, or manual steps in a dedicated checklist. Before requesting review, confirm `npm run lint` and `npm run build` both pass locally.
 
-## Security & Configuration
-- Env vars: Start from `.env.example` → `.env.local`. Do not commit secrets. Key vars: `AUTH_TOKEN`, `REVALIDATION_TOKEN`, `WEBHOOK_SECRET`, `OPENAI_API_KEY`, Upstash Redis tokens, Mercado Pago keys.
-- Webhooks/tokens: Rotate regularly; use strong values (`openssl rand -hex 32`).
-- Rate limiting/cache: See `utils/cache-config.ts` and Redis setup. Keep tokens off client components.
-
+## Security & Configuration Tips
+Seed new environments from `.env.example`, storing secrets only in `.env.local` or platform-specific vaults. Rotate `AUTH_TOKEN`, `REVALIDATION_TOKEN`, `WEBHOOK_SECRET`, `OPENAI_API_KEY`, Upstash Redis, and Mercado Pago keys regularly using `openssl rand -hex 32`. Keep credentials off client components, and review `middleware.ts` plus `utils/cache-config.ts` when adjusting authentication or rate-limiting behavior.

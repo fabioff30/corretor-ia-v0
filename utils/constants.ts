@@ -17,7 +17,7 @@ export const GTM_ID = "GTM-5ZNJ85CP"
 
 // API endpoints - URLs atualizadas para nova API
 export const WEBHOOK_URL = process.env.CORRECTION_API_URL || "https://my-corretoria-hab2a25sc-fabioff30s-projects.vercel.app/api/corrigir"
-export const REWRITE_WEBHOOK_URL = process.env.REWRITE_API_URL || "https://my-corretoria.vercel.app/api/reescrever"
+export const REWRITE_WEBHOOK_URL = "https://my-corretoria.vercel.app/api/reescrever"
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 
 // Authentication - Server-side only
