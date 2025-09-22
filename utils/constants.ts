@@ -20,20 +20,21 @@ export const POPUP_CONTENT_Z_INDEX = 10000
 export const GOOGLE_ADSENSE_CLIENT = "ca-pub-9690140831352761"
 export const GTM_ID = "GTM-5ZNJ85CP"
 
-// API endpoints - URLs atualizadas para nova API
-export const WEBHOOK_URL = process.env.CORRECTION_API_URL || "http://my-corretoria-fabioff30-fabioff30s-projects.vercel.app/api/corrigir"
-export const REWRITE_WEBHOOK_URL = "http://my-corretoria-fabioff30-fabioff30s-projects.vercel.app/api/reescrever"
+// API Base URL and endpoints
+export const API_BASE_URL = "https://api-test.corretordetextoonline.com.br"
+
+// Free API endpoints
+export const WEBHOOK_URL = `${API_BASE_URL}/api/corrigir`
+export const REWRITE_WEBHOOK_URL = `${API_BASE_URL}/api/reescrever`
 export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 
 // Premium API endpoints
-export const PREMIUM_WEBHOOK_URL = "http://my-corretoria-fabioff30-fabioff30s-projects.vercel.app/api/premium_corrigir"
-export const PREMIUM_REWRITE_WEBHOOK_URL = "http://my-corretoria-fabioff30-fabioff30s-projects.vercel.app/api/premium_reescrever"
+export const PREMIUM_WEBHOOK_URL = `${API_BASE_URL}/api/premium_corrigir`
+export const PREMIUM_REWRITE_WEBHOOK_URL = `${API_BASE_URL}/api/premium_reescrever`
 
 // Humanization API endpoints
-export const HUMANIZE_ANALYSIS_URL =
-  process.env.HUMANIZE_ANALYSIS_URL || "http://127.0.0.1:8000/api/analysis-ai"
-export const HUMANIZE_REWRITE_URL =
-  process.env.HUMANIZE_REWRITE_URL || "http://127.0.0.1:8000/api/humanizar"
+export const HUMANIZE_ANALYSIS_URL = `${API_BASE_URL}/api/analysis_ai`
+export const HUMANIZE_REWRITE_URL = `${API_BASE_URL}/api/humanizar`
 
 // Humanization limits and configuration
 export const HUMANIZE_LIMITS = {
