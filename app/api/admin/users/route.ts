@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth'
 import { createSupabaseAdmin } from '@/lib/supabase-client-admin'
 import { z } from 'zod'
 
+export const dynamic = 'force-dynamic'
+
 interface UserWithSubscription {
   id: string
   email: string

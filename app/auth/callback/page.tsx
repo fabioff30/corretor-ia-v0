@@ -1,17 +1,19 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { getSafeRedirectUrl } from '@/utils/auth-helpers'
 
+// Force dynamic rendering for this page since it uses searchParams
+export const dynamic = 'force-dynamic'
+
 /**
- * Página de callback para autenticação OAuth (Google, GitHub, etc.)
- * Processa o retorno do provider e redireciona adequadamente
+ * Componente interno que usa useSearchParams
  */
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const router = useRouter()
@@ -165,5 +167,40 @@ export default function AuthCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+/**
+ * Loading fallback component
+ */
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Carregando...
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
+          <p className="text-muted-foreground">
+            Processando autenticação...
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/**
+ * Página de callback para autenticação OAuth (Google, GitHub, etc.)
+ * Processa o retorno do provider e redireciona adequadamente
+ */
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }

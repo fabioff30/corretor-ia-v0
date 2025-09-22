@@ -9,6 +9,8 @@ import { checkFeatureLimit, recordFeatureUsage } from "@/utils/feature-limits"
 import { cookies } from "next/headers"
 import { supabase } from "@/lib/supabase"
 
+export const dynamic = 'force-dynamic'
+
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 

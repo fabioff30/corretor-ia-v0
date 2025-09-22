@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   // Check if Stripe is properly configured
   if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_placeholder') {

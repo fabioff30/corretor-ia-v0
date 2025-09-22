@@ -3,6 +3,8 @@ import { stripe } from '@/lib/stripe'
 import { supabase } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe is properly configured
