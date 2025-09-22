@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   }
 
   const cookieStore = cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  // Use server-side supabase client for webhooks
 
   try {
     switch (event.type) {

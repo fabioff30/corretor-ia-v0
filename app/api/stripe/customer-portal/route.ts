@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
     // Verify user is authenticated
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    // Get user ID from cookie/header
+    const userId = cookieStore.get('user-id')?.value
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Get user data from database
+    const { data: user, error: authError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
+      .single()
 
     if (authError || !user) {
       return NextResponse.json(
