@@ -2,13 +2,12 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Menu, Sparkles, X, Shield, LogOut } from "lucide-react"
-import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -17,9 +16,29 @@ import { UserMenu } from "@/components/auth/user-menu"
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [adminPassword, setAdminPassword] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
-  const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
   const { toast } = useToast()
+
+  // Verificar sessão admin
+  const checkAdminSession = async () => {
+    try {
+      const response = await fetch('/api/admin/auth')
+      const data = await response.json()
+      setIsAuthenticated(data.authenticated)
+    } catch (err) {
+      console.error('Erro ao verificar sessão admin:', err)
+      setIsAuthenticated(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Verificar sessão ao carregar
+  useEffect(() => {
+    checkAdminSession()
+  }, [])
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -31,30 +50,75 @@ export function Header() {
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (login(adminPassword)) {
+    if (!adminPassword.trim()) {
+      toast({
+        title: "Erro",
+        description: "Digite a senha",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'login',
+          password: adminPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao fazer login')
+      }
+
       toast({
         title: "Login bem-sucedido",
         description: "Você está autenticado como administrador.",
       })
       setAdminPassword("")
-    } else {
+      setIsAuthenticated(true)
+    } catch (err) {
+      console.error('Erro no login admin:', err)
       toast({
         title: "Falha no login",
-        description: "Senha incorreta. Tente novamente.",
+        description: err instanceof Error ? err.message : "Senha incorreta. Tente novamente.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleAdminLogout = () => {
-    logout()
-    toast({
-      title: "Logout realizado",
-      description: "Você saiu da área administrativa.",
-    })
+  const handleAdminLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'logout'
+        })
+      })
+
+      setIsAuthenticated(false)
+      toast({
+        title: "Logout realizado",
+        description: "Você saiu da área administrativa.",
+      })
+    } catch (err) {
+      console.error('Erro no logout admin:', err)
+    }
   }
 
   return (
@@ -74,6 +138,12 @@ export function Header() {
             className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/") ? "text-primary" : "text-foreground/60"}`}
           >
             Início
+          </Link>
+          <Link
+            href="/detector-ia"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/detector-ia") ? "text-primary" : "text-foreground/60"}`}
+          >
+            Detector de IA
           </Link>
           <Link
             href="/recursos"
@@ -120,13 +190,18 @@ export function Header() {
                     <>
                       <div className="px-2 py-1.5 text-sm font-medium">Área Administrativa</div>
                       <DropdownMenuItem asChild>
-                        <Link href="/admin/content-monitoring" className="cursor-pointer">
-                          Monitoramento de Conteúdo
+                        <Link href="/admin/users" className="cursor-pointer">
+                          Gerenciar Usuários
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/admin/ratings" className="cursor-pointer">
                           Estatísticas de Avaliações
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/content-monitoring" className="cursor-pointer">
+                          Monitoramento de Conteúdo
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleAdminLogout} className="text-red-500 cursor-pointer">
@@ -174,6 +249,13 @@ export function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Início
+            </Link>
+            <Link
+              href="/detector-ia"
+              className={`px-2 py-1 rounded-md ${isActive("/detector-ia") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Detector de IA
             </Link>
             <Link
               href="/recursos"

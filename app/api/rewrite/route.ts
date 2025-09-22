@@ -2,9 +2,12 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL, PREMIUM_REWRITE_WEBHOOK_URL } from "@/utils/constants"
 import { fetchWithRetry, fetchWithTimeout } from "@/utils/fetch-retry"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
+import { checkFeatureLimit, recordFeatureUsage } from "@/utils/feature-limits"
+import { cookies } from "next/headers"
+import { supabase } from "@/lib/supabase"
 
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
@@ -15,6 +18,59 @@ export const dynamic = 'force-dynamic'
 // Função fetchWithTimeout agora importada de @/utils/fetch-retry
 
 export const maxDuration = 60 // Configurar o tempo máximo de execução da função para 60 segundos
+
+// Função para detectar se o usuário é premium baseado no header
+const isPremiumUser = (request: NextRequest): boolean => {
+  // Verificar headers que podem indicar usuário premium
+  const isPremium = request.headers.get("x-user-premium") === "true"
+  const userPlan = request.headers.get("x-user-plan")
+  return isPremium || userPlan === "premium" || userPlan === "pro" || userPlan === "plus"
+}
+
+// Função para obter o ID do usuário dos headers/cookies
+const getUserId = (request: NextRequest): string | null => {
+  // Tentar obter do header primeiro
+  const userId = request.headers.get("x-user-id")
+  if (userId) return userId
+
+  // Tentar obter do cookie se não estiver no header
+  const cookieStore = cookies()
+  const userCookie = cookieStore.get('user-id')
+  return userCookie?.value || null
+}
+
+// Função para salvar reescrita no histórico (apenas para usuários Pro/Plus)
+const saveRewrite = async (
+  userId: string,
+  originalText: string,
+  rewrittenText: string,
+  evaluation: any,
+  style: string
+) => {
+  try {
+    const { error } = await supabase
+      .from('rewrite_history')
+      .insert([
+        {
+          user_id: userId,
+          original_text: originalText,
+          rewritten_text: rewrittenText,
+          style: style,
+          score: evaluation?.score || 7,
+          character_count: originalText.length,
+          evaluation: evaluation
+        }
+      ])
+
+    if (error) {
+      console.error('Erro ao salvar reescrita no histórico:', error)
+    } else {
+      console.log('Reescrita salva no histórico com sucesso para usuário:', userId)
+    }
+  } catch (error) {
+    console.error('Erro ao salvar reescrita:', error)
+  }
+}
 
 // Função para criar uma resposta padrão em caso de erro
 const createFallbackResponse = (originalText: string) => {
@@ -85,13 +141,53 @@ export async function POST(request: NextRequest) {
 
     const { text, isMobile, style } = validatedInput
 
+    // Verificar limite de uso do recurso
+    const userId = getUserId(request)
+    if (userId) {
+      const limitCheck = await checkFeatureLimit(userId, 'rewrites')
+
+      if (!limitCheck.allowed) {
+        logRequest(requestId, {
+          status: 403,
+          message: `Feature limit exceeded: ${limitCheck.reason}`,
+          userId,
+          feature: 'rewrites',
+          daily_used: limitCheck.daily_used,
+          daily_limit: limitCheck.daily_limit,
+          monthly_used: limitCheck.monthly_used,
+          monthly_limit: limitCheck.monthly_limit,
+          ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+        })
+
+        return NextResponse.json(
+          {
+            error: "Limite de uso excedido",
+            message: limitCheck.reason === 'Daily limit reached'
+              ? `Você atingiu o limite diário de ${limitCheck.daily_limit} reescritas. Tente novamente amanhã ou faça upgrade para um plano superior.`
+              : limitCheck.reason === 'Monthly limit reached'
+              ? `Você atingiu o limite mensal de ${limitCheck.monthly_limit} reescritas. Faça upgrade para continuar usando.`
+              : `Recurso não disponível no seu plano atual.`,
+            limits: {
+              daily: { used: limitCheck.daily_used, limit: limitCheck.daily_limit },
+              monthly: { used: limitCheck.monthly_used, limit: limitCheck.monthly_limit }
+            }
+          },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Detectar se o usuário é premium
+    const isUserPremium = isPremiumUser(request)
+    const selectedWebhookUrl = isUserPremium ? PREMIUM_REWRITE_WEBHOOK_URL : REWRITE_WEBHOOK_URL
+
     // Obter o estilo da validação
     const rewriteStyle = style || "formal"
 
     console.log(`API: Estilo de reescrita selecionado: ${rewriteStyle}`, requestId)
 
     console.log("API: Iniciando processamento de reescrita", requestId)
-    
+
     // Logs de debugging melhorados
     const debugInfo = {
       requestId,
@@ -102,21 +198,31 @@ export async function POST(request: NextRequest) {
       textLength: text.length,
       isMobile,
       rewriteStyle,
-      webhookUrl: REWRITE_WEBHOOK_URL
+      webhookUrl: selectedWebhookUrl,
+      isPremium: isUserPremium
     }
     
     console.log("API: Request debug info:", JSON.stringify(debugInfo), requestId)
 
-    // Verificar tamanho do texto
-    if (text.length > 5000) {
+    // Verificar tamanho do texto baseado no plano do usuário
+    const maxCharacters = isUserPremium ? 10000 : 1500
+    if (text.length > maxCharacters) {
       logRequest(requestId, {
         status: 413,
         message: "Text too large",
         textLength: text.length,
+        maxAllowed: maxCharacters,
+        isPremium: isUserPremium,
         ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
       })
       return NextResponse.json(
-        { error: "Texto muito grande", message: "O texto não pode exceder 5000 caracteres" },
+        {
+          error: "Texto muito grande",
+          message: `O texto não pode exceder ${maxCharacters} caracteres${!isUserPremium ? '. Upgrade para CorretorIA Pro para até 10.000 caracteres.' : '.'}`,
+          maxCharacters,
+          currentLength: text.length,
+          isPremium: isUserPremium
+        },
         { status: 413 },
       )
     }
@@ -143,7 +249,7 @@ export async function POST(request: NextRequest) {
         "X-Request-ID": requestId,
       }
 
-      let webhookUrl = REWRITE_WEBHOOK_URL
+      let webhookUrl = selectedWebhookUrl
 
       console.log(`API: Enviando para webhook ${webhookUrl}`)
       console.log(`API: Headers:`, JSON.stringify(headers), requestId)
@@ -195,50 +301,88 @@ export async function POST(request: NextRequest) {
         // Adicionar log detalhado da resposta para diagnóstico
         console.log("API: Resposta bruta recebida:", JSON.stringify(data), requestId)
 
-        // A nova API retorna formato: [{ output: { adjustedText: string, evaluation: object } }]
-        let adjustedText = ""
-        let evaluation = null
+        // A nova API pode retornar diferentes formatos; normalizamos para reescrita
+        let rewrittenText = ""
+        let evaluation: any = null
 
-        if (Array.isArray(data) && data.length > 0 && data[0].output) {
-          // Formato da nova API
-          adjustedText = data[0].output.adjustedText
-          evaluation = data[0].output.evaluation
-        } else if (data.correctedText) {
-          // Formato de fallback/antigo (correção sendo usada como reescrita)
-          adjustedText = data.correctedText
-          evaluation = data.evaluation
-          
-          // Adaptar avaliação de correção para reescrita
-          if (evaluation) {
-            evaluation = {
-              toneApplied: rewriteStyle,
-              changes: evaluation.suggestions || [`Texto reescrito no estilo ${rewriteStyle}`],
-              suggestions: []
-            }
+        const tryExtractOutput = (payload: any) => {
+          if (!payload) return false
+          const textCandidate =
+            payload.rewrittenText ||
+            payload.adjustedText ||
+            payload.correctedText ||
+            payload.text
+
+          if (textCandidate) {
+            rewrittenText = textCandidate
+            evaluation = payload.evaluation || null
+            return true
           }
-          
-          console.log("API: Usando resposta de correção adaptada para reescrita", requestId)
+          return false
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+          const primaryOutput = data[0].output || data[0]
+          if (!tryExtractOutput(primaryOutput)) {
+            console.error("API: Formato inesperado dentro do array de resposta", requestId)
+            throw new Error("Formato de resposta não reconhecido da nova API")
+          }
+        } else if (typeof data === "object" && data) {
+          if (!tryExtractOutput(data)) {
+            console.error("API: Formato de objeto não contém texto reescrito", requestId)
+            throw new Error("Formato de resposta não reconhecido da nova API")
+          }
         } else {
-          console.error("API: Formato de resposta não reconhecido", requestId)
+          console.error("API: Resposta do webhook não é objeto ou array", requestId)
           throw new Error("Formato de resposta não reconhecido da nova API")
         }
 
-        if (!adjustedText) {
-          console.error("API: Campo adjustedText não encontrado na resposta", requestId)
-          throw new Error("Campo adjustedText não encontrado na resposta do webhook")
+        if (!rewrittenText) {
+          console.error("API: Texto reescrito ausente na resposta do webhook", requestId)
+          throw new Error("Texto reescrito ausente na resposta do serviço")
+        }
+
+        // Adaptar avaliações alternativas (ex.: respostas de correção reutilizadas)
+        if (!evaluation && typeof data === "object" && data && (data.evaluation || data.suggestions)) {
+          const suggestions = Array.isArray((data as any).suggestions)
+            ? (data as any).suggestions
+            : data.evaluation?.suggestions
+
+          evaluation = {
+            toneApplied: rewriteStyle,
+            styleApplied: rewriteStyle,
+            changes: suggestions || [`Texto reescrito no estilo ${rewriteStyle}`],
+            suggestions: suggestions || [],
+          }
+          console.log("API: Adicionando avaliação derivada do formato antigo", requestId)
+        }
+
+        const normalizedEvaluation = {
+          strengths: evaluation && Array.isArray(evaluation.strengths) ? evaluation.strengths : [],
+          weaknesses: evaluation && Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [],
+          suggestions: evaluation && Array.isArray(evaluation.suggestions) ? evaluation.suggestions : [],
+          score: evaluation && typeof evaluation.score === "number" ? evaluation.score : 7,
+          toneApplied: evaluation?.toneApplied || evaluation?.styleApplied || rewriteStyle,
+          styleApplied: evaluation?.styleApplied || rewriteStyle,
+          changes: evaluation && Array.isArray(evaluation.changes) ? evaluation.changes : [],
+        }
+
+        if (normalizedEvaluation.strengths.length === 0 && normalizedEvaluation.changes.length > 0) {
+          normalizedEvaluation.strengths = normalizedEvaluation.changes
+        }
+
+        if (normalizedEvaluation.strengths.length === 0) {
+          normalizedEvaluation.strengths = ["Texto reescrito com sucesso"]
+        }
+
+        if (normalizedEvaluation.suggestions.length === 0 && normalizedEvaluation.changes.length > 0) {
+          normalizedEvaluation.suggestions = normalizedEvaluation.changes
         }
 
         // Mapear a resposta para o formato esperado pelo frontend
         processedData = {
-          rewrittenText: adjustedText,
-          evaluation: {
-            strengths: evaluation?.changes || ["Texto reescrito com sucesso"],
-            weaknesses: [],
-            suggestions: evaluation?.suggestions || [],
-            score: 7,
-            toneApplied: evaluation?.toneApplied || rewriteStyle,
-            changes: evaluation?.changes || []
-          },
+          rewrittenText,
+          evaluation: normalizedEvaluation,
         }
 
         if (!processedData.evaluation) {
@@ -251,6 +395,22 @@ export async function POST(request: NextRequest) {
             score: 7,
           }
           console.log("API: Criada avaliação padrão para substituir campo ausente", requestId)
+        }
+
+        // Registrar o uso do recurso se o usuário estiver identificado
+        if (userId) {
+          await recordFeatureUsage(userId, 'rewrites', 1)
+
+          // Salvar reescrita no histórico apenas para usuários Pro/Plus
+          if (isPremiumUser(request)) {
+            await saveRewrite(
+              userId,
+              text,
+              processedData.rewrittenText,
+              processedData.evaluation,
+              rewriteStyle
+            )
+          }
         }
 
         // Registrar o sucesso da requisição

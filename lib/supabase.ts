@@ -14,6 +14,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'cache-control': 'no-cache, no-store, must-revalidate'
+    }
   }
 })
 
@@ -30,7 +38,9 @@ export interface Subscription {
   id: string
   user_id: string
   status: 'active' | 'canceled' | 'expired' | 'trial'
-  plan: 'free' | 'premium'
+  plan: 'free' | 'premium' | 'pro' | 'plus'
+  plan_id?: string
+  billing_period?: 'monthly' | 'annual'
   current_period_start?: string
   current_period_end?: string
   mercadopago_subscription_id?: string
@@ -59,7 +69,37 @@ export interface CorrectionHistory {
   created_at: string
 }
 
+// Tipos para os novos planos
+export interface PlanFeature {
+  feature_name: string
+  feature_display_name: string
+  daily_limit?: number | null
+  monthly_limit?: number | null
+  is_available: boolean
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  display_name: string
+  description?: string
+  priority: number
+  monthly_price?: number
+  annual_price?: number
+  features?: Record<string, PlanFeature>
+}
+
+export interface FeatureUsage {
+  allowed: boolean
+  reason: string
+  daily_limit?: number | null
+  monthly_limit?: number | null
+  daily_used: number
+  monthly_used: number
+}
+
 // Tipos combinados para uso na aplicação
 export interface UserWithSubscription extends User {
   subscription?: Subscription
+  subscription_plan?: SubscriptionPlan
 }

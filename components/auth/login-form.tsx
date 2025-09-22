@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Loader2, Mail, Lock, Eye, EyeOff, Github } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth} from "@/contexts/unified-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export function LoginForm() {
@@ -19,7 +20,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   
-  const { signIn } = useAuth()
+  const { signIn, signInWithProvider } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -29,7 +30,7 @@ export function LoginForm() {
     setError("")
 
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await signIn({ email, password })
       
       if (error) {
         setError(error.message)
@@ -47,6 +48,59 @@ export function LoginForm() {
       }
     } catch (err) {
       const errorMessage = "Erro inesperado no login"
+      setError(errorMessage)
+      toast({
+        title: "Erro no login", 
+        description: errorMessage,
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    setError('')
+    setIsLoading(true)
+
+    try {
+      console.log('🚀 Iniciando login social com:', provider)
+      
+      const result = await signInWithProvider(provider)
+      console.log('📦 Resultado do signInWithProvider:', result)
+      
+      if (result?.error) {
+        const errorMessage = result.error.message || `Erro ao fazer login com ${provider === 'google' ? 'Google' : 'GitHub'}`
+        console.log('❌ Erro retornado:', { error: result.error, message: errorMessage })
+        
+        setError(errorMessage)
+        toast({
+          title: "Erro no login",
+          description: errorMessage,
+          variant: "destructive"
+        })
+      } else {
+        console.log('✅ Login social iniciado com sucesso')
+        // O redirect será feito automaticamente pelo Supabase
+      }
+    } catch (err) {
+      console.error('💥 Exceção capturada no handleSocialLogin:', err)
+      
+      let errorMessage = "Erro inesperado no login"
+      
+      // Tentar extrair uma mensagem mais específica do erro
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid login credentials')) {
+          errorMessage = "Credenciais inválidas"
+        } else if (err.message.includes('Provider not enabled')) {
+          errorMessage = `Login com ${provider === 'google' ? 'Google' : 'GitHub'} não está habilitado`
+        } else if (err.message.includes('signInWithOAuth')) {
+          errorMessage = "Erro na configuração de autenticação. Verifique se o Google OAuth está configurado no Supabase."
+        } else {
+          errorMessage = err.message || errorMessage
+        }
+      }
+      
       setError(errorMessage)
       toast({
         title: "Erro no login", 
@@ -157,6 +211,41 @@ export function LoginForm() {
             </div>
           </CardFooter>
         </form>
+
+        {/* Botões de login social movidos para fora do form */}
+        <CardContent className="pt-0">
+          {/* Divisor */}
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Ou continue com
+              </span>
+            </div>
+          </div>
+
+          {/* Botões de login social */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading}
+            >
+              <FcGoogle className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSocialLogin('github')}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

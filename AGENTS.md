@@ -1,19 +1,23 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core application logic lives in `app/`, using the Next.js App Router for pages, layouts, and API routes. Shared UI primitives reside in `components/ui/`, while feature components sit in `components/`. Custom hooks stay under `hooks/`, utilities under `utils/`, and shared types in `types/`. Assets belong in `public/`, with global styles in `app/globals.css` and Tailwind setup in `tailwind.config.ts`. Keep integration scripts and workflows inside `actions/` and `scripts/`, and store email templates in `emails/`.
+The Next.js App Router lives in `app/`, where each route folder can include UI, loading states, and API handlers. Shared UI is in `components/`, with interactive pieces marked by `"use client"`. Cross-cutting logic is grouped under `hooks/`, `utils/`, and `types/`. Server-side integrations (Supabase, OpenAI, Mercado Pago) sit in `lib/` and `supabase/`; update schemas alongside `supabase/schema.sql`. UI styling is centralized in `styles/` with Tailwind config, while assets belong in `public/`. Test fixtures and mocks use `__tests__/`, automation scripts are in `actions/` and `scripts/`, and email templates live in `emails/`.
 
 ## Build, Test, and Development Commands
-Use `npm run dev` for the local development server with hot reload. `npm run build` creates the production bundle and surfaces type issues. Follow up with `npm run start` to validate the optimized build. `npm run lint` enforces ESLint and Next.js rules; run it before raising a PR. If you introduce tests, wire them to `npm test` so the command stays the single source of truth.
+- `npm run dev`: Start the local dev server with hot reload on http://localhost:3000.
+- `npm run build`: Produce the production bundle and surface type errors.
+- `npm run start`: Serve the optimized build; use after `npm run build` to validate.
+- `npm run lint`: Enforce ESLint + Prettier rules.
+- `npm test`: Execute the Jest suite (React Testing Library + jsdom environment).
 
 ## Coding Style & Naming Conventions
-Write strict TypeScript with double quotes and no semicolons. Format files with two-space indentation and keep imports ordered (external, then `@/`). Components export PascalCase symbols, files use kebab-case (`text-correction-form.tsx`), and hooks start with `use-`. Default to server components; add `"use client"` only when browser APIs are required. Prefer the `@/` alias instead of long relative paths.
+Write modern TypeScript with React 18 patterns. Components export PascalCase, hooks begin with `use`, and utilities prefer kebab-case filenames such as `text-correction-form.tsx`. Group imports by origin: external packages, then `@/` aliases, then relative paths. Favor server components; add `"use client"` only when browser APIs or hooks require it. Format via Prettier (mirrors `npm run lint`) and follow Tailwind utility ordering already established in `styles/`.
 
 ## Testing Guidelines
-Jest with React Testing Library is prepped via `jest.config.js` and `jest.setup.ts`. Add unit or integration specs under `__tests__/` or alongside the file as `*.test.ts(x)`. Target critical behavior first: sanitization utilities, environment validation, caching logic, and rating workflows. Document any new test command in `package.json` so contributors can run `npm test` consistently.
+Tests run under Jest with jsdom (`jest.config.js`, `jest.setup.ts`). Place specs in `__tests__/` or co-locate as `*.test.tsx`. Cover API routes, webhook flows, Supabase auth, and text-processing utilities. Use React Testing Library patterns (`render`, `screen`, `userEvent`) and keep assertions resilient to copy updates.
 
 ## Commit & Pull Request Guidelines
-Commits follow conventional prefixes such as `feat:`, `fix:`, `chore:`, and `refactor:`; keep messages short and present tense. PRs should include a concise summary, implementation notes, linked issues, and screenshots or GIFs for UI updates. Highlight migrations, config changes, or manual steps in a dedicated checklist. Before requesting review, confirm `npm run lint` and `npm run build` both pass locally.
+Follow Conventional Commits (`feat:`, `fix:`, `chore:`, etc.) with imperative, present-tense subjects. PRs should summarize changes, call out implementation details, reference issues, and attach UI screenshots or GIFs when applicable. Before requesting review, run `npm run lint`, `npm run build`, and `npm test`, and document any skipped steps.
 
 ## Security & Configuration Tips
-Seed new environments from `.env.example`, storing secrets only in `.env.local` or platform-specific vaults. Rotate `AUTH_TOKEN`, `REVALIDATION_TOKEN`, `WEBHOOK_SECRET`, `OPENAI_API_KEY`, Upstash Redis, and Mercado Pago keys regularly using `openssl rand -hex 32`. Keep credentials off client components, and review `middleware.ts` plus `utils/cache-config.ts` when adjusting authentication or rate-limiting behavior.
+Copy `.env.example` to `.env.local` per environment. Keep API keys rotated and never committed. When modifying middleware or caching, review `middleware.ts`, `utils/subscription.ts`, and Supabase policies to ensure access stays scoped to authenticated contexts.

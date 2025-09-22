@@ -12,7 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test` - Run Jest test suite
 
 ### Package Manager
-This project uses `pnpm` as the package manager based on `pnpm-lock.yaml`. Use `pnpm install` to install dependencies.
+This project uses `pnpm` as the package manager based on `pnpm-lock.yaml` and configured in `vercel.json`. Use `pnpm install` to install dependencies.
+
+**Important**: Vercel deployment uses `pnpm install --no-frozen-lockfile` for better compatibility.
 
 ### Testing Framework
 Jest is configured with:
@@ -39,24 +41,25 @@ Jest is configured with:
 ### Core Business Logic
 CorretorIA is a Portuguese text correction application powered by AI. The main workflow:
 
-1. **Text Input**: Users input text through `TextCorrectionForm` component (character limits: 1500 free, 5000 premium)
+1. **Text Input**: Users input text through `TextCorrectionForm` component (character limits: 1500 free, 10000 premium)
 2. **API Processing**: Text is sent to `/api/correct/route.ts` which handles:
    - Rate limiting and input validation via middleware
    - Multiple webhook endpoints for different correction modes
    - Fallback mechanisms and error handling
+   - 30-second optimized timeout with 25-second fetch timeout
 3. **Response Processing**: Corrected text and evaluation data returned to client
 4. **Display**: Results shown with diff highlighting and detailed analysis
 
 ### Key API Endpoints
 - `/api/correct` - Main text correction endpoint with comprehensive error handling
 - `/api/rewrite` - Text rewriting functionality  
-- `/api/custom-tone-webhook` - Custom tone adjustment processing with external webhook integration
+- `/api/tone` - Tone adjustment and text analysis
+- `/api/julinho` - AI chat assistant functionality (controlled by `JULINHO_DISABLED` flag)
 - `/api/feedback` - User feedback collection
-- `/api/mercadopago/*` - Payment processing integration
+- `/api/mercadopago/*` - Payment processing integration (config, preference, webhook)
 - `/api/admin/*` - Administrative functions with JWT authentication
 - `/api/admin/auth` - Secure admin authentication endpoint
-- `/api/revalidate` - Content revalidation with token protection
-- `/api/revalidate/webhook` - Webhook-based content revalidation for blog posts
+- `/api/admin/ratings` - User rating management
 
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
@@ -100,11 +103,12 @@ Key configuration in `utils/constants.ts`:
 - **Token Security**: Cryptographically secure tokens with validation
 
 ### Performance Considerations
-- **Timeouts**: 60-second API timeout with fallback mechanisms
+- **Timeouts**: 30-second API timeout with fallback mechanisms (optimized from 60s)
 - **Caching**: Redis-backed caching and API routes configured with no-store
-- **Image Optimization**: Disabled for compatibility
+- **Image Optimization**: Disabled for compatibility (`unoptimized: true`)
 - **Server Actions**: 2MB body size limit configured
 - **Bundle Optimization**: Proper code splitting and lazy loading
+- **Container Sizing**: Tailwind configured with max-width of 1366px for better display compatibility
 
 ### Error Handling Strategy
 Robust error handling with multiple fallback levels:

@@ -71,8 +71,41 @@ export async function getRatingDetails(limit = 50, offset = 0): Promise<RatingDa
     // LRANGE retorna elementos da lista em um intervalo específico
     const ratings = await redis.lrange(RATINGS_DETAILED_KEY, offset, offset + limit - 1)
 
-    // Converter as strings JSON em objetos
-    return ratings.map((rating) => JSON.parse(rating) as RatingData)
+    // Converter os dados em objetos, com validação
+    // Upstash Redis client pode retornar strings ou objetos já parseados
+    const validRatings: RatingData[] = []
+    
+    for (const rating of ratings) {
+      try {
+        let parsed: any
+
+        // Se é um objeto, use diretamente
+        if (typeof rating === 'object' && rating !== null) {
+          parsed = rating
+        }
+        // Se é uma string, tente fazer parse do JSON
+        else if (typeof rating === 'string' && rating.trim()) {
+          parsed = JSON.parse(rating)
+        }
+        // Se não é nem string nem objeto, pule
+        else {
+          console.warn("Tipo de dados inesperado no Redis:", typeof rating, rating)
+          continue
+        }
+
+        // Validar estrutura básica
+        if (parsed && typeof parsed === 'object' && parsed.id && typeof parsed.rating === 'number') {
+          validRatings.push(parsed as RatingData)
+        } else {
+          console.warn("Estrutura de avaliação inválida:", parsed)
+        }
+      } catch (parseError) {
+        console.warn("Ignorando avaliação com dados inválidos:", parseError, rating)
+        // Continua processando outras avaliações
+      }
+    }
+    
+    return validRatings
   } catch (error) {
     console.error("Erro ao obter avaliações detalhadas:", error)
     return []
@@ -98,7 +131,20 @@ export async function getRatingById(id: string): Promise<RatingData | null> {
     // Encontrar a avaliação com o ID correspondente
     const ratingJson = allRatings.find((rating) => {
       try {
-        const parsed = JSON.parse(rating)
+        let parsed: any
+        
+        // Se é um objeto, use diretamente
+        if (typeof rating === 'object' && rating !== null) {
+          parsed = rating
+        }
+        // Se é uma string, tente fazer parse do JSON
+        else if (typeof rating === 'string' && rating.trim()) {
+          parsed = JSON.parse(rating)
+        }
+        else {
+          return false
+        }
+        
         return parsed.id === id
       } catch {
         return false
@@ -109,7 +155,13 @@ export async function getRatingById(id: string): Promise<RatingData | null> {
       return null
     }
 
-    return JSON.parse(ratingJson) as RatingData
+    // Se já é um objeto, retorne diretamente
+    if (typeof ratingJson === 'object' && ratingJson !== null) {
+      return ratingJson as RatingData
+    }
+    
+    // Se é uma string, faça parse
+    return JSON.parse(ratingJson as string) as RatingData
   } catch (error) {
     console.error("Erro ao obter avaliação por ID:", error)
     return null

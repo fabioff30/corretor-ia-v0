@@ -1,46 +1,37 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useAdminAuth as useAdminAuthContext } from './use-unified-auth'
 
+/**
+ * Hook específico para autenticação de administradores
+ * Mantém compatibilidade com o código existente
+ */
 export function useAdminAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const { admin, isAuthenticated, loading, signIn, signOut } = useAdminAuthContext()
 
-  useEffect(() => {
-    // Verificar se o usuário já está autenticado no localStorage
-    const checkAuth = () => {
-      const storedAuth = localStorage.getItem("adminAuth")
-      if (storedAuth === "true") {
-        setIsAuthenticated(true)
-      }
-      setIsLoading(false)
+  // Método de login legado (compatibilidade)
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const result = await signIn({ email, password })
+      return !result.error
+    } catch (error) {
+      console.error('Erro no login admin:', error)
+      return false
     }
-
-    checkAuth()
-  }, [])
-
-  const login = (password: string): boolean => {
-    // Verificar se a senha corresponde à variável de ambiente
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
-
-    if (adminPassword && password === adminPassword) {
-      localStorage.setItem("adminAuth", "true")
-      setIsAuthenticated(true)
-      return true
-    }
-
-    return false
   }
 
-  const logout = () => {
-    localStorage.removeItem("adminAuth")
-    setIsAuthenticated(false)
+  // Método de logout legado (compatibilidade)
+  const logout = async () => {
+    await signOut()
   }
 
   return {
+    admin,
     isAuthenticated,
-    isLoading,
-    login,
-    logout,
+    isLoading: loading,
+    signIn,
+    signOut,
+    login, // Método legado
+    logout, // Método legado
   }
 }

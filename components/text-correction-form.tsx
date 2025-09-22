@@ -20,6 +20,7 @@ import {
   Pencil,
   Wand2,
   CheckCircle,
+  Shield,
   Crown,
   User,
 } from "lucide-react"
@@ -32,7 +33,7 @@ import { StarRating } from "@/components/star-rating"
 import { getUserSubscription, type Subscription } from "@/utils/subscription"
 import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { useSubscription, useFeatureAccess } from "@/hooks/use-subscription"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth} from "@/contexts/unified-auth-context"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import { SupabaseConfigNotice } from "@/components/supabase-config-notice"
@@ -75,6 +76,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       changes?: string[]
       toneApplied?: string
     }
+    blockedTermsRemoved?: Record<string, number>
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -325,11 +327,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
 
       console.log(`Cliente: Enviando texto para ${endpoint}`)
 
+      // Preparar headers incluindo informações premium
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+
+      // Adicionar headers premium se o usuário for premium
+      if (subscription.isPremium) {
+        headers["x-user-premium"] = "true"
+        headers["x-user-plan"] = "premium"
+      }
+
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(payload),
         signal,
       })
@@ -381,6 +392,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
           styleApplied: "", // Novo campo para o estilo aplicado na reescrita
           changes: [], // Novo campo para as mudanças feitas na reescrita
         },
+        blockedTermsRemoved: {} as Record<string, number>,
       }
 
       // Processar a resposta com base no endpoint usado
@@ -448,6 +460,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               toneApplied: output.evaluation.toneApplied
             }
           }
+
+          if (output.blockedTermsRemoved) {
+            processedData.blockedTermsRemoved = output.blockedTermsRemoved
+          }
         } else if (data.output && data.output.adjustedText) {
           // Formato alternativo com objeto output no nível superior (nova API)
           processedData.correctedText = data.output.adjustedText
@@ -461,6 +477,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               score: 0,
               toneApplied: data.output.evaluation.toneApplied
             }
+          }
+
+          if (data.output.blockedTermsRemoved) {
+            processedData.blockedTermsRemoved = data.output.blockedTermsRemoved
           }
         } else if (data.rewrittenText) {
           // Formato atual do API /api/rewrite
@@ -477,6 +497,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               changes: data.evaluation.strengths || [],
             }
           }
+
+          if (data.blockedTermsRemoved) {
+            processedData.blockedTermsRemoved = data.blockedTermsRemoved
+          }
         } else if (data.correctedText) {
           // Formato alternativo - resposta do n8n webhook
           processedData.correctedText = data.correctedText
@@ -491,6 +515,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               styleApplied: data.evaluation.styleApplied || selectedRewriteStyle,
               changes: data.evaluation.changes || [],
             }
+          }
+
+          if (data.blockedTermsRemoved) {
+            processedData.blockedTermsRemoved = data.blockedTermsRemoved
           }
         } else {
           console.error("Cliente: Formato de resposta não reconhecido", data)
@@ -507,6 +535,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       setResult({
         correctedText: processedText,
         evaluation: processedData.evaluation,
+        blockedTermsRemoved: processedData.blockedTermsRemoved,
       })
 
       // Modificar a parte onde definimos os flags após a correção bem-sucedida
@@ -673,42 +702,66 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       { value: "childlike", label: "Como uma Criança", description: "Linguagem simples e inocente" },
     ]
 
+    const currentStyle = styles.find((style) => style.value === selectedRewriteStyle)
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
-        {styles.map((style) => (
-          <div
-            key={style.value}
-            className={`p-3 border rounded-lg cursor-pointer transition-all ${
-              selectedRewriteStyle === style.value
-                ? "border-primary bg-primary/10 shadow-sm"
-                : "border-muted hover:border-primary/50 hover:bg-muted/50"
-            }`}
-            onClick={() => handleRewriteStyleChange(style.value as RewriteStyle)}
+      <div className="mt-4 space-y-3">
+        <div className="sm:hidden space-y-2">
+          <select
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            value={selectedRewriteStyle}
+            onChange={(event) => handleRewriteStyleChange(event.target.value as RewriteStyle)}
           >
-            <div className="font-medium text-sm">{style.label}</div>
-            <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
-          </div>
-        ))}
+            {styles.map((style) => (
+              <option key={style.value} value={style.value}>
+                {style.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            {currentStyle?.description || "Escolha o estilo que combina melhor com o seu texto."}
+          </p>
+        </div>
+
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+          {styles.map((style) => (
+            <button
+              type="button"
+              key={style.value}
+              className={`p-3 border rounded-lg text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                selectedRewriteStyle === style.value
+                  ? "border-primary bg-primary/10 shadow-sm"
+                  : "border-muted hover:border-primary/50 hover:bg-muted/50"
+              }`}
+              onClick={() => handleRewriteStyleChange(style.value as RewriteStyle)}
+            >
+              <div className="font-medium text-sm">{style.label}</div>
+              <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
+            </button>
+          ))}
+        </div>
       </div>
     )
   }
 
   // Função para renderizar o componente de avaliação de reescrita
-  const renderRewriteEvaluation = () => {
+  const renderRewriteInsights = () => {
     if (!result || !result.evaluation) {
       return null
     }
 
-    const { styleApplied, changes } = result.evaluation
+    const { styleApplied, changes, suggestions } = result.evaluation
+    const blockedTerms = result.blockedTermsRemoved || {}
+    const improvementItems = changes && changes.length > 0 ? changes : suggestions || []
+    const termsEntries = Object.entries(blockedTerms)
 
     return (
       <div className="space-y-6">
-        {/* Estilo Aplicado */}
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-lg font-semibold flex items-center">
               <Wand2 className="h-5 w-5 text-primary mr-2" />
-              Estilo Aplicado
+              Estilo aplicado
             </h4>
             <Badge className="bg-primary text-primary-foreground px-3 py-1 text-sm font-medium">
               {styleApplied
@@ -717,20 +770,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            O texto foi reescrito seguindo o estilo selecionado, adaptando o tom e a estrutura conforme necessário.
+            O texto foi reescrito seguindo o estilo selecionado, adaptando tom, vocabulário e estrutura onde necessário.
           </p>
         </div>
 
-        {/* Alterações Realizadas */}
-        {changes && changes.length > 0 && (
-          <div className="bg-muted/30 rounded-lg p-4 border">
-            <div className="flex items-center mb-4">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <h4 className="text-lg font-semibold">Alterações Realizadas</h4>
-            </div>
+        <div className="bg-muted/30 rounded-lg p-4 border">
+          <div className="flex items-center mb-4">
+            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+            <h4 className="text-lg font-semibold">Melhorias aplicadas</h4>
+          </div>
+          {improvementItems.length > 0 ? (
             <ul className="space-y-3">
-              {changes.map((change, index) => (
-                <li key={index} className="bg-white dark:bg-slate-800 p-3 rounded-md border shadow-sm">
+              {improvementItems.map((change, index) => (
+                <li key={`${change}-${index}`} className="bg-white dark:bg-slate-800 p-3 rounded-md border shadow-sm">
                   <div className="flex items-start">
                     <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">
                       {index + 1}
@@ -740,19 +792,27 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma melhoria específica foi informada pelo serviço.</p>) }
+        </div>
 
-        {(!changes || changes.length === 0) && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-              <p className="text-yellow-800 dark:text-yellow-200">
-                Não foram fornecidos detalhes específicos sobre as alterações realizadas no texto.
-              </p>
-            </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <Shield className="h-5 w-5 text-blue-500 mr-2" />
+            <h4 className="text-lg font-semibold text-blue-800">Termos removidos</h4>
           </div>
-        )}
+          {termsEntries.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {termsEntries.map(([term, count]) => (
+                <Badge key={term} variant="outline" className="bg-white text-blue-700 border-blue-200 text-xs">
+                  {term} ({count}x)
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-blue-700">Nenhum termo foi removido durante a reescrita deste texto.</p>
+          )}
+        </div>
       </div>
     )
   }
@@ -1012,7 +1072,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                   value="evaluation"
                   className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
                 >
-                  Avaliação
+                  {operationMode === "rewrite" ? "Melhorias & termos" : "Avaliação"}
                 </TabsTrigger>
               </TabsList>
 
@@ -1070,7 +1130,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                     {operationMode === "correct" ? (
                       <TextEvaluation evaluation={result.evaluation} />
                     ) : (
-                      renderRewriteEvaluation()
+                      renderRewriteInsights()
                     )}
                   </CardContent>
                 </Card>

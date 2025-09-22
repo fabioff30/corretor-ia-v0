@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth} from "@/contexts/unified-auth-context"
 import { useSubscription } from "@/hooks/use-subscription"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -82,10 +82,10 @@ export default function AccountPage() {
           {subscription.isPremium ? (
             <>
               <Crown className="h-3 w-3 mr-1" />
-              CorretorIA Pro
+              {subscription.planDisplayName}
             </>
           ) : (
-            "Plano Gratuito"
+            subscription.planDisplayName
           )}
         </Badge>
       </div>
@@ -149,14 +149,14 @@ export default function AccountPage() {
                 <div>
                   <h3 className="font-medium">Plano Atual</h3>
                   <p className="text-sm text-muted-foreground">
-                    {subscription.isPremium ? "CorretorIA Pro" : "Gratuito"}
+                    {subscription.planDisplayName}
                   </p>
                 </div>
-                
+
                 <div className="text-right">
                   {subscription.isPremium ? (
                     <>
-                      <div className="font-semibold text-green-600">R$ 19,90/mês</div>
+                      <div className="font-semibold text-green-600">{subscription.planPrice}</div>
                       {subscription.expiresAt && (
                         <div className="text-xs text-muted-foreground">
                           Renova em {formatDate(subscription.expiresAt)}
@@ -164,7 +164,7 @@ export default function AccountPage() {
                       )}
                     </>
                   ) : (
-                    <div className="font-semibold">R$ 0,00</div>
+                    <div className="font-semibold">{subscription.planPrice}</div>
                   )}
                 </div>
               </div>

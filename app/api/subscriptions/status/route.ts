@@ -1,17 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Cliente Supabase com service role
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+import { createSupabaseAdmin } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar se o usuário existe
+    const supabaseAdmin = createSupabaseAdmin()
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, email, name')

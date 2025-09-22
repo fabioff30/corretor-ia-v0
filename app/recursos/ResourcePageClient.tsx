@@ -348,6 +348,34 @@ export default function ResourcePageClient() {
                     </ul>
                   </div>
 
+                  {/* Detector Tool Box */}
+                  <div className="glass-card rounded-xl p-6 border-blue-500/30 bg-blue-50/50 dark:bg-blue-900/20">
+                    <h3 className="text-lg font-semibold mb-3 text-blue-800 dark:text-blue-200">🤖 Detector de IA</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                      Analise a probabilidade de um texto ter sido escrito por IA e visualize sinais explicados em detalhes.
+                    </p>
+                    <Button variant="outline" className="w-full border-blue-500/30 hover:bg-blue-500/10" asChild>
+                      <Link href="/detector-ia">
+                        Analisar Texto com IA
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Pricing Box */}
+                  <div className="glass-card rounded-xl p-6 border-primary/20 bg-primary/5">
+                    <h3 className="text-lg font-semibold mb-3">💳 Planos e limites atualizados</h3>
+                    <p className="text-sm text-foreground/80 mb-4">
+                      Compare o plano grátis, Pro e Plus para encontrar o volume ideal de correções, reescritas e análises de IA.
+                    </p>
+                    <Button className="w-full" asChild>
+                      <Link href="/precos">
+                        Ver planos e preços
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
                   {/* Related Articles */}
                   <div className="glass-card rounded-xl p-6">
                     <h3 className="text-lg font-semibold mb-4">Artigos Relacionados</h3>

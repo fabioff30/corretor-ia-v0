@@ -1,12 +1,14 @@
 "use client"
 
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth} from "@/contexts/unified-auth-context"
 import { useSubscription } from "@/hooks/use-subscription"
-import { useCorrectionHistory } from "@/hooks/use-correction-history"
+import { useCorrectionHistory, type UnifiedHistoryItem } from "@/hooks/use-correction-history"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { UsageLimits } from "@/components/usage-limits"
+import { SubscriptionManagement } from "@/components/subscription-management"
 import { 
   Crown, 
   FileText, 
@@ -29,21 +31,51 @@ import { useState, useEffect } from "react"
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const subscription = useSubscription()
-  const { history, loading: historyLoading, stats } = useCorrectionHistory()
+  const { history, allHistory, loading: historyLoading, stats } = useCorrectionHistory()
   const [usageStats, setUsageStats] = useState({
     correctionsThisMonth: stats.totalCorrections || 0,
-    averageScore: stats.averageScore || 0
+    averageScore: stats.averageScore || 0,
+    totalItems: stats.totalItems || 0
   })
+  const [featureUsage, setFeatureUsage] = useState<any>(null)
+  const [loadingUsage, setLoadingUsage] = useState(true)
 
   // Atualizar estatísticas quando dados do histórico carregarem
   useEffect(() => {
     if (!historyLoading && stats) {
       setUsageStats({
         correctionsThisMonth: stats.totalCorrections,
-        averageScore: stats.averageScore
+        averageScore: stats.averageScore,
+        totalItems: stats.totalItems
       })
     }
-  }, [stats.totalCorrections, stats.averageScore, historyLoading])
+  }, [stats.totalCorrections, stats.averageScore, stats.totalItems, historyLoading])
+
+  // Buscar dados de uso de recursos
+  useEffect(() => {
+    async function fetchUsage() {
+      if (!user) return
+
+      try {
+        const response = await fetch('/api/user/usage', {
+          headers: {
+            'x-user-id': user.id
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setFeatureUsage(data)
+        }
+      } catch (error) {
+        console.error('Error fetching usage data:', error)
+      } finally {
+        setLoadingUsage(false)
+      }
+    }
+
+    fetchUsage()
+  }, [user])
 
   // Redirecionar para login se não autenticado
   useEffect(() => {
@@ -87,10 +119,10 @@ export default function DashboardPage() {
             {subscription.isPremium ? (
               <>
                 <Crown className="h-3 w-3 mr-1" />
-                CorretorIA Pro
+                {subscription.planDisplayName}
               </>
             ) : (
-              "Plano Gratuito"
+              subscription.planDisplayName
             )}
           </Badge>
         </div>
@@ -112,7 +144,7 @@ export default function DashboardPage() {
                 {subscription.isPremium ? (
                   <>
                     <Crown className="h-5 w-5 text-amber-500" />
-                    <span className="font-medium">CorretorIA Pro</span>
+                    <span className="font-medium">{subscription.planDisplayName}</span>
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       Ativo
                     </Badge>
@@ -120,7 +152,7 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <Shield className="h-5 w-5 text-blue-500" />
-                    <span className="font-medium">Gratuito</span>
+                    <span className="font-medium">{subscription.planDisplayName}</span>
                   </>
                 )}
               </div>
@@ -151,7 +183,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-amber-700 dark:text-amber-300">
-                    Upgrade para CorretorIA Pro
+                    Upgrade para Planos Premium
                   </h4>
                   <p className="text-sm text-muted-foreground mt-1">
                     10.000 caracteres, sem anúncios e processamento prioritário
@@ -263,9 +295,9 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3">
                     <Crown className="h-5 w-5 text-amber-500" />
                     <div className="text-left">
-                      <div className="font-medium text-amber-600">Upgrade Pro</div>
+                      <div className="font-medium text-amber-600">Upgrade Premium</div>
                       <div className="text-sm text-muted-foreground">
-                        Recursos premium por R$ 19,90/mês
+                        Recursos premium a partir de R$ 19,90/mês
                       </div>
                     </div>
                   </div>
@@ -276,6 +308,17 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Gerenciamento de Assinatura */}
+      <SubscriptionManagement />
+
+      {/* Limites de Uso de Recursos */}
+      {featureUsage && !loadingUsage && (
+        <UsageLimits
+          features={featureUsage.usage || {}}
+          planName={featureUsage.subscription?.planName || 'Grátis'}
+        />
+      )}
+
       {/* Histórico de Correções - Apenas para usuários premium */}
       {subscription.isPremium && (
         <>
@@ -284,13 +327,13 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Correções Realizadas
+                  Total de Itens
                 </CardTitle>
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {historyLoading ? "..." : stats.totalCorrections}
+                  {historyLoading ? "..." : stats.totalItems}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   nos últimos 30 dias
@@ -335,27 +378,29 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Tipo Mais Usado
+                  Tipos de Conteúdo
                 </CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-amber-600">
-                  {historyLoading ? "..." : (() => {
-                    const maxType = Object.entries(stats.correctionsByType)
-                      .reduce((a, b) => a[1] > b[1] ? a : b)[0]
-                    const typeNames = {
-                      grammar: 'Gramática',
-                      style: 'Estilo', 
-                      tone: 'Tom',
-                      complete: 'Completa'
-                    }
-                    return typeNames[maxType as keyof typeof typeNames] || 'N/A'
-                  })()}
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>Correções:</span>
+                    <span className="font-semibold">{historyLoading ? "..." : stats.itemsByType?.corrections || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Reescritas:</span>
+                    <span className="font-semibold">{historyLoading ? "..." : stats.itemsByType?.rewrites || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Análises:</span>
+                    <span className="font-semibold">{historyLoading ? "..." : stats.itemsByType?.analyses || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Humanizações:</span>
+                    <span className="font-semibold">{historyLoading ? "..." : stats.itemsByType?.humanizations || 0}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  tipo de correção
-                </p>
               </CardContent>
             </Card>
           </div>
@@ -365,10 +410,10 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Histórico de Correções
+                Histórico de Conteúdo
               </CardTitle>
               <CardDescription>
-                Suas últimas correções realizadas nos últimos 30 dias
+                Suas últimas correções, reescritas, análises e humanizações dos últimos 30 dias
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -381,77 +426,134 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-              ) : history.length === 0 ? (
+              ) : allHistory.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-medium text-lg mb-2">Nenhuma correção encontrada</h3>
+                  <h3 className="font-medium text-lg mb-2">Nenhum conteúdo encontrado</h3>
                   <p className="text-muted-foreground mb-4">
-                    Você ainda não realizou nenhuma correção nos últimos 30 dias.
+                    Você ainda não realizou nenhuma correção, reescrita, análise ou humanização nos últimos 30 dias.
                   </p>
                   <Button asChild>
                     <Link href="/">
                       <FileText className="h-4 w-4 mr-2" />
-                      Fazer primeira correção
+                      Começar agora
                     </Link>
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {history.slice(0, 10).map((correction) => (
-                    <div key={correction.id} className="border rounded-lg p-4 bg-card">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={
-                            correction.correction_type === 'grammar' ? 'destructive' :
-                            correction.correction_type === 'style' ? 'secondary' :
-                            correction.correction_type === 'tone' ? 'outline' : 'default'
-                          }>
-                            {correction.correction_type === 'grammar' && 'Gramática'}
-                            {correction.correction_type === 'style' && 'Estilo'}
-                            {correction.correction_type === 'tone' && 'Tom'}
-                            {correction.correction_type === 'complete' && 'Completa'}
-                          </Badge>
-                          <Badge variant="outline" className="text-green-600">
-                            {correction.score}/10
-                          </Badge>
+                  {allHistory.slice(0, 10).map((item) => {
+                    const getTypeBadge = (type: string) => {
+                      switch (type) {
+                        case 'correction':
+                          return <Badge variant="default" className="bg-blue-500">Correção</Badge>
+                        case 'rewrite':
+                          return <Badge variant="secondary" className="bg-purple-500">Reescrita</Badge>
+                        case 'analysis':
+                          return <Badge variant="outline" className="bg-green-500">Análise</Badge>
+                        case 'humanization':
+                          return <Badge variant="destructive" className="bg-orange-500">Humanização</Badge>
+                        default:
+                          return <Badge variant="outline">{type}</Badge>
+                      }
+                    }
+
+                    const getProcessedText = (item: UnifiedHistoryItem) => {
+                      switch (item.type) {
+                        case 'correction':
+                          return (item as any).corrected_text
+                        case 'rewrite':
+                          return (item as any).rewritten_text
+                        case 'analysis':
+                          return JSON.stringify((item as any).analysis_result, null, 2)
+                        case 'humanization':
+                          return (item as any).humanized_text
+                        default:
+                          return 'N/A'
+                      }
+                    }
+
+                    const getSubtype = (item: UnifiedHistoryItem) => {
+                      switch (item.type) {
+                        case 'correction':
+                          const correctionType = (item as any).correction_type
+                          const typeNames = {
+                            grammar: 'Gramática',
+                            style: 'Estilo',
+                            tone: 'Tom',
+                            complete: 'Completa'
+                          }
+                          return typeNames[correctionType as keyof typeof typeNames] || correctionType
+                        case 'rewrite':
+                          return (item as any).style || 'formal'
+                        case 'analysis':
+                          return (item as any).analysis_type || 'complete'
+                        case 'humanization':
+                          return (item as any).humanization_type || 'standard'
+                        default:
+                          return ''
+                      }
+                    }
+
+                    return (
+                      <div key={item.id} className="border rounded-lg p-4 bg-card">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            {getTypeBadge(item.type)}
+                            <Badge variant="outline" className="text-xs">
+                              {getSubtype(item)}
+                            </Badge>
+                            <Badge variant="outline" className="text-green-600">
+                              {item.score}/10
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(correction.created_at).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">Texto original:</p>
+                            <p className="text-sm bg-red-50 dark:bg-red-950/20 p-2 rounded border-l-2 border-red-500">
+                              {item.original_text.length > 200
+                                ? `${item.original_text.substring(0, 200)}...`
+                                : item.original_text}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">
+                              {item.type === 'analysis' ? 'Resultado:' : 'Texto processado:'}
+                            </p>
+                            <p className="text-sm bg-green-50 dark:bg-green-950/20 p-2 rounded border-l-2 border-green-500">
+                              {(() => {
+                                const processedText = getProcessedText(item)
+                                return processedText.length > 200
+                                  ? `${processedText.substring(0, 200)}...`
+                                  : processedText
+                              })()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{item.character_count} caracteres</span>
+                            <span>•</span>
+                            <span>Pontuação: {item.score}/10</span>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Texto original:</p>
-                          <p className="text-sm bg-red-50 dark:bg-red-950/20 p-2 rounded border-l-2 border-red-500">
-                            {correction.original_text}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Texto corrigido:</p>
-                          <p className="text-sm bg-green-50 dark:bg-green-950/20 p-2 rounded border-l-2 border-green-500">
-                            {correction.corrected_text}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{correction.character_count} caracteres</span>
-                          <span>•</span>
-                          <span>Pontuação: {correction.score}/10</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {history.length > 10 && (
+                    )
+                  })}
+
+                  {allHistory.length > 10 && (
                     <div className="text-center pt-4">
                       <Button variant="outline">
-                        Ver mais correções
+                        Ver mais itens
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </div>

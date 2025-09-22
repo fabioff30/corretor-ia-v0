@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, Mail, Lock, User, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { Loader2, Mail, Lock, User, Eye, EyeOff, CheckCircle, Github } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth} from "@/contexts/unified-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export function RegisterForm() {
@@ -27,7 +28,7 @@ export function RegisterForm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   
-  const { signUp } = useAuth()
+  const { signUp, signInWithProvider } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -69,7 +70,11 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const { error } = await signUp(formData.email, formData.password, formData.name)
+      const { error } = await signUp({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name
+      })
       
       if (error) {
         if (error.message.includes("already registered")) {
@@ -112,6 +117,35 @@ export function RegisterForm() {
       ...prev,
       [field]: e.target.value
     }))
+  }
+
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    setError('')
+    setIsLoading(true)
+
+    try {
+      const { error } = await signInWithProvider(provider)
+      
+      if (error) {
+        setError(error.message)
+        toast({
+          title: "Erro no cadastro",
+          description: error.message,
+          variant: "destructive"
+        })
+      }
+      // O redirect será feito automaticamente pelo Supabase
+    } catch (err) {
+      const errorMessage = "Erro inesperado no cadastro"
+      setError(errorMessage)
+      toast({
+        title: "Erro no cadastro", 
+        description: errorMessage,
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (success) {
@@ -293,6 +327,41 @@ export function RegisterForm() {
             </p>
           </CardFooter>
         </form>
+
+        {/* Botões de login social movidos para fora do form */}
+        <CardContent className="pt-0">
+          {/* Divisor */}
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Ou cadastre-se com
+              </span>
+            </div>
+          </div>
+
+          {/* Botões de login social */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading}
+            >
+              <FcGoogle className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSocialLogin('github')}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

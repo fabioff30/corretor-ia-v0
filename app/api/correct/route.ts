@@ -2,9 +2,12 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT, AUTH_TOKEN, WEBHOOK_URL, FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN, WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL } from "@/utils/constants"
 import { fetchWithRetry, fetchWithTimeout } from "@/utils/fetch-retry"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
+import { checkFeatureLimit, recordFeatureUsage } from "@/utils/feature-limits"
+import { cookies } from "next/headers"
+import { supabase } from "@/lib/supabase"
 
 // Token de bypass para autenticação Vercel
 const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
@@ -12,6 +15,63 @@ const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 // Função fetchWithTimeout agora importada de @/utils/fetch-retry
 
 export const maxDuration = 60 // Configurar o tempo máximo de execução da função para 60 segundos (máximo permitido)
+
+// Função para detectar se o usuário é premium baseado no header
+const isPremiumUser = (request: NextRequest): boolean => {
+  // Verificar headers que podem indicar usuário premium
+  const isPremium = request.headers.get("x-user-premium") === "true"
+  const userPlan = request.headers.get("x-user-plan")
+  return isPremium || userPlan === "premium" || userPlan === "pro" || userPlan === "plus"
+}
+
+// Função para obter o ID do usuário dos headers/cookies
+const getUserId = (request: NextRequest): string | null => {
+  // Tentar obter do header primeiro
+  const userId = request.headers.get("x-user-id")
+  if (userId) return userId
+
+  // Tentar obter do cookie se não estiver no header
+  const cookieStore = cookies()
+  const userCookie = cookieStore.get('user-id')
+  return userCookie?.value || null
+}
+
+// Função para salvar correção no histórico (apenas para usuários Pro/Plus)
+const saveCorrection = async (
+  userId: string,
+  originalText: string,
+  correctedText: string,
+  evaluation: any,
+  tone: string
+) => {
+  try {
+    const correctionType = tone === 'grammar' ? 'grammar' :
+                          tone === 'style' ? 'style' :
+                          tone === 'tone' ? 'tone' : 'complete'
+
+    const { error } = await supabase
+      .from('correction_history')
+      .insert([
+        {
+          user_id: userId,
+          original_text: originalText,
+          corrected_text: correctedText,
+          score: evaluation?.score || 7,
+          character_count: originalText.length,
+          correction_type: correctionType,
+          evaluation: evaluation
+        }
+      ])
+
+    if (error) {
+      console.error('Erro ao salvar correção no histórico:', error)
+    } else {
+      console.log('Correção salva no histórico com sucesso para usuário:', userId)
+    }
+  } catch (error) {
+    console.error('Erro ao salvar correção:', error)
+  }
+}
 
 // Função para criar uma resposta padrão em caso de erro
 const createFallbackResponse = (originalText: string) => {
@@ -81,8 +141,48 @@ export async function POST(request: NextRequest) {
 
     const { text, isMobile, tone = "Padrão" } = validatedInput
 
+    // Verificar limite de uso do recurso
+    const userId = getUserId(request)
+    if (userId) {
+      const limitCheck = await checkFeatureLimit(userId, 'corrections')
+
+      if (!limitCheck.allowed) {
+        logRequest(requestId, {
+          status: 403,
+          message: `Feature limit exceeded: ${limitCheck.reason}`,
+          userId,
+          feature: 'corrections',
+          daily_used: limitCheck.daily_used,
+          daily_limit: limitCheck.daily_limit,
+          monthly_used: limitCheck.monthly_used,
+          monthly_limit: limitCheck.monthly_limit,
+          ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
+        })
+
+        return NextResponse.json(
+          {
+            error: "Limite de uso excedido",
+            message: limitCheck.reason === 'Daily limit reached'
+              ? `Você atingiu o limite diário de ${limitCheck.daily_limit} correções. Tente novamente amanhã ou faça upgrade para um plano superior.`
+              : limitCheck.reason === 'Monthly limit reached'
+              ? `Você atingiu o limite mensal de ${limitCheck.monthly_limit} correções. Faça upgrade para continuar usando.`
+              : `Recurso não disponível no seu plano atual.`,
+            limits: {
+              daily: { used: limitCheck.daily_used, limit: limitCheck.daily_limit },
+              monthly: { used: limitCheck.monthly_used, limit: limitCheck.monthly_limit }
+            }
+          },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Detectar se o usuário é premium
+    const isUserPremium = isPremiumUser(request)
+    const selectedWebhookUrl = isUserPremium ? PREMIUM_WEBHOOK_URL : WEBHOOK_URL
+
     console.log("API: Iniciando processamento de correção", requestId)
-    
+
     // Logs de debugging melhorados
     const debugInfo = {
       requestId,
@@ -93,21 +193,31 @@ export async function POST(request: NextRequest) {
       textLength: text.length,
       isMobile,
       tone,
-      webhookUrl: WEBHOOK_URL
+      webhookUrl: selectedWebhookUrl,
+      isPremium: isUserPremium
     }
     
     console.log("API: Request debug info:", JSON.stringify(debugInfo), requestId)
 
-    // Verificar tamanho do texto
-    if (text.length > 5000) {
+    // Verificar tamanho do texto baseado no plano do usuário
+    const maxCharacters = isUserPremium ? 10000 : 1500
+    if (text.length > maxCharacters) {
       logRequest(requestId, {
         status: 413,
         message: "Text too large",
         textLength: text.length,
+        maxAllowed: maxCharacters,
+        isPremium: isUserPremium,
         ip: request.ip || request.headers.get("x-forwarded-for") || "unknown",
       })
       return NextResponse.json(
-        { error: "Texto muito grande", message: "O texto não pode exceder 5000 caracteres" },
+        {
+          error: "Texto muito grande",
+          message: `O texto não pode exceder ${maxCharacters} caracteres${!isUserPremium ? '. Upgrade para CorretorIA Pro para até 10.000 caracteres.' : '.'}`,
+          maxCharacters,
+          currentLength: text.length,
+          isPremium: isUserPremium
+        },
         { status: 413 },
       )
     }
@@ -127,7 +237,7 @@ export async function POST(request: NextRequest) {
         "X-Request-ID": requestId,
       }
 
-      let webhookUrl = WEBHOOK_URL
+      let webhookUrl = selectedWebhookUrl
       
       // Adicionar token de bypass apenas se não for localhost e se o token estiver disponível
       if (VERCEL_BYPASS_TOKEN && !webhookUrl.includes('localhost')) {
@@ -368,6 +478,22 @@ export async function POST(request: NextRequest) {
           suggestions: [],
           score: 0,
           toneChanges: toneChanges,
+        }
+      }
+
+      // Registrar o uso do recurso se o usuário estiver identificado
+      if (userId) {
+        await recordFeatureUsage(userId, 'corrections', 1)
+
+        // Salvar correção no histórico apenas para usuários Pro/Plus
+        if (isPremiumUser(request)) {
+          await saveCorrection(
+            userId,
+            text,
+            processedData.correctedText,
+            processedData.evaluation,
+            tone
+          )
         }
       }
 

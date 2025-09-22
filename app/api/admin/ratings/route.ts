@@ -1,14 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getRatingDetails } from "@/utils/rating-storage"
-import { protectedAdminApiHandler } from "@/middleware/admin-auth"
+import { requireAdmin } from "@/lib/auth"
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
 
-// Protected admin endpoint using secure session-based auth
-const handler = protectedAdminApiHandler(async (request: NextRequest, session) => {
-
+export async function GET(request: NextRequest) {
   try {
+    // Verificar autenticação admin
+    const session = await requireAdmin()
+
     // Obter parâmetros de paginação da query string
     const searchParams = request.nextUrl.searchParams
     const limit = Number.parseInt(searchParams.get("limit") || "50", 10)
@@ -31,12 +32,17 @@ const handler = protectedAdminApiHandler(async (request: NextRequest, session) =
     })
   } catch (error) {
     console.error("Erro ao obter avaliações:", error)
+    
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: "Acesso não autorizado" },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
       { error: "Erro ao obter avaliações", message: error instanceof Error ? error.message : "Erro desconhecido" },
       { status: 500 },
     )
   }
-})
-
-// Export the protected handler as GET
-export const GET = handler
+}

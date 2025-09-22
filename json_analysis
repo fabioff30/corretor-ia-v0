@@ -1,0 +1,71 @@
+{
+  "result": {
+    "verdict": "human",
+    "probability": 0.85,
+    "confidence": "high",
+    "explanation": "O texto apresenta uma estrutura coesa, com uma voz pessoal e experiências individuais que indicam autoria humana. A especificidade nas informações e a fluidez do discurso reforçam essa conclusão.",
+    "signals": [
+      {
+        "category": "lexical",
+        "direction": "human",
+        "description": "O uso de experiências pessoais e opiniões indica uma voz humana, que é menos comum em textos gerados por IA.",
+        "terms": [
+          "eu já tenho",
+          "minhas certificações"
+        ],
+        "count": 2
+      },
+      {
+        "category": "structural",
+        "direction": "human",
+        "description": "A estrutura do texto é lógica e segue um fluxo natural de ideias, o que sugere uma autoria humana.",
+        "terms": [
+          "com algumas das melhores ferramentas",
+          "mas há 10 certificações"
+        ],
+        "count": 2
+      },
+      {
+        "category": "temporal coherence",
+        "direction": "human",
+        "description": "A menção de experiências passadas e a referência a um número específico de certificações mostram uma coerência temporal que é típica de textos humanos.",
+        "terms": [
+          "há 10 certificações"
+        ],
+        "count": 1
+      }
+    ],
+    "metadata": {
+      "promptVersion": "default",
+      "termsVersion": "ai_markers:v1+human_markers:v1"
+    }
+  },
+  "termsSnapshot": {
+    "collections": [],
+    "totalHits": 0,
+    "uniqueTerms": [],
+    "weightedScore": 0.0,
+    "termsVersion": "ai_markers:v1+human_markers:v1",
+    "termsSignature": "cf235512c24d"
+  },
+  "textStats": {
+    "charCount": 495,
+    "wordCount": 74,
+    "sentenceCount": 5,
+    "avgSentenceLength": 14.8,
+    "avgWordLength": 5.5811,
+    "uppercaseRatio": 0.0292,
+    "digitRatio": 0.004,
+    "punctuationRatio": 0.0182
+  },
+  "metadata": {
+    "promptVersion": "default",
+    "termsVersion": "ai_markers:v1+human_markers:v1",
+    "termsSignature": "cf235512c24d",
+    "models": [
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3-haiku",
+      "google/gemini-2.5-flash"
+    ]
+  }
+}

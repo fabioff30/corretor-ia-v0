@@ -3,7 +3,7 @@ import "@/app/globals.css"
 import type { Metadata } from "next"
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
+import { UnifiedAuthProvider } from "@/contexts/unified-auth-context"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
@@ -223,7 +223,7 @@ export default function RootLayout({
         </noscript>
 
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
+          <UnifiedAuthProvider>
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1">{children}</main>
@@ -232,7 +232,7 @@ export default function RootLayout({
             <Toaster />
             <CookieConsent />
             <JulinhoAssistant />
-          </AuthProvider>
+          </UnifiedAuthProvider>
         </ThemeProvider>
       </body>
     </html>

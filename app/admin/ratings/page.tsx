@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Star, ChevronLeft, ChevronRight, Search, AlertTriangle } from "lucide-react"
+import { Star, ChevronLeft, ChevronRight, Search, AlertTriangle, LogOut } from "lucide-react"
 import { BackgroundGradient } from "@/components/background-gradient"
 
 interface RatingData {
@@ -24,6 +24,16 @@ interface PaginationInfo {
   count: number
 }
 
+interface AdminSession {
+  authenticated: boolean
+  user?: {
+    id: string
+    role: string
+    authenticated: boolean
+    expiresAt: number
+  }
+}
+
 export default function AdminRatingsPage() {
   const [ratings, setRatings] = useState<RatingData[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -33,26 +43,96 @@ export default function AdminRatingsPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [apiKey, setApiKey] = useState("")
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [session, setSession] = useState<AdminSession | null>(null)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const [password, setPassword] = useState("")
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+  // Verificar sessão admin
+  const checkSession = async () => {
+    try {
+      const response = await fetch('/api/admin/auth')
+      const data = await response.json()
+      setSession(data)
+    } catch (err) {
+      console.error('Erro ao verificar sessão:', err)
+      setSession({ authenticated: false })
+    } finally {
+      setIsSessionLoading(false)
+    }
+  }
+
+  // Fazer login
+  const handleLogin = async () => {
+    if (!password.trim()) {
+      setError("Digite a senha")
+      return
+    }
+
+    setIsLoggingIn(true)
+    try {
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'login',
+          password
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao fazer login')
+      }
+
+      setPassword('')
+      setError(null)
+      await checkSession() // Recarregar sessão
+    } catch (err) {
+      console.error('Erro no login:', err)
+      setError(err instanceof Error ? err.message : "Erro no login")
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
+  // Fazer logout
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'logout'
+        })
+      })
+
+      setSession({ authenticated: false })
+      setRatings([])
+      setError(null)
+    } catch (err) {
+      console.error('Erro no logout:', err)
+    }
+  }
 
   const fetchRatings = async () => {
-    if (!apiKey) return
+    if (!session?.authenticated) return
 
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`/api/admin/ratings?limit=${pagination.limit}&offset=${pagination.offset}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      })
+      const response = await fetch(`/api/admin/ratings?limit=${pagination.limit}&offset=${pagination.offset}`)
 
       if (!response.ok) {
         if (response.status === 401) {
-          setIsAuthenticated(false)
-          throw new Error("Chave de API inválida")
+          setSession({ authenticated: false })
+          throw new Error("Sessão expirada")
         }
         throw new Error(`Erro ao buscar avaliações: ${response.status}`)
       }
@@ -60,7 +140,6 @@ export default function AdminRatingsPage() {
       const data = await response.json()
       setRatings(data.ratings)
       setPagination(data.pagination)
-      setIsAuthenticated(true)
     } catch (err) {
       console.error("Erro ao buscar avaliações:", err)
       setError(err instanceof Error ? err.message : "Erro desconhecido")
@@ -69,33 +148,20 @@ export default function AdminRatingsPage() {
     }
   }
 
+  // Verificar sessão ao carregar
   useEffect(() => {
-    // Tentar carregar a chave de API do localStorage
-    const savedApiKey = localStorage.getItem("admin_api_key")
-    if (savedApiKey) {
-      setApiKey(savedApiKey)
-      setIsAuthenticated(true)
+    if (typeof window !== 'undefined') {
+      checkSession()
     }
   }, [])
 
+  // Carregar avaliações quando sessão estiver ativa
   useEffect(() => {
-    if (isAuthenticated) {
+    if (session?.authenticated) {
       fetchRatings()
     }
-  }, [pagination.offset, pagination.limit, isAuthenticated])
+  }, [pagination.offset, pagination.limit, session?.authenticated])
 
-  const handleLogin = () => {
-    // Salvar a chave de API no localStorage
-    localStorage.setItem("admin_api_key", apiKey)
-    fetchRatings()
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("admin_api_key")
-    setApiKey("")
-    setIsAuthenticated(false)
-    setRatings([])
-  }
 
   const handlePrevPage = () => {
     if (pagination.offset - pagination.limit >= 0) {
@@ -132,26 +198,35 @@ export default function AdminRatingsPage() {
       <div className="container max-w-6xl mx-auto py-12 px-4">
         <h1 className="text-3xl font-bold mb-8 gradient-text">Painel de Avaliações</h1>
 
-        {!isAuthenticated ? (
+        {isSessionLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p>Verificando sessão...</p>
+          </div>
+        ) : !session?.authenticated ? (
           <Card>
             <CardHeader>
-              <CardTitle>Autenticação</CardTitle>
+              <CardTitle>Autenticação Admin</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="apiKey" className="block text-sm font-medium mb-1">
-                    Chave de API
+                  <label htmlFor="password" className="block text-sm font-medium mb-1">
+                    Senha
                   </label>
                   <div className="flex gap-2">
                     <Input
-                      id="apiKey"
+                      id="password"
                       type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Digite sua chave de API"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Digite sua senha"
+                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                      disabled={isLoggingIn}
                     />
-                    <Button onClick={handleLogin}>Entrar</Button>
+                    <Button onClick={handleLogin} disabled={isLoggingIn}>
+                      {isLoggingIn ? 'Entrando...' : 'Entrar'}
+                    </Button>
                   </div>
                 </div>
                 {error && (
@@ -191,6 +266,7 @@ export default function AdminRatingsPage() {
                 </div>
               </div>
               <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
                 Sair
               </Button>
             </div>
