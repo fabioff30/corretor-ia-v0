@@ -32,6 +32,7 @@ import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from 
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
@@ -41,6 +42,7 @@ import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 interface TextCorrectionFormProps {
   onTextCorrected?: () => void
   initialMode?: OperationMode
+  enableCrossNavigation?: boolean // Se habilitado, permite navegação entre páginas
 }
 
 // Tipos para os modos de operação
@@ -55,7 +57,8 @@ interface RewriteEvaluation {
   changes: string[]
 }
 
-export default function TextCorrectionForm({ onTextCorrected, initialMode }: TextCorrectionFormProps) {
+export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false }: TextCorrectionFormProps) {
+  const router = useRouter()
   const [originalText, setOriginalText] = useState("")
   const [charCount, setCharCount] = useState(0)
   const [result, setResult] = useState<{
@@ -791,9 +794,26 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
 
         {/* Abas para alternar entre correção e reescrita */}
         <Tabs
-          defaultValue={operationMode}
+          value={operationMode} // Usar value em vez de defaultValue para controle preciso
           className="w-full mb-4"
-          onValueChange={(value) => setOperationMode(value as OperationMode)}
+          onValueChange={(value) => {
+            if (enableCrossNavigation) {
+              if (value === "rewrite") {
+                // Redirecionar para a página dedicada de reescrita
+                router.push("/reescrever-texto")
+              } else if (value === "correct") {
+                // Redirecionar para a home page
+                router.push("/")
+              }
+            } else {
+              // Comportamento padrão na home - só navegar para reescrita
+              if (value === "rewrite") {
+                router.push("/reescrever-texto")
+              } else {
+                setOperationMode(value as OperationMode)
+              }
+            }
+          }}
         >
           <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-0.5 sm:p-1 rounded-lg">
             <TabsTrigger
@@ -805,7 +825,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
             </TabsTrigger>
             <TabsTrigger
               value="rewrite"
-              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white cursor-pointer"
             >
               <Pencil className="h-4 w-4 mr-2" />
               Reescrever Texto
