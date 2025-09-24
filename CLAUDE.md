@@ -126,15 +126,15 @@ Robust error handling with multiple fallback levels:
 
 ### Required Environment Variables
 Critical production variables (see `CONFIGURATION.md` for auto-generated tokens):
-```bash
+\`\`\`bash
 AUTH_TOKEN=your-secure-32-character-token
 REVALIDATION_TOKEN=your-secure-revalidation-token  
 WEBHOOK_SECRET=your-secure-webhook-secret
 ADMIN_API_KEY=your-secure-admin-api-key
-```
+\`\`\`
 
 ### Optional Services
-```bash
+\`\`\`bash
 # AI Processing
 OPENAI_API_KEY=sk-your-key
 
@@ -144,7 +144,7 @@ UPSTASH_REDIS_REST_TOKEN=your-redis-token
 
 # Payments
 MERCADO_PAGO_ACCESS_TOKEN=your-token
-```
+\`\`\`
 
 ## 📚 Additional Documentation
 
