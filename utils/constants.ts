@@ -15,10 +15,14 @@ export const POPUP_CONTENT_Z_INDEX = 10000
 export const GOOGLE_ADSENSE_CLIENT = "ca-pub-9690140831352761"
 export const GTM_ID = "GTM-5ZNJ85CP"
 
-// API endpoints - URLs atualizadas para nova API
-export const WEBHOOK_URL = process.env.CORRECTION_API_URL || "https://my-corretoria-hab2a25sc-fabioff30s-projects.vercel.app/api/corrigir"
-export const REWRITE_WEBHOOK_URL = "https://my-corretoria.vercel.app/api/reescrever"
-export const FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
+// API endpoints - Workers API
+const WORKERS_API_BASE = "https://workers-api.fabiofariasf.workers.dev"
+export const WEBHOOK_URL = process.env.CORRECTION_API_URL || `${WORKERS_API_BASE}/api/corrigir`
+export const PREMIUM_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-corrigir`
+export const REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/reescrever`
+export const PREMIUM_REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-reescrever`
+export const ANALYSIS_WEBHOOK_URL = `${WORKERS_API_BASE}/api/analysis-ai`
+export const FALLBACK_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir` // Mesmo endpoint como fallback
 
 // Authentication - Server-side only
 export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOKEN || "ex5B31uQHm2rPHsWt1RwUo9ct35qFAjczdKqbCIMZh5D1qovSmotGtQUQaRXJtvg") : ""

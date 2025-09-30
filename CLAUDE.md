@@ -5,14 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Scripts
-- `npm run dev` - Start development server (Next.js 14)
-- `npm run build` - Build production application
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint (note: linting ignored during builds)
-- `npm run test` - Run Jest test suite
+- `pnpm dev` (or `npm run dev`) - Start development server (Next.js 15)
+- `pnpm build` - Build production application
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint (note: linting ignored during builds)
+- `pnpm test` - Run Jest test suite
 
 ### Package Manager
-This project uses `pnpm` as the package manager based on `pnpm-lock.yaml`. Use `pnpm install` to install dependencies.
+This project uses `pnpm` as the package manager. Always use `pnpm install` to install dependencies and `pnpm add <package>` to add new packages.
 
 ### Testing Framework
 Jest is configured with:
@@ -25,13 +25,13 @@ Jest is configured with:
 ## Architecture Overview
 
 ### Technology Stack
-- **Framework**: Next.js 14 with App Router
-- **UI Library**: React 18 with extensive Radix UI components
+- **Framework**: Next.js 15.2.4 with App Router
+- **UI Library**: React 19 with extensive Radix UI components
 - **Styling**: Tailwind CSS with custom theming
 - **AI Integration**: OpenAI API via `ai` and `@ai-sdk/openai` packages
 - **Animation**: Framer Motion
 - **Form Handling**: React Hook Form with Zod validation
-- **Testing**: Jest + React Testing Library with jsdom
+- **Testing**: Jest + React Testing Library with jsdom and polyfills
 - **Security**: JWT authentication with `jose`, DOMPurify sanitization
 - **Database/Cache**: Redis integration via Upstash
 - **Type Safety**: Full TypeScript with strict configurations
@@ -39,13 +39,14 @@ Jest is configured with:
 ### Core Business Logic
 CorretorIA is a Portuguese text correction application powered by AI. The main workflow:
 
-1. **Text Input**: Users input text through `TextCorrectionForm` component (character limits: 1500 free, 5000 premium)
+1. **Text Input**: Users input text through `text-correction-form.tsx` component (character limits: 1500 free, 5000 premium)
 2. **API Processing**: Text is sent to `/api/correct/route.ts` which handles:
    - Rate limiting and input validation via middleware
-   - Multiple webhook endpoints for different correction modes
-   - Fallback mechanisms and error handling
+   - Multiple webhook endpoints for different correction modes (primary + fallback)
+   - Automatic fallback on errors (401, timeout, malformed responses)
+   - Authentication with AUTH_TOKEN and Vercel bypass tokens
 3. **Response Processing**: Corrected text and evaluation data returned to client
-4. **Display**: Results shown with diff highlighting and detailed analysis
+4. **Display**: Results shown with diff highlighting and detailed analysis via `TextCorrectionTabs`
 
 ### Key API Endpoints
 - `/api/correct` - Main text correction endpoint with comprehensive error handling
@@ -69,13 +70,26 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 
 ### Configuration & Constants
 Key configuration in `utils/constants.ts`:
-- Character limits and API timeouts
+- Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000)
+- API timeouts: `API_REQUEST_TIMEOUT` (30s), `FETCH_TIMEOUT` (25s)
 - Google Analytics, AdSense, and GTM IDs
-- Webhook URLs for different correction services
-- Feature flags (e.g., `JULINHO_DISABLED`)
+- Webhook URLs (Workers API base: `https://workers-api.fabiofariasf.workers.dev`):
+  - `WEBHOOK_URL` - `/api/corrigir` (text correction)
+  - `PREMIUM_WEBHOOK_URL` - `/api/premium-corrigir` (premium correction)
+  - `REWRITE_WEBHOOK_URL` - `/api/reescrever` (text rewriting)
+  - `PREMIUM_REWRITE_WEBHOOK_URL` - `/api/premium-reescrever` (premium rewriting)
+  - `ANALYSIS_WEBHOOK_URL` - `/api/analysis-ai` (AI analysis)
+  - `FALLBACK_WEBHOOK_URL` - same as primary (automatic fallback)
+- Authentication: `AUTH_TOKEN` (server-side only)
+- Feature flags: `JULINHO_DISABLED` (currently false)
 
 ### External Integrations
-- **AI Services**: Primary and fallback webhook endpoints for text correction and custom tone adjustment
+- **AI Services**: Cloudflare Workers API (`workers-api.fabiofariasf.workers.dev`) for text correction, rewriting, and AI analysis
+  - POST `/api/corrigir` - Text correction with evaluation
+  - POST `/api/premium-corrigir` - Premium correction with advanced models
+  - POST `/api/reescrever` - Text rewriting with style options
+  - POST `/api/premium-reescrever` - Premium rewriting
+  - POST `/api/analysis-ai` - AI-generated content analysis
 - **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
 - **Monetization**: Google AdSense with consent management, CleverWebServer script integration
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
@@ -100,18 +114,22 @@ Key configuration in `utils/constants.ts`:
 - **Token Security**: Cryptographically secure tokens with validation
 
 ### Performance Considerations
-- **Timeouts**: 60-second API timeout with fallback mechanisms
+- **Timeouts**: 30-second API timeout (reduced from 60s) with 25s fetch timeout
+- **Max Duration**: 60 seconds configured for serverless functions
 - **Caching**: Redis-backed caching and API routes configured with no-store
-- **Image Optimization**: Disabled for compatibility
+- **Image Optimization**: Disabled for compatibility (`unoptimized: true`)
 - **Server Actions**: 2MB body size limit configured
 - **Bundle Optimization**: Proper code splitting and lazy loading
+- **Build Optimization**: TypeScript and ESLint errors ignored during builds
 
 ### Error Handling Strategy
 Robust error handling with multiple fallback levels:
-1. Primary webhook failure → fallback webhook
-2. Processing errors → fallback response with original text
-3. Network timeouts → user-friendly timeout messages
-4. Comprehensive logging with request IDs
+1. Primary webhook failure → automatic fallback webhook (FALLBACK_WEBHOOK_URL)
+2. 401 authentication errors → immediate fallback retry
+3. Processing errors → fallback response with original text and generic evaluation
+4. Network timeouts → user-friendly 504 timeout messages
+5. Malformed responses → graceful fallback with original text
+6. All errors logged with request IDs and context
 
 ### Development Notes
 - TypeScript and ESLint errors ignored during builds (configured in `next.config.mjs`)
@@ -148,11 +166,11 @@ MERCADO_PAGO_ACCESS_TOKEN=your-token
 
 ## 📚 Additional Documentation
 
-- **SECURITY.md** - Comprehensive security implementation guide
-- **CONFIGURATION.md** - Environment setup and configuration
+- **SECURITY.md** - Comprehensive security implementation guide with JWT auth, input validation, and CSP
+- **CONFIGURATION.md** - Environment setup with auto-generated secure tokens
 - **AGENTS.md** - AI agent integration documentation
-- **jest.config.js** - Testing configuration
-- **jest.setup.ts** - Test environment setup with polyfills and mocks
+- **jest.config.js** - Jest configuration with Next.js integration
+- **jest.setup.ts** - Test environment setup with TextEncoder/TextDecoder polyfills and crypto mocks
 - **vercel.json** - Deployment configuration
 - **actions/revalidate-content.ts** - Server Actions for content cache management
 

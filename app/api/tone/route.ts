@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "@/middleware/rate-limit"
 import { validateInput } from "@/middleware/input-validation"
 import { logRequest, logError } from "@/utils/logger"
-import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN, REWRITE_WEBHOOK_URL } from "@/utils/constants"
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
-
-// URL do webhook para ajuste de tom
-const TONE_WEBHOOK_URL = "https://my-corretoria.vercel.app/api/reescrever"
 
 // Função para fazer fetch com timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
@@ -143,11 +140,11 @@ export async function POST(request: NextRequest) {
         authToken: AUTH_TOKEN,
       }
 
-      console.log(`API: Enviando para webhook ${TONE_WEBHOOK_URL}`)
+      console.log(`API: Enviando para webhook ${REWRITE_WEBHOOK_URL}`)
       console.log(`API: Corpo da requisição para o webhook:`, JSON.stringify(requestBody), requestId)
 
       const response = await fetchWithTimeout(
-        TONE_WEBHOOK_URL,
+        REWRITE_WEBHOOK_URL,
         {
           method: "POST",
           headers: {

@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server"
+import { WEBHOOK_URL } from "@/utils/constants"
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
-
-// URL do webhook do n8n
-const WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor"
 
 export async function GET() {
   try {
     // Verificar se o webhook está online
     const response = await fetch(WEBHOOK_URL, {
-      method: "HEAD",
+      method: "GET",
       cache: "no-store",
     })
 
