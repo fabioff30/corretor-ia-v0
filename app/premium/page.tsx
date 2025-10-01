@@ -33,35 +33,42 @@ export default function PremiumPage() {
             <h2 className="text-2xl font-bold mb-4">Perguntas Frequentes</h2>
             <div className="max-w-3xl mx-auto space-y-6 text-left">
               <div>
+                <h3 className="text-lg font-medium mb-2">Quando o plano premium estará disponível?</h3>
+                <p className="text-foreground/80">
+                  O plano premium está em desenvolvimento final e será lançado em breve. Cadastre-se para ser notificado
+                  assim que estiver disponível!
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
+                <p className="text-foreground/80">
+                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários e de caracteres. O
+                  plano premium remove todos os limites, oferece processamento prioritário e acesso a recursos avançados.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-medium mb-2">Qual a diferença entre doação e assinatura premium?</h3>
                 <p className="text-foreground/80">
-                  As doações são contribuições únicas para apoiar o projeto, com alguns benefícios temporários como
-                  agradecimento. A assinatura premium é um serviço recorrente que oferece acesso contínuo a todos os
-                  recursos avançados.
+                  As doações são contribuições únicas para apoiar o projeto. A assinatura premium (R$ 29,90/mês ou R$
+                  299/ano) é um serviço recorrente que oferece acesso ilimitado a todas as funcionalidades.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-lg font-medium mb-2">Posso cancelar minha assinatura a qualquer momento?</h3>
                 <p className="text-foreground/80">
-                  Sim, você pode cancelar sua assinatura a qualquer momento pela sua conta. Após o cancelamento, você
-                  continuará tendo acesso aos recursos premium até o final do período pago.
+                  Sim, você poderá cancelar sua assinatura a qualquer momento. Após o cancelamento, você continuará tendo
+                  acesso aos recursos premium até o final do período pago.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium mb-2">Como funciona a garantia de reembolso?</h3>
+                <h3 className="text-lg font-medium mb-2">Quais métodos de pagamento serão aceitos?</h3>
                 <p className="text-foreground/80">
-                  Se você não estiver satisfeito com o serviço premium, pode solicitar um reembolso em até 7 dias após a
-                  assinatura. Basta entrar em contato conosco por email.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Quais métodos de pagamento são aceitos?</h3>
-                <p className="text-foreground/80">
-                  Aceitamos cartões de crédito (Visa, Mastercard, American Express) e pagamentos via PIX. Todos os
-                  pagamentos são processados com segurança pelo Mercado Pago.
+                  Aceitaremos cartões de crédito (Visa, Mastercard, American Express) e pagamentos via PIX. Todos os
+                  pagamentos serão processados com segurança.
                 </p>
               </div>
             </div>

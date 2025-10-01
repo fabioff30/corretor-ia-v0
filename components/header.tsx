@@ -81,6 +81,12 @@ export function Header() {
             Recursos
           </Link>
           <Link
+            href="/detector-ia"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/detector-ia") ? "text-primary" : "text-foreground/60"}`}
+          >
+            Detector de IA
+          </Link>
+          <Link
             href="/blog"
             className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/blog") ? "text-primary" : "text-foreground/60"}`}
           >
@@ -179,6 +185,13 @@ export function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Recursos
+            </Link>
+            <Link
+              href="/detector-ia"
+              className={`px-2 py-1 rounded-md ${isActive("/detector-ia") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Detector de IA
             </Link>
             <Link
               href="/blog"

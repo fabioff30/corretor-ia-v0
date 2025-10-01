@@ -13,30 +13,20 @@ export function PremiumPlan() {
   const router = useRouter()
 
   const features = [
+    { name: "Correções ilimitadas", included: true },
+    { name: "Análises de IA ilimitadas", included: true },
+    { name: "Reescrita de texto ilimitada", included: true },
     { name: "Sem limite de caracteres", included: true },
     { name: "Sem anúncios", included: true },
-    { name: "Correções ilimitadas", included: true },
     { name: "Análise de estilo avançada", included: true },
-    { name: "Sugestões de reescrita", included: true },
     { name: "Prioridade no processamento", included: true },
     { name: "Histórico de correções", included: false, comingSoon: true },
     { name: "Extensão para navegador", included: false, comingSoon: true },
   ]
 
   const handleSubscribe = () => {
-    setIsLoading(true)
-
-    sendGTMEvent("premium_subscription_click", {
-      plan: "mensal",
-      price: "9.90",
-    })
-
-    // Redirecionar para a página de doação
-    setTimeout(() => {
-      router.push(
-        "/apoiar?plan=premium&billing=monthly&utm_source=premium_plan&utm_medium=button&utm_campaign=monthly_subscription",
-      )
-    }, 500)
+    // Não faz nada por enquanto - Em breve
+    return
   }
 
   return (
@@ -66,12 +56,12 @@ export function PremiumPlan() {
                   <Zap className="h-5 w-5" />
                 </div>
               </div>
-              <CardDescription className="text-white/90 mt-2">Correção de texto sem limites</CardDescription>
+              <CardDescription className="text-white/90 mt-2">Tudo ilimitado: Correções, Análises e Reescrita</CardDescription>
               <div className="mt-4">
-                <span className="text-3xl font-bold">R$9,90</span>
+                <span className="text-3xl font-bold">R$29,90</span>
                 <span className="text-white/90 ml-1">/mês</span>
               </div>
-              <div className="text-sm mt-1 text-white/80">ou R$89,90/ano (economia de 25%)</div>
+              <div className="text-sm mt-1 text-white/80">ou R$299/ano (economize 2 meses)</div>
             </CardHeader>
 
             <CardContent className="pt-6">
@@ -104,19 +94,21 @@ export function PremiumPlan() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-3">
-              <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleSubscribe} disabled={isLoading}>
-                {isLoading ? "Processando..." : "Assinar agora"}
-              </Button>
+              <div className="w-full p-4 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg text-center">
+                <div className="inline-flex items-center gap-2 text-lg font-semibold text-primary mb-2">
+                  <Zap className="h-5 w-5" />
+                  Em Breve
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  O plano premium está em desenvolvimento. Cadastre-se para ser notificado quando estiver disponível!
+                </p>
+              </div>
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() =>
-                  router.push(
-                    "/apoiar?plan=premium&billing=yearly&utm_source=premium_plan&utm_medium=button&utm_campaign=yearly_subscription",
-                  )
-                }
+                onClick={() => router.push("/contato")}
               >
-                Plano anual com 25% de desconto
+                Quero ser notificado
               </Button>
             </CardFooter>
           </Card>

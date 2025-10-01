@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { motion } from "framer-motion"
 import { Heart, Star, Crown, Check } from "lucide-react"
