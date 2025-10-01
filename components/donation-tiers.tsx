@@ -1,15 +1,8 @@
-"use client"
-
 import type React from "react"
-
-import { useState } from "react"
 import { motion } from "framer-motion"
 import { Heart, Star, Crown, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { sendGTMEvent } from "@/utils/gtm-helper"
-import { useRouter } from "next/navigation"
 
 interface DonationTier {
   id: string
@@ -19,13 +12,10 @@ interface DonationTier {
   icon: React.ReactNode
   benefits: string[]
   popular?: boolean
-  paymentLink: string
   color: string
 }
 
 export function DonationTiers() {
-  const [selectedTier, setSelectedTier] = useState<string | null>(null)
-
   const tiers: DonationTier[] = [
     {
       id: "bronze",
@@ -34,7 +24,6 @@ export function DonationTiers() {
       description: "Apoio básico para manter o corretor funcionando",
       icon: <Heart className="h-5 w-5" />,
       benefits: ["Nome na lista de apoiadores", "Sem anúncios por 1 mês", "Limite de 2.000 caracteres"],
-      paymentLink: "/apoiar?tier=bronze&utm_source=donation_tiers&utm_medium=card&utm_campaign=bronze_tier",
       color: "bg-amber-600",
     },
     {
@@ -50,7 +39,6 @@ export function DonationTiers() {
         "Acesso a recursos beta",
       ],
       popular: true,
-      paymentLink: "/apoiar?tier=silver&utm_source=donation_tiers&utm_medium=card&utm_campaign=silver_tier",
       color: "bg-slate-400",
     },
     {
@@ -66,36 +54,16 @@ export function DonationTiers() {
         "Acesso a todos os recursos beta",
         "Suporte prioritário por email",
       ],
-      paymentLink: "/apoiar?tier=gold&utm_source=donation_tiers&utm_medium=card&utm_campaign=gold_tier",
       color: "bg-yellow-500",
     },
   ]
-
-  const router = useRouter()
-
-  const handleDonationClick = (tier: DonationTier) => {
-    setSelectedTier(tier.id)
-
-    // Enviar evento para o GTM
-    sendGTMEvent("donation_tier_selected", {
-      tier_id: tier.id,
-      tier_name: tier.name,
-      tier_price: tier.price,
-    })
-
-    // Redirecionar para o link de pagamento após um pequeno delay
-    setTimeout(() => {
-      router.push(tier.paymentLink)
-    }, 300)
-  }
 
   return (
     <div className="py-8">
       <div className="text-center mb-10">
         <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">Apoie o CorretorIA</h2>
         <p className="text-foreground/80 max-w-[700px] mx-auto">
-          Escolha um nível de apoio e ajude a manter o corretor gratuito para todos, além de ganhar benefícios
-          exclusivos
+          Conheça os níveis de apoio disponíveis para ajudar a manter o corretor gratuito para todos
         </p>
       </div>
 
@@ -135,25 +103,15 @@ export function DonationTiers() {
                   ))}
                 </ul>
               </CardContent>
-
-              <CardFooter>
-                <Button
-                  className={`w-full ${tier.popular ? "bg-primary hover:bg-primary/90" : ""}`}
-                  onClick={() => handleDonationClick(tier)}
-                >
-                  <Heart className="mr-2 h-4 w-4" />
-                  Apoiar agora
-                </Button>
-              </CardFooter>
             </Card>
           </motion.div>
         ))}
       </div>
 
       <div className="text-center mt-8 text-sm text-muted-foreground">
-        <p>Todos os pagamentos são processados com segurança via PIX ou cartão de crédito através do Mercado Pago.</p>
+        <p>Entre em contato para saber mais sobre como apoiar o projeto.</p>
         <p className="mt-1">
-          Ao fazer uma doação, você concorda com nossos{" "}
+          Ao apoiar, você concorda com nossos{" "}
           <a href="/termos" className="text-primary hover:underline">
             Termos de Serviço
           </a>

@@ -1,11 +1,7 @@
-"use client"
-
-import { motion } from "framer-motion"
 import { Github, Linkedin, Globe, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 
 export function AboutAuthorSection() {
@@ -22,13 +18,7 @@ export function AboutAuthorSection() {
           </p>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto"
-        >
+        <div className="max-w-4xl mx-auto">
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-3">
@@ -69,16 +59,7 @@ export function AboutAuthorSection() {
                     </a>
                   </div>
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link
-                      href="/apoiar"
-                      onClick={() => {
-                        sendGTMEvent("donation_click", {
-                          location: "about_author",
-                          element_type: "contact_button",
-                          section: "author_bio",
-                        })
-                      }}
-                    >
+                    <Link href="/contato">
                       <Mail className="h-4 w-4 mr-2" />
                       Contato
                     </Link>
@@ -113,7 +94,7 @@ export function AboutAuthorSection() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </section>
   )

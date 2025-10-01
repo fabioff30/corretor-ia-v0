@@ -49,19 +49,26 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 4. **Display**: Results shown with diff highlighting and detailed analysis via `TextCorrectionTabs`
 
 ### Key API Endpoints
-- `/api/correct` - Main text correction endpoint with comprehensive error handling
-- `/api/rewrite` - Text rewriting functionality  
-- `/api/custom-tone-webhook` - Custom tone adjustment processing with external webhook integration
+- `/api/correct` - Main text correction endpoint (refactored with shared modules)
+- `/api/rewrite` - Text rewriting functionality (refactored with shared modules)
+- `/api/tone` - Tone adjustment processing (refactored with shared modules)
 - `/api/feedback` - User feedback collection
-- `/api/mercadopago/*` - Payment processing integration
 - `/api/admin/*` - Administrative functions with JWT authentication
 - `/api/admin/auth` - Secure admin authentication endpoint
 - `/api/revalidate` - Content revalidation with token protection
 - `/api/revalidate/webhook` - Webhook-based content revalidation for blog posts
 
+### API Architecture
+All API routes now use shared modules from `lib/api/` for improved maintainability:
+- `lib/api/shared-handlers.ts` - Rate limiting, input validation, request parsing
+- `lib/api/webhook-client.ts` - Unified webhook client with retry and fallback logic
+- `lib/api/error-handlers.ts` - Centralized error handling and fallback responses
+- `lib/api/response-normalizer.ts` - Response format normalization across different webhook responses
+
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
-- **Page Sections**: Modular sections like `HeroSection`, `BenefitsSection`, etc.
+- **Server Components**: Static sections converted to server components for better performance (`BenefitsSection`, `FeaturesSection`, `AboutAuthorSection`)
+- **Client Components**: Interactive components like `TextCorrectionForm`, `ToneAdjuster`, `JulinhoAssistant`
 - **Form Components**: `TextCorrectionForm` as main interaction point
 - **UI Components**: Comprehensive Radix UI component library in `/components/ui/`
 - **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat)
@@ -93,7 +100,6 @@ Key configuration in `utils/constants.ts`:
 - **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
 - **Monetization**: Google AdSense with consent management, CleverWebServer script integration
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
-- **Payments**: MercadoPago integration
 - **Email**: React Email components for notifications
 - **Content Management**: WordPress API integration for blog content with automatic revalidation
 
