@@ -17,7 +17,7 @@ export const GTM_ID = "GTM-5ZNJ85CP"
 
 // API endpoints - Workers API
 const WORKERS_API_BASE = "https://workers-api.fabiofariasf.workers.dev"
-export const WEBHOOK_URL = process.env.CORRECTION_API_URL || `${WORKERS_API_BASE}/api/corrigir`
+export const WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir`
 export const PREMIUM_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-corrigir`
 export const REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/reescrever`
 export const PREMIUM_REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-reescrever`

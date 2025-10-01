@@ -1,8 +1,6 @@
 import { fetchWithRetry } from "@/utils/fetch-retry"
 import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
 
-const VERCEL_BYPASS_TOKEN = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
-
 interface WebhookOptions {
   url: string
   fallbackUrl?: string
@@ -18,7 +16,7 @@ interface WebhookHeaders {
 }
 
 /**
- * Prepares headers for webhook request with optional bypass token
+ * Prepares headers for webhook request
  */
 function prepareHeaders(requestId: string): WebhookHeaders {
   return {
@@ -28,30 +26,12 @@ function prepareHeaders(requestId: string): WebhookHeaders {
 }
 
 /**
- * Adds Vercel bypass token to URL and headers if available
- */
-function addBypassToken(url: string, headers: WebhookHeaders): string {
-  if (!VERCEL_BYPASS_TOKEN || url.includes('localhost')) {
-    return url
-  }
-
-  const urlObj = new URL(url)
-  urlObj.searchParams.set('x-vercel-set-bypass-cookie', 'true')
-  urlObj.searchParams.set('x-vercel-protection-bypass', VERCEL_BYPASS_TOKEN)
-
-  headers['x-vercel-protection-bypass'] = VERCEL_BYPASS_TOKEN
-  headers['x-vercel-set-bypass-cookie'] = 'true'
-
-  return urlObj.toString()
-}
-
-/**
  * Makes a request to the webhook with retry and fallback support
  */
 export async function callWebhook(options: WebhookOptions): Promise<Response> {
   const { url, fallbackUrl, text, requestId, additionalData = {} } = options
   const headers = prepareHeaders(requestId)
-  let webhookUrl = addBypassToken(url, headers)
+  const webhookUrl = url
 
   const requestBody = {
     text,
