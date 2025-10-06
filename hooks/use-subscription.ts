@@ -89,7 +89,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create subscription')
+        const errorMsg = typeof errorData.error === 'string'
+          ? errorData.error
+          : (errorData.message || 'Failed to create subscription')
+        throw new Error(errorMsg)
       }
 
       const data = await response.json()
@@ -138,7 +141,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to cancel subscription')
+        const errorMsg = typeof errorData.error === 'string'
+          ? errorData.error
+          : (errorData.message || 'Failed to cancel subscription')
+        throw new Error(errorMsg)
       }
 
       // Refresh subscription data
