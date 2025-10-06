@@ -131,6 +131,25 @@ export default function ResetSubscriptionPage() {
             <p className="text-xs text-muted-foreground font-mono">{user.id}</p>
           </div>
 
+          {/* Mercado Pago Config */}
+          <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
+            <p className="text-sm font-medium mb-2">Configuração Mercado Pago:</p>
+            <div className="text-xs space-y-1">
+              <p className="flex items-start gap-2">
+                <span className="font-medium min-w-[80px]">Public Key:</span>
+                <span className="font-mono break-all text-blue-600 dark:text-blue-400">
+                  {process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || 'Não configurado'}
+                </span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="font-medium min-w-[80px]">Ambiente:</span>
+                <span className="font-mono">
+                  {process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith('TEST-') ? '🧪 TEST' : '🚀 PRODUCTION'}
+                </span>
+              </p>
+            </div>
+          </div>
+
           {/* Check Status */}
           <div>
             <Button
