@@ -61,7 +61,7 @@
     "jose": "latest",
     "jsdom": "latest",
     "lucide-react": "^0.454.0",
-    "next": "15.2.4",
+    "next": "15.5.4",
     "next-themes": "latest",
     "node-fetch": "latest",
     "openai": "^5.16.0",
@@ -78,7 +78,7 @@
     "tailwindcss-animate": "^1.0.7",
     "util": "latest",
     "vaul": "latest",
-    "zod": "^3.24.1"
+    "zod": "^4.1.12"
   },
   "overrides": {
     "form-data": "4.0.4"

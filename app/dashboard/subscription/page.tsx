@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -31,7 +31,7 @@ import { useSubscription } from "@/hooks/use-subscription"
 import { useUser } from "@/hooks/use-user"
 import { useToast } from "@/hooks/use-toast"
 
-export default function SubscriptionPage() {
+function SubscriptionContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -322,5 +322,19 @@ export default function SubscriptionPage() {
         )}
       </motion.div>
     </div>
+  )
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto py-10 px-4 max-w-4xl">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    }>
+      <SubscriptionContent />
+    </Suspense>
   )
 }
