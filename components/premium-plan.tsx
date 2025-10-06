@@ -2,15 +2,21 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Zap, Check, X, AlertTriangle } from "lucide-react"
+import { Zap, Check, X, AlertTriangle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
+import { useUser } from "@/hooks/use-user"
+import { useSubscription } from "@/hooks/use-subscription"
+import { useToast } from "@/hooks/use-toast"
 
 export function PremiumPlan() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { user, profile } = useUser()
+  const { createSubscription, isActive, isPro } = useSubscription()
+  const { toast } = useToast()
 
   const features = [
     { name: "Correções ilimitadas", included: true },
@@ -24,9 +30,67 @@ export function PremiumPlan() {
     { name: "Extensão para navegador", included: false, comingSoon: true },
   ]
 
-  const handleSubscribe = () => {
-    // Não faz nada por enquanto - Em breve
-    return
+  const handleSubscribe = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Você precisa estar logado para assinar o plano premium.",
+        variant: "destructive",
+      })
+      router.push('/login?redirect=/premium')
+      return
+    }
+
+    // Check if already subscribed
+    if (isPro || isActive) {
+      toast({
+        title: "Você já é Premium!",
+        description: "Você já possui uma assinatura ativa.",
+      })
+      router.push('/dashboard')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+
+      // Track event
+      sendGTMEvent({
+        event: 'subscribe_premium_clicked',
+        user_id: user.id,
+        email: user.email,
+      })
+
+      // Create subscription
+      const result = await createSubscription()
+
+      if (!result) {
+        throw new Error('Failed to create subscription')
+      }
+
+      // Track checkout initiated
+      sendGTMEvent({
+        event: 'begin_checkout',
+        user_id: user.id,
+        email: user.email,
+        value: 29.90,
+        currency: 'BRL',
+      })
+
+      // Redirect to Mercado Pago checkout
+      window.location.href = result.checkoutUrl
+
+    } catch (error) {
+      console.error('Error subscribing:', error)
+      toast({
+        title: "Erro ao processar assinatura",
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -94,22 +158,41 @@ export function PremiumPlan() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-3">
-              <div className="w-full p-4 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg text-center">
-                <div className="inline-flex items-center gap-2 text-lg font-semibold text-primary mb-2">
-                  <Zap className="h-5 w-5" />
-                  Em Breve
+              {isPro || isActive ? (
+                <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
+                  <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
+                    <Check className="h-5 w-5" />
+                    Você é Premium!
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Aproveite todos os recursos ilimitados.
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  O plano premium está em desenvolvimento. Cadastre-se para ser notificado quando estiver disponível!
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push("/contato")}
-              >
-                Quero ser notificado
-              </Button>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                    onClick={handleSubscribe}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-5 w-5" />
+                        Assinar Agora
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Pagamento seguro via Mercado Pago
+                  </p>
+                </>
+              )}
             </CardFooter>
           </Card>
         </motion.div>

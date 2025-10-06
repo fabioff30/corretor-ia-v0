@@ -200,7 +200,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {/* Meta Pixel Code - noscript */}
         <noscript>
           <img

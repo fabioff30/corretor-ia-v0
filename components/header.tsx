@@ -7,18 +7,22 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Menu, Sparkles, X, Shield, LogOut } from "lucide-react"
+import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { createClient } from "@/lib/supabase/client"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [adminPassword, setAdminPassword] = useState("")
   const pathname = usePathname()
   const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
+  const { user, signOut: userSignOut, loading: userLoading } = useUser()
   const { toast } = useToast()
+  const supabase = createClient()
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -54,6 +58,15 @@ export function Header() {
       title: "Logout realizado",
       description: "Você saiu da área administrativa.",
     })
+  }
+
+  const handleUserLogout = async () => {
+    await userSignOut()
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu da sua conta.",
+    })
+    window.location.href = '/'
   }
 
   return (
@@ -159,9 +172,43 @@ export function Header() {
           </DropdownMenu>
 
           <ModeToggle />
-          <Button asChild className="hidden md:flex">
-            <Link href="/apoiar">Apoiar</Link>
-          </Button>
+
+          {/* User Auth Button - Desktop */}
+          {!userLoading && (
+            <div className="hidden md:flex">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Ir para Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleUserLogout} className="text-red-500 cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild>
+                  <Link href="/login">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Entrar
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+
           <button className="md:hidden" onClick={toggleMenu} aria-label="Toggle Menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -214,11 +261,40 @@ export function Header() {
             >
               Contato
             </Link>
-            <Button asChild className="mt-2">
-              <Link href="/apoiar" onClick={() => setIsMenuOpen(false)}>
-                Apoiar
-              </Link>
-            </Button>
+
+            {/* User Auth Button - Mobile */}
+            {!userLoading && (
+              <div className="mt-2">
+                {user ? (
+                  <>
+                    <Button asChild className="w-full mb-2">
+                      <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full text-red-500 hover:text-red-600"
+                      onClick={() => {
+                        setIsMenuOpen(false)
+                        handleUserLogout()
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <Button asChild className="w-full">
+                    <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Entrar
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

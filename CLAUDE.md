@@ -52,6 +52,7 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 - `/api/correct` - Main text correction endpoint (refactored with shared modules)
 - `/api/rewrite` - Text rewriting functionality (refactored with shared modules)
 - `/api/tone` - Tone adjustment processing (refactored with shared modules)
+- `/api/ai-detector` - AI content detection with brazilianism analysis (10,000 char limit, 2 uses/day)
 - `/api/feedback` - User feedback collection
 - `/api/admin/*` - Administrative functions with JWT authentication
 - `/api/admin/auth` - Secure admin authentication endpoint
@@ -64,6 +65,7 @@ All API routes now use shared modules from `lib/api/` for improved maintainabili
 - `lib/api/webhook-client.ts` - Unified webhook client with retry and fallback logic
 - `lib/api/error-handlers.ts` - Centralized error handling and fallback responses
 - `lib/api/response-normalizer.ts` - Response format normalization across different webhook responses
+- `lib/api/daily-rate-limit.ts` - Daily rate limiting for AI detector (Redis-backed)
 
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
@@ -71,13 +73,14 @@ All API routes now use shared modules from `lib/api/` for improved maintainabili
 - **Client Components**: Interactive components like `TextCorrectionForm`, `ToneAdjuster`, `JulinhoAssistant`
 - **Form Components**: `TextCorrectionForm` as main interaction point
 - **UI Components**: Comprehensive Radix UI component library in `/components/ui/`
-- **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat)
+- **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat), `AIDetectorForm`, `AIDetectorRating`
 - **Result Components**: `TextCorrectionTabs` for tabbed display of correction results
 - **Advertisement Components**: Smart banner system with frequency control and user engagement tracking
 
 ### Configuration & Constants
 Key configuration in `utils/constants.ts`:
-- Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000)
+- Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000), `AI_DETECTOR_CHARACTER_LIMIT` (10000)
+- Rate limits: `AI_DETECTOR_DAILY_LIMIT` (2 uses per day)
 - API timeouts: `API_REQUEST_TIMEOUT` (30s), `FETCH_TIMEOUT` (25s)
 - Google Analytics, AdSense, and GTM IDs
 - Webhook URLs (Workers API base: `https://workers-api.fabiofariasf.workers.dev`):
@@ -85,7 +88,7 @@ Key configuration in `utils/constants.ts`:
   - `PREMIUM_WEBHOOK_URL` - `/api/premium-corrigir` (premium correction)
   - `REWRITE_WEBHOOK_URL` - `/api/reescrever` (text rewriting)
   - `PREMIUM_REWRITE_WEBHOOK_URL` - `/api/premium-reescrever` (premium rewriting)
-  - `ANALYSIS_WEBHOOK_URL` - `/api/analysis-ai` (AI analysis)
+  - `ANALYSIS_WEBHOOK_URL` - `/api/analysis-ai` (AI content detection)
   - `FALLBACK_WEBHOOK_URL` - same as primary (automatic fallback)
 - Authentication: `AUTH_TOKEN` (server-side only)
 - Feature flags: `JULINHO_DISABLED` (currently false)
@@ -96,7 +99,12 @@ Key configuration in `utils/constants.ts`:
   - POST `/api/premium-corrigir` - Premium correction with advanced models
   - POST `/api/reescrever` - Text rewriting with style options
   - POST `/api/premium-reescrever` - Premium rewriting
-  - POST `/api/analysis-ai` - AI-generated content analysis
+  - POST `/api/analysis-ai` - AI-generated content detection with brazilianism analysis, grammar summary, and confidence scoring
+- **Payments**: Mercado Pago integration for recurring subscriptions
+  - Subscription management with automatic renewals
+  - Webhook validation with HMAC-SHA256
+  - Full payment transaction history
+  - See `MERCADOPAGO_SETUP.md` for setup guide
 - **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
 - **Monetization**: Google AdSense with consent management, CleverWebServer script integration
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
@@ -182,8 +190,20 @@ MERCADO_PAGO_ACCESS_TOKEN=your-token
 
 ## 🆕 Recent Feature Additions
 
+### AI Content Detector (Latest)
+- New `/api/ai-detector` endpoint for detecting AI-generated content
+- Advanced analysis including:
+  - AI vs Human content classification with confidence scores
+  - Brazilian Portuguese language patterns detection (brazilianism analysis)
+  - Grammar summary with error counts and categorization
+  - Text statistics (word count, sentence length, etc.)
+- Daily rate limiting (2 uses per day per IP/session)
+- Character limit: 10,000 characters
+- Components: `AIDetectorForm`, `AIDetectorRating`
+- Feedback system for user rating and improvements
+
 ### Custom Tone Adjustment
-- New `/api/custom-tone-webhook` endpoint for processing custom tone instructions
+- `/api/custom-tone-webhook` endpoint for processing custom tone instructions
 - External webhook integration with fallback handling
 - Graceful error handling to maintain user experience
 
