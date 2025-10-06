@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 export default function ResetSubscriptionPage() {
   const [isResetting, setIsResetting] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
   const [mpConfig, setMpConfig] = useState<any>(null)
   const { user } = useUser()
@@ -107,6 +108,61 @@ export default function ResetSubscriptionPage() {
       })
     } finally {
       setIsResetting(false)
+    }
+  }
+
+  const handleTestSubscription = async () => {
+    if (!user?.id || !user?.email) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!confirm('⚠️ ATENÇÃO: Isso criará uma assinatura REAL de R$ 1,00 que será cobrada no seu cartão. Continuar?')) {
+      return
+    }
+
+    try {
+      setIsTesting(true)
+      const response = await fetch('/api/mercadopago/create-test-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create test subscription')
+      }
+
+      const data = await response.json()
+
+      toast({
+        title: "Assinatura de teste criada!",
+        description: "Redirecionando para o checkout...",
+      })
+
+      // Redirect to checkout
+      setTimeout(() => {
+        window.location.href = data.checkoutUrl
+      }, 1500)
+    } catch (error) {
+      console.error('Error creating test subscription:', error)
+      toast({
+        title: "Erro ao criar assinatura de teste",
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: "destructive",
+      })
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -217,6 +273,35 @@ export default function ResetSubscriptionPage() {
               )}
             </div>
           )}
+
+          {/* Test Subscription Button */}
+          <div className="pt-4 border-t">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-lg mb-4">
+              <p className="text-sm font-semibold mb-2 text-yellow-600 dark:text-yellow-400">
+                🧪 Teste de Assinatura Real (R$ 1,00)
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Cria uma assinatura REAL de R$ 1,00/mês em PRODUÇÃO. Você será cobrado! Use para testar o fluxo completo de pagamento.
+              </p>
+              <Button
+                onClick={handleTestSubscription}
+                disabled={isTesting}
+                variant="outline"
+                className="w-full border-yellow-500/50 hover:bg-yellow-500/10"
+              >
+                {isTesting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    💳 Criar Assinatura de R$ 1,00
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
 
           {/* Reset Button */}
           <div className="pt-4 border-t">

@@ -313,3 +313,30 @@ export async function createProSubscription(
 export function getMercadoPagoClient(): MercadoPagoClient {
   return new MercadoPagoClient()
 }
+
+/**
+ * Helper function to create a TEST subscription with R$ 1.00
+ * USE ONLY FOR TESTING - Will be charged to real credit card
+ */
+export async function createTestSubscription(
+  userId: string,
+  userEmail: string,
+  backUrl: string
+): Promise<MPSubscriptionResponse> {
+  const client = new MercadoPagoClient()
+
+  const subscriptionData: MPSubscriptionRequest = {
+    reason: '🧪 TESTE - Assinatura R$ 1,00',
+    auto_recurring: {
+      frequency: 1,
+      frequency_type: 'months',
+      transaction_amount: 1.00, // R$ 1,00 para teste
+      currency_id: 'BRL',
+    },
+    back_url: backUrl,
+    payer_email: userEmail,
+    external_reference: `test_${userId}`,
+  }
+
+  return await client.createSubscription(subscriptionData)
+}
