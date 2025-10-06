@@ -20,7 +20,7 @@ interface SubscriptionData {
 }
 
 interface SubscriptionActions {
-  createSubscription: () => Promise<{ checkoutUrl: string } | null>
+  createSubscription: (planType?: 'monthly' | 'annual') => Promise<{ checkoutUrl: string } | null>
   cancelSubscription: () => Promise<boolean>
   refreshSubscription: () => Promise<void>
 }
@@ -66,7 +66,7 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
   }
 
   // Create new subscription
-  const createSubscription = async (): Promise<{ checkoutUrl: string } | null> => {
+  const createSubscription = async (planType: 'monthly' | 'annual' = 'monthly'): Promise<{ checkoutUrl: string } | null> => {
     if (!user?.id || !user?.email) {
       setError('User not authenticated')
       return null
@@ -84,6 +84,7 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
         body: JSON.stringify({
           userId: user.id,
           userEmail: user.email,
+          planType,
         }),
       })
 

@@ -15,6 +15,7 @@ export const maxDuration = 60
 interface CreateSubscriptionRequest {
   userId: string
   userEmail: string
+  planType?: 'monthly' | 'annual'
   returnUrl?: string
 }
 
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: CreateSubscriptionRequest = await request.json()
-    const { userId, userEmail, returnUrl } = body
+    const { userId, userEmail, planType = 'monthly', returnUrl } = body
 
     // Validate input
     if (!userId || !userEmail) {
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
     const mpSubscription = await createProSubscription(
       userId,
       userEmail,
-      backUrl
+      backUrl,
+      planType
     )
 
     // Save subscription to Supabase

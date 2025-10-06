@@ -268,16 +268,35 @@ export class MercadoPagoClient {
 export async function createProSubscription(
   userId: string,
   userEmail: string,
-  backUrl: string
+  backUrl: string,
+  planType: 'monthly' | 'annual' = 'monthly'
 ): Promise<MPSubscriptionResponse> {
   const client = new MercadoPagoClient()
 
-  const subscriptionData: MPSubscriptionRequest = {
-    reason: 'Plano Premium - CorretorIA',
-    auto_recurring: {
+  // Define pricing based on plan type
+  const pricing = {
+    monthly: {
       frequency: 1,
-      frequency_type: 'months',
-      transaction_amount: 29.90, // R$ 29,90/mês
+      frequency_type: 'months' as const,
+      transaction_amount: 29.90,
+      reason: 'Plano Premium Mensal - CorretorIA',
+    },
+    annual: {
+      frequency: 12,
+      frequency_type: 'months' as const,
+      transaction_amount: 299.00,
+      reason: 'Plano Premium Anual - CorretorIA',
+    },
+  }
+
+  const plan = pricing[planType]
+
+  const subscriptionData: MPSubscriptionRequest = {
+    reason: plan.reason,
+    auto_recurring: {
+      frequency: plan.frequency,
+      frequency_type: plan.frequency_type,
+      transaction_amount: plan.transaction_amount,
       currency_id: 'BRL',
     },
     back_url: backUrl,
