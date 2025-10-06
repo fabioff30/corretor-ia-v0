@@ -50,21 +50,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has an active subscription
-    const { data: existingSubscription } = await supabase
+    const { data: existingSubscriptions } = await supabase
       .from('subscriptions')
-      .select('id, status, mp_subscription_id')
+      .select('id, status, mp_subscription_id, created_at')
       .eq('user_id', userId)
       .in('status', ['pending', 'authorized'])
-      .single()
+      .order('created_at', { ascending: false })
 
-    if (existingSubscription) {
-      return NextResponse.json(
-        {
-          error: 'User already has an active subscription',
-          subscriptionId: existingSubscription.mp_subscription_id,
-        },
-        { status: 409 }
-      )
+    if (existingSubscriptions && existingSubscriptions.length > 0) {
+      const latestSubscription = existingSubscriptions[0]
+
+      // If subscription is pending and older than 30 minutes, allow creating new one
+      const subscriptionAge = Date.now() - new Date(latestSubscription.created_at).getTime()
+      const thirtyMinutes = 30 * 60 * 1000
+
+      if (latestSubscription.status === 'pending' && subscriptionAge > thirtyMinutes) {
+        // Cancel old pending subscription
+        await supabase
+          .from('subscriptions')
+          .update({ status: 'canceled' })
+          .eq('id', latestSubscription.id)
+
+        console.log(`Cancelled old pending subscription: ${latestSubscription.id}`)
+      } else {
+        // Has active or recent pending subscription
+        return NextResponse.json(
+          {
+            error: 'User already has an active subscription',
+            subscriptionId: latestSubscription.mp_subscription_id,
+            status: latestSubscription.status,
+            message: latestSubscription.status === 'pending'
+              ? 'You have a pending subscription. Please wait 30 minutes or contact support to reset.'
+              : 'You already have an active subscription',
+          },
+          { status: 409 }
+        )
+      }
     }
 
     // Determine return URL

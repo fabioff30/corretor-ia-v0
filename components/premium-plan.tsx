@@ -48,7 +48,7 @@ export function PremiumPlan() {
         title: "Você já é Premium!",
         description: "Você já possui uma assinatura ativa.",
       })
-      router.push('/dashboard')
+      router.push('/dashboard/subscription')
       return
     }
 
@@ -83,11 +83,23 @@ export function PremiumPlan() {
 
     } catch (error) {
       console.error('Error subscribing:', error)
-      toast({
-        title: "Erro ao processar assinatura",
-        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
-        variant: "destructive",
-      })
+
+      // Check if it's the "already has subscription" error
+      const errorMessage = error instanceof Error ? error.message : "Tente novamente mais tarde."
+
+      if (errorMessage.includes('already has an active subscription')) {
+        toast({
+          title: "Assinatura pendente detectada",
+          description: "Você tem uma assinatura pendente. Aguarde 30 minutos ou entre em contato com o suporte.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Erro ao processar assinatura",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoading(false)
     }
