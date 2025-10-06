@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Trash2, RefreshCw } from "lucide-react"
@@ -11,8 +11,17 @@ export default function ResetSubscriptionPage() {
   const [isResetting, setIsResetting] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
+  const [mpConfig, setMpConfig] = useState<any>(null)
   const { user } = useUser()
   const { toast } = useToast()
+
+  // Fetch MP config on mount
+  useEffect(() => {
+    fetch('/api/mercadopago/config')
+      .then(res => res.json())
+      .then(data => setMpConfig(data))
+      .catch(err => console.error('Error fetching MP config:', err))
+  }, [])
 
   const handleCheck = async () => {
     if (!user?.id) {
@@ -134,20 +143,33 @@ export default function ResetSubscriptionPage() {
           {/* Mercado Pago Config */}
           <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
             <p className="text-sm font-medium mb-2">Configuração Mercado Pago:</p>
-            <div className="text-xs space-y-1">
-              <p className="flex items-start gap-2">
-                <span className="font-medium min-w-[80px]">Public Key:</span>
-                <span className="font-mono break-all text-blue-600 dark:text-blue-400">
-                  {process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || 'Não configurado'}
-                </span>
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="font-medium min-w-[80px]">Ambiente:</span>
-                <span className="font-mono">
-                  {process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith('TEST-') ? '🧪 TEST' : '🚀 PRODUCTION'}
-                </span>
-              </p>
-            </div>
+            {mpConfig ? (
+              <div className="text-xs space-y-1">
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[80px]">Public Key:</span>
+                  <span className="font-mono break-all text-blue-600 dark:text-blue-400">
+                    {mpConfig.publicKey || 'Não configurado'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[80px]">Ambiente:</span>
+                  <span className="font-mono">
+                    {mpConfig.isTest ? '🧪 TEST' : '🚀 PRODUCTION'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[80px]">Token:</span>
+                  <span className="font-mono text-[10px]">
+                    {mpConfig.hasAccessToken ? '✅ Configurado' : '❌ Não configurado'}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                Carregando configuração...
+              </div>
+            )}
           </div>
 
           {/* Check Status */}
