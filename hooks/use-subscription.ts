@@ -42,21 +42,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch(
-        `/api/mercadopago/create-subscription?userId=${user.id}`
-      )
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch subscription')
-      }
-
-      const data = await response.json()
-
-      if (data.hasActiveSubscription) {
-        setSubscription(data.subscription)
-      } else {
-        setSubscription(null)
-      }
+      // For now, rely on profile data from useUser hook
+      // Stripe subscription details are synced via webhooks to the database
+      // and available through the profile
+      setSubscription(null)
     } catch (err) {
       console.error('Error fetching subscription:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -76,7 +65,7 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch('/api/mercadopago/create-subscription', {
+      const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,15 +102,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
     }
   }
 
-  // Cancel subscription
+  // Cancel subscription (opens Stripe Customer Portal)
   const cancelSubscription = async (): Promise<boolean> => {
     if (!user?.id) {
       setError('User not authenticated')
-      return false
-    }
-
-    if (!subscription?.id) {
-      setError('No active subscription to cancel')
       return false
     }
 
@@ -129,14 +113,14 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch('/api/mercadopago/cancel-subscription', {
+      // Stripe uses Customer Portal for self-service subscription management
+      const response = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: user.id,
-          subscriptionId: subscription.id,
         }),
       })
 
@@ -144,17 +128,19 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
         const errorData = await response.json()
         const errorMsg = typeof errorData.error === 'string'
           ? errorData.error
-          : (errorData.message || 'Failed to cancel subscription')
+          : (errorData.message || 'Failed to open customer portal')
         throw new Error(errorMsg)
       }
 
-      // Refresh subscription data
-      await fetchSubscription()
+      const data = await response.json()
+
+      // Redirect to Customer Portal
+      window.location.href = data.portalUrl
 
       return true
     } catch (err) {
-      console.error('Error canceling subscription:', err)
-      setError(err instanceof Error ? err.message : 'Failed to cancel subscription')
+      console.error('Error opening customer portal:', err)
+      setError(err instanceof Error ? err.message : 'Failed to open customer portal')
       return false
     } finally {
       setIsLoading(false)
@@ -216,9 +202,9 @@ export function usePaymentHistory() {
         setIsLoading(true)
         setError(null)
 
-        // This would be a new API endpoint to fetch payment history
+        // This would be a new API endpoint to fetch payment history from Stripe
         // For now, we'll leave this as a placeholder
-        const response = await fetch(`/api/mercadopago/transactions?userId=${user.id}`)
+        const response = await fetch(`/api/stripe/transactions?userId=${user.id}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch transactions')

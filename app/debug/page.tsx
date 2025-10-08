@@ -13,15 +13,23 @@ export default function ResetSubscriptionPage() {
   const [isTesting, setIsTesting] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
   const [mpConfig, setMpConfig] = useState<any>(null)
+  const [stripeConfig, setStripeConfig] = useState<any>(null)
   const { user } = useUser()
   const { toast } = useToast()
 
-  // Fetch MP config on mount
+  // Fetch payment configs on mount
   useEffect(() => {
+    // Fetch Mercado Pago config
     fetch('/api/mercadopago/config')
       .then(res => res.json())
       .then(data => setMpConfig(data))
       .catch(err => console.error('Error fetching MP config:', err))
+
+    // Fetch Stripe config
+    fetch('/api/stripe/config')
+      .then(res => res.json())
+      .then(data => setStripeConfig(data))
+      .catch(err => console.error('Error fetching Stripe config:', err))
   }, [])
 
   const handleCheck = async () => {
@@ -196,9 +204,47 @@ export default function ResetSubscriptionPage() {
             <p className="text-xs text-muted-foreground font-mono">{user.id}</p>
           </div>
 
-          {/* Mercado Pago Config */}
-          <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
-            <p className="text-sm font-medium mb-2">Configuração Mercado Pago:</p>
+          {/* Stripe Config */}
+          <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-lg">
+            <p className="text-sm font-medium mb-2">🎯 Configuração Stripe (ATUAL):</p>
+            {stripeConfig ? (
+              <div className="text-xs space-y-1">
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[100px]">Publishable Key:</span>
+                  <span className="font-mono break-all text-green-600 dark:text-green-400">
+                    {stripeConfig.publishableKey || 'Não configurado'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[100px]">Ambiente:</span>
+                  <span className="font-mono">
+                    {stripeConfig.isTest ? '🧪 TEST' : '🚀 PRODUCTION'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[100px]">Secret Key:</span>
+                  <span className="font-mono text-[10px]">
+                    {stripeConfig.hasSecretKey ? '✅ Configurado' : '❌ Não configurado'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="font-medium min-w-[100px]">Status:</span>
+                  <span className="font-mono font-semibold">
+                    {stripeConfig.configured ? '✅ PRONTO' : '❌ Incompleto'}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                Carregando configuração...
+              </div>
+            )}
+          </div>
+
+          {/* Mercado Pago Config (LEGACY) */}
+          <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg opacity-60">
+            <p className="text-sm font-medium mb-2">⚠️ Mercado Pago (LEGACY - será removido):</p>
             {mpConfig ? (
               <div className="text-xs space-y-1">
                 <p className="flex items-start gap-2">

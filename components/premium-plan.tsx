@@ -84,7 +84,7 @@ export function PremiumPlan() {
         plan: planType,
       })
 
-      // Redirect to Mercado Pago checkout
+      // Redirect to Stripe checkout
       window.location.href = result.checkoutUrl
 
     } catch (error) {
@@ -312,7 +312,7 @@ export function PremiumPlan() {
             <p className="font-semibold mb-1">Garantia de 7 dias</p>
             <p>
               Cancele a qualquer momento. Oferecemos garantia de 7 dias de reembolso se você não ficar satisfeito.
-              Pagamento seguro via Mercado Pago.
+              Pagamento seguro via Stripe.
             </p>
           </div>
         </div>
