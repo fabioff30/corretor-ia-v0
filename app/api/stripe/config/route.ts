@@ -11,13 +11,12 @@ import { getServerConfig } from '@/utils/env-config'
 export async function GET() {
   try {
     const config = getServerConfig()
-    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY
 
     return NextResponse.json({
-      publishableKey: publishableKey || null,
-      isTest: publishableKey?.startsWith('pk_test_') || false,
+      publishableKey: config.STRIPE_PUBLISHABLE_KEY || null,
+      isTest: config.STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') || false,
       hasSecretKey: !!config.STRIPE_SECRET_KEY,
-      configured: !!(publishableKey && config.STRIPE_SECRET_KEY),
+      configured: !!(config.STRIPE_PUBLISHABLE_KEY && config.STRIPE_SECRET_KEY),
     })
   } catch (error) {
     console.error('[Stripe Config] Error:', error)
