@@ -17,6 +17,7 @@ import {
 import Stripe from 'stripe'
 
 export const maxDuration = 60
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
