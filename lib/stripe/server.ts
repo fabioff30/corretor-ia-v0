@@ -13,10 +13,10 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   typescript: true,
 })
 
-// Price IDs from Stripe Dashboard
+// Price IDs from Stripe Dashboard (Test Mode)
 export const STRIPE_PRICES = {
-  MONTHLY: 'price_1SFN5rAaDWyHAlqlK3GSBbU2', // R$ 29,90/mês
-  ANNUAL: 'price_1SFN65AaDWyHAlql7m6EslQp',  // R$ 299/12 meses
+  MONTHLY: 'price_1SFxorAaDWyHAlqlbEy1Ozk5', // R$ 29,90/mês
+  ANNUAL: 'price_1SFxpsAaDWyHAlql8RAud6sp',  // R$ 299/ano
 } as const
 
 /**
