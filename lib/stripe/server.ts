@@ -94,7 +94,7 @@ export async function createCheckoutSession(
       },
     },
     allow_promotion_codes: true,
-    billing_address_collection: 'required',
+    billing_address_collection: 'auto', // Changed from 'required' to 'auto'
   })
 
   return session

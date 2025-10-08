@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
     // Get price ID based on plan type
     const priceId = planType === 'monthly' ? STRIPE_PRICES.MONTHLY : STRIPE_PRICES.ANNUAL
 
-    // Determine URLs
-    const baseUrl = getPublicConfig().APP_URL
+    // Determine URLs - use request origin for correct environment
+    const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/') || getPublicConfig().APP_URL
+    const baseUrl = origin
     const successUrl = returnUrl || `${baseUrl}/dashboard/subscription?success=true`
     const cancelUrl = `${baseUrl}/premium?canceled=true`
 
