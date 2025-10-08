@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Determine URLs - use request origin for correct environment
     const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/') || getPublicConfig().APP_URL
-    const baseUrl = origin
+    const baseUrl = origin.endsWith('/') ? origin.slice(0, -1) : origin // Remove trailing slash
     const successUrl = returnUrl || `${baseUrl}/dashboard/subscription?success=true`
     const cancelUrl = `${baseUrl}/premium?canceled=true`
 

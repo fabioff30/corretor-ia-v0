@@ -29,6 +29,18 @@ export async function handleCheckoutCompleted(
   const stripe = (await import('./server')).stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
+  // Check if subscription already exists
+  const { data: existingSubscription } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('stripe_subscription_id', subscription.id)
+    .single()
+
+  if (existingSubscription) {
+    console.log('[Stripe Webhook] Subscription already exists, skipping insert')
+    return
+  }
+
   // Save subscription to database
   const { error: insertError } = await supabase
     .from('subscriptions')
@@ -37,7 +49,7 @@ export async function handleCheckoutCompleted(
       stripe_subscription_id: subscription.id,
       stripe_customer_id: customerId,
       stripe_price_id: subscription.items.data[0].price.id,
-      status: subscription.status as 'pending' | 'authorized' | 'paused' | 'canceled',
+      status: subscription.status === 'active' ? 'authorized' : 'pending',
       start_date: new Date(subscription.created * 1000).toISOString(),
       next_payment_date: subscription.current_period_end
         ? new Date(subscription.current_period_end * 1000).toISOString()
@@ -52,6 +64,33 @@ export async function handleCheckoutCompleted(
   }
 
   console.log('[Stripe Webhook] Subscription created successfully')
+
+  // Get the created subscription ID
+  const { data: createdSubscription } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('stripe_subscription_id', subscription.id)
+    .single()
+
+  if (!createdSubscription) {
+    console.error('[Stripe Webhook] Could not find created subscription')
+    return
+  }
+
+  // Activate subscription immediately if payment was successful
+  if (session.payment_status === 'paid') {
+    const { error: activateError } = await supabase.rpc('activate_subscription', {
+      p_user_id: userId,
+      p_subscription_id: createdSubscription.id,
+    })
+
+    if (activateError) {
+      console.error('[Stripe Webhook] Error activating subscription:', activateError)
+      throw activateError
+    }
+
+    console.log('[Stripe Webhook] Subscription activated for user:', userId)
+  }
 }
 
 /**
