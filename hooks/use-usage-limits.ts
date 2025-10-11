@@ -72,8 +72,23 @@ export function useUsageLimits() {
             .select()
             .single()
 
-          if (insertError) throw insertError
-          setUsage(newUsage)
+          // Se houver erro de duplicata, buscar o registro existente
+          if (insertError && insertError.code === '23505') {
+            const { data: existingUsage } = await supabase
+              .from('usage_limits')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('date', today)
+              .single()
+
+            if (existingUsage) {
+              setUsage(existingUsage)
+            }
+          } else if (insertError) {
+            throw insertError
+          } else {
+            setUsage(newUsage)
+          }
         } else if (usageError) {
           throw usageError
         } else {

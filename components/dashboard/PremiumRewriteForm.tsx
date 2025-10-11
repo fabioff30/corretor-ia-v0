@@ -425,7 +425,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
             <TabsContent value="diff" className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <TextDiff originalText={originalText} correctedText={result.rewrittenText} />
+                  <TextDiff original={originalText} corrected={result.rewrittenText} />
                 </CardContent>
               </Card>
             </TabsContent>

@@ -397,7 +397,7 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
             <TabsContent value="diff" className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <TextDiff originalText={originalText} correctedText={result.correctedText} />
+                  <TextDiff original={originalText} corrected={result.correctedText} />
                 </CardContent>
               </Card>
             </TabsContent>
