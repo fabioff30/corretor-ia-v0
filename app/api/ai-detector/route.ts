@@ -72,11 +72,15 @@ export async function POST(request: NextRequest) {
   if (parseError) return parseError
 
   try {
-    // Apply daily rate limiting (1 per day)
-    const rateLimitResponse = await dailyRateLimiter(request, "ai-detector", AI_DETECTOR_DAILY_LIMIT)
-    if (rateLimitResponse) return rateLimitResponse
+    const { text, isPremium = false } = requestBody
 
-    const { text } = requestBody
+    // Apply daily rate limiting (skip for premium users)
+    if (!isPremium) {
+      const rateLimitResponse = await dailyRateLimiter(request, "ai-detector", AI_DETECTOR_DAILY_LIMIT)
+      if (rateLimitResponse) return rateLimitResponse
+    } else {
+      console.log(`API: PREMIUM user - skipping daily rate limit`, requestId)
+    }
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -85,11 +89,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate text length (10,000 characters max)
-    const lengthError = validateTextLength(text, AI_DETECTOR_CHARACTER_LIMIT, requestId, ip)
-    if (lengthError) return lengthError
+    // Validate text length (10,000 characters max for free, unlimited for premium)
+    if (!isPremium) {
+      const lengthError = validateTextLength(text, AI_DETECTOR_CHARACTER_LIMIT, requestId, ip)
+      if (lengthError) return lengthError
+    }
 
-    console.log(`API: Processing AI detection for text, length: ${text.length}`, requestId)
+    console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} AI detection for text, length: ${text.length}`, requestId)
 
     // Call webhook
     const response = await callWebhook({

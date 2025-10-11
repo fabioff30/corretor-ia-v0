@@ -1,6 +1,7 @@
 // Character limits
 export const FREE_CHARACTER_LIMIT = 1500
 export const PREMIUM_CHARACTER_LIMIT = 5000
+export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 
 // AI Detector limits

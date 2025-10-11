@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Zap,
+  Wand2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlanBadge } from './PlanBadge'
@@ -62,6 +64,28 @@ export function DashboardSidebar() {
     },
   ]
 
+  // Premium navigation items (only for Pro/Admin users)
+  const premiumNavItems: NavItem[] = [
+    {
+      title: 'Corretor Premium',
+      href: '/dashboard/corretor-premium',
+      icon: Zap,
+      badge: 'PRO',
+    },
+    {
+      title: 'Reescrever Premium',
+      href: '/dashboard/reescrever-premium',
+      icon: Wand2,
+      badge: 'PRO',
+    },
+    {
+      title: 'Detector IA Premium',
+      href: '/dashboard/detector-ia-premium',
+      icon: Sparkles,
+      badge: 'PRO',
+    },
+  ]
+
   const adminNavItems: NavItem[] = [
     {
       title: 'Admin Dashboard',
@@ -83,11 +107,24 @@ export function DashboardSidebar() {
     },
   ]
 
-  const allItems = isAdmin ? [...navItems, ...adminNavItems] : navItems
+  const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
+
+  // Combinar todos os items baseado no tipo de usuário
+  let allItems = [...navItems]
+
+  // Adicionar items premium se for Pro/Admin
+  if (isPremium) {
+    allItems = [...navItems, ...premiumNavItems]
+  }
+
+  // Adicionar items admin se for Admin
+  if (isAdmin) {
+    allItems = [...allItems, ...adminNavItems]
+  }
 
   // Filtrar "Upgrade para Pro" se for usuário Pro ou Admin
   const filteredItems = allItems.filter((item) => {
-    if (item.href === '/dashboard/upgrade' && (profile?.plan_type === 'pro' || profile?.plan_type === 'admin')) {
+    if (item.href === '/dashboard/upgrade' && isPremium) {
       return false
     }
     return true
@@ -150,7 +187,8 @@ export function DashboardSidebar() {
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent',
                 active ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground',
                 collapsed && 'justify-center',
-                item.adminOnly && 'border-l-2 border-purple-500'
+                item.adminOnly && 'border-l-2 border-purple-500',
+                item.badge === 'PRO' && 'border-l-2 border-pink-500'
               )}
               title={collapsed ? item.title : undefined}
             >

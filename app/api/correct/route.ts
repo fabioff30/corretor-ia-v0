@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL } from "@/utils/constants"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -32,16 +32,18 @@ export async function POST(request: NextRequest) {
     const validatedInput = await validateAndSanitizeInput(request, requestBody, requestId)
     if (validatedInput instanceof NextResponse) return validatedInput
 
-    const { text, isMobile, tone = "Padrão" } = validatedInput
+    const { text, isMobile, tone = "Padrão", isPremium = false } = validatedInput
 
-    // Validate text length
-    const lengthError = validateTextLength(text, 5000, requestId, ip)
-    if (lengthError) return lengthError
+    // Validate text length (skip for premium users)
+    if (!isPremium) {
+      const lengthError = validateTextLength(text, 5000, requestId, ip)
+      if (lengthError) return lengthError
+    }
 
-    console.log(`API: Processing ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
+    console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
     console.log(`API: Selected tone: ${tone}`, requestId)
 
-    // Call webhook
+    // Call webhook (use premium webhook for premium users)
     const webhookData: Record<string, any> = {
       source: isMobile ? "mobile" : "desktop",
     }
@@ -51,8 +53,11 @@ export async function POST(request: NextRequest) {
       webhookData.tone = tone
     }
 
+    const webhookUrl = isPremium ? PREMIUM_WEBHOOK_URL : WEBHOOK_URL
+    console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} webhook`, requestId)
+
     const response = await callWebhook({
-      url: WEBHOOK_URL,
+      url: webhookUrl,
       fallbackUrl: FALLBACK_WEBHOOK_URL,
       text,
       requestId,

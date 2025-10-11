@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { REWRITE_WEBHOOK_URL } from "@/utils/constants"
+import { REWRITE_WEBHOOK_URL, PREMIUM_REWRITE_WEBHOOK_URL } from "@/utils/constants"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -33,19 +33,24 @@ export async function POST(request: NextRequest) {
     const validatedInput = await validateAndSanitizeInput(request, requestBody, requestId)
     if (validatedInput instanceof NextResponse) return validatedInput
 
-    const { text, isMobile, style } = validatedInput
+    const { text, isMobile, style, isPremium = false } = validatedInput
     const rewriteStyle = style || "formal"
 
-    // Validate text length
-    const lengthError = validateTextLength(text, 5000, requestId, ip)
-    if (lengthError) return lengthError
+    // Validate text length (skip for premium users)
+    if (!isPremium) {
+      const lengthError = validateTextLength(text, 5000, requestId, ip)
+      if (lengthError) return lengthError
+    }
 
-    console.log(`API: Processing ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
+    console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
     console.log(`API: Rewrite style selected: ${rewriteStyle}`, requestId)
 
-    // Call webhook
+    // Call webhook (use premium webhook for premium users)
+    const webhookUrl = isPremium ? PREMIUM_REWRITE_WEBHOOK_URL : REWRITE_WEBHOOK_URL
+    console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} rewrite webhook`, requestId)
+
     const response = await callWebhook({
-      url: REWRITE_WEBHOOK_URL,
+      url: webhookUrl,
       text,
       requestId,
       additionalData: { style: rewriteStyle },

@@ -40,7 +40,12 @@ interface AIDetectionResponse {
   }
 }
 
-export function AIDetectorForm() {
+interface AIDetectorFormProps {
+  isPremium?: boolean
+  onAnalysisComplete?: () => void
+}
+
+export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDetectorFormProps = {}) {
   const [text, setText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<AIDetectionResponse | null>(null)
@@ -49,7 +54,7 @@ export function AIDetectorForm() {
   const { toast } = useToast()
 
   const charCount = text.length
-  const isOverLimit = charCount > AI_DETECTOR_CHARACTER_LIMIT
+  const isOverLimit = !isPremium && charCount > AI_DETECTOR_CHARACTER_LIMIT
   const canAnalyze = text.trim().length > 0 && !isOverLimit
 
   const handleAnalyze = async () => {
@@ -66,7 +71,7 @@ export function AIDetectorForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, isPremium }),
       })
 
       const data = await response.json()
@@ -107,6 +112,11 @@ export function AIDetectorForm() {
         title: "Análise concluída!",
         description: "O texto foi analisado com sucesso.",
       })
+
+      // Call callback if provided
+      if (onAnalysisComplete) {
+        onAnalysisComplete()
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao analisar o texto"
       setError(errorMessage)
