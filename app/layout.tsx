@@ -10,6 +10,7 @@ import Script from "next/script"
 import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
+import { UserProvider } from "@/components/providers/user-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -221,16 +222,18 @@ export default function RootLayout({
           />
         </noscript>
 
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <Toaster />
-          <CookieConsent />
-          <JulinhoAssistant />
-        </ThemeProvider>
+        <UserProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <Toaster />
+            <CookieConsent />
+            <JulinhoAssistant />
+          </ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   )
