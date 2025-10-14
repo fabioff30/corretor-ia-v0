@@ -45,7 +45,8 @@ export function UserAvatar() {
       description: 'Você foi desconectado com sucesso.',
     })
 
-    router.push('/')
+    router.replace('/')
+    router.refresh()
   }
 
   if (!user || !profile) return null

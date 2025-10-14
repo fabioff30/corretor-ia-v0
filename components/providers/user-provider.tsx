@@ -193,13 +193,30 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
   )
 
   const signOut = useCallback(async () => {
+    setUser(null)
+    setProfile(null)
+
     const { error: signOutError } = await supabase.auth.signOut()
-    if (!signOutError) {
-      setUser(null)
-      setProfile(null)
+
+    if (signOutError) {
+      setError(signOutError.message)
+
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser()
+
+      if (currentUser) {
+        setUser(currentUser)
+        await fetchProfile(currentUser.id)
+      } else {
+        setProfile(null)
+      }
+    } else {
+      setError(null)
     }
+
     return { error: signOutError }
-  }, [supabase])
+  }, [fetchProfile, supabase])
 
   const value = useMemo<UserContextValue>(
     () => ({

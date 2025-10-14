@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard } from "lucide-react"
@@ -13,16 +13,16 @@ import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { createClient } from "@/lib/supabase/client"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [adminPassword, setAdminPassword] = useState("")
   const pathname = usePathname()
+  const router = useRouter()
   const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
   const { user, signOut: userSignOut, loading: userLoading } = useUser()
   const { toast } = useToast()
-  const supabase = createClient()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -61,12 +61,26 @@ export function Header() {
   }
 
   const handleUserLogout = async () => {
-    await userSignOut()
+    setIsLoggingOut(true)
+    const { error } = await userSignOut()
+
+    if (error) {
+      toast({
+        title: "Erro ao sair",
+        description: error.message,
+        variant: "destructive",
+      })
+      setIsLoggingOut(false)
+      return
+    }
+
     toast({
       title: "Logout realizado",
       description: "Você saiu da sua conta.",
     })
-    window.location.href = '/'
+
+    router.replace("/")
+    router.refresh()
   }
 
   return (
@@ -192,7 +206,11 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleUserLogout} className="text-red-500 cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={handleUserLogout}
+                      className="text-red-500 cursor-pointer"
+                      disabled={isLoggingOut}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       Sair
                     </DropdownMenuItem>
