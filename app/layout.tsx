@@ -11,6 +11,8 @@ import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
+import { createClient as createServerClient } from "@/lib/supabase/server"
+import type { Profile } from "@/types/supabase"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,11 +25,30 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createServerClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  let initialProfile: Profile | null = null
+
+  if (session?.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single()
+
+    if (profile) {
+      initialProfile = profile as Profile
+    }
+  }
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
@@ -222,7 +243,7 @@ export default function RootLayout({
           />
         </noscript>
 
-        <UserProvider>
+        <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <div className="flex min-h-screen flex-col">
               <Header />

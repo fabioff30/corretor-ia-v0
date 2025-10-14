@@ -21,11 +21,18 @@ interface UserContextValue {
 
 const UserContext = createContext<UserContextValue | undefined>(undefined)
 
-export function UserProvider({ children }: { children: ReactNode }) {
+interface UserProviderProps {
+  children: ReactNode
+  initialUser?: User | null
+  initialProfile?: Profile | null
+}
+
+export function UserProvider({ children, initialUser = null, initialProfile = null }: UserProviderProps) {
   const supabase = useMemo(() => createClient(), [])
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(initialUser)
+  const [profile, setProfile] = useState<Profile | null>(initialProfile)
+  const initialUserProvided = initialUser !== null
+  const [loading, setLoading] = useState(!initialUserProvided)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProfile = useCallback(
@@ -54,7 +61,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const fetchUser = async () => {
       try {
-        setLoading(true)
+        if (!initialUserProvided) {
+          setLoading(true)
+        }
         setError(null)
 
         const {
@@ -108,7 +117,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile, supabase])
+  }, [fetchProfile, initialUserProvided, supabase])
 
   const updateProfile = useCallback(
     async (updates: Partial<Profile>) => {
