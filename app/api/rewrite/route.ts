@@ -11,6 +11,8 @@ import {
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
+import { getCurrentUser } from "@/utils/auth-helpers"
+import { saveCorrection } from "@/utils/limit-checker"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -104,9 +106,37 @@ export async function POST(request: NextRequest) {
     console.log("API: Sending processed response to client", requestId)
 
     // Build response with debug headers
+    let correctionId: string | null = null
+
+    if (isPremium) {
+      const user = await getCurrentUser()
+      if (!user) {
+        return NextResponse.json(
+          { error: "Não autorizado", message: "Usuário não autenticado" },
+          { status: 401 }
+        )
+      }
+
+      const saveResult = await saveCorrection({
+        userId: user.id,
+        originalText: text,
+        correctedText: normalized.text,
+        operationType: "rewrite",
+        toneStyle: rewriteStyle,
+        evaluation: processedEvaluation,
+      })
+
+      if (saveResult.success && saveResult.id) {
+        correctionId = saveResult.id
+      } else if (!saveResult.success) {
+        console.error("API: Failed to persist premium rewrite", saveResult.error, requestId)
+      }
+    }
+
     const apiResponse = NextResponse.json({
       rewrittenText: normalized.text,
       evaluation: processedEvaluation,
+      correctionId,
     })
 
     apiResponse.headers.set("X-API-Version", "2.0")

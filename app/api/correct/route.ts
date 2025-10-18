@@ -11,6 +11,8 @@ import {
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
+import { getCurrentUser } from "@/utils/auth-helpers"
+import { saveCorrection } from "@/utils/limit-checker"
 
 export const maxDuration = 60
 
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     if (validatedInput instanceof NextResponse) return validatedInput
 
     const { text, isMobile, tone = "Padrão", isPremium = false } = validatedInput
+    const customTone = typeof requestBody?.customTone === "string" ? requestBody.customTone : undefined
 
     // Validate text length (skip for premium users)
     if (!isPremium) {
@@ -127,6 +130,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (customTone?.trim()) {
+      processedEvaluation = {
+        ...processedEvaluation,
+        toneApplied: customTone.trim(),
+      }
+    } else if (tone && tone !== "Padrão") {
+      processedEvaluation = {
+        ...processedEvaluation,
+        toneApplied: tone,
+      }
+    }
+
     // Log success
     const processingTime = Date.now() - startTime
     logRequest(requestId, {
@@ -139,9 +154,43 @@ export async function POST(request: NextRequest) {
     console.log("API: Sending processed response to client", requestId)
 
     // Build response with debug headers
+    let correctionId: string | null = null
+
+    if (isPremium) {
+      const user = await getCurrentUser()
+      if (!user) {
+        return NextResponse.json(
+          { error: "Não autorizado", message: "Usuário não autenticado" },
+          { status: 401 }
+        )
+      }
+
+      const toneStyleToPersist = customTone?.trim() ? customTone.trim() : tone
+
+      const saveResult = await saveCorrection({
+        userId: user.id,
+        originalText: text,
+        correctedText: normalized.text,
+        operationType: "correct",
+        toneStyle: toneStyleToPersist,
+        evaluation: processedEvaluation,
+      })
+
+      if (saveResult.success && saveResult.id) {
+        correctionId = saveResult.id
+      } else if (!saveResult.success) {
+        console.error(
+          "API: Failed to persist premium correction",
+          saveResult.error,
+          requestId
+        )
+      }
+    }
+
     const apiResponse = NextResponse.json({
       correctedText: normalized.text,
       evaluation: processedEvaluation,
+      correctionId,
     })
 
     apiResponse.headers.set("X-API-Version", "2.0")
@@ -149,7 +198,7 @@ export async function POST(request: NextRequest) {
     apiResponse.headers.set("X-Request-ID", requestId)
     apiResponse.headers.set("X-Processing-Time", `${processingTime}ms`)
     apiResponse.headers.set("X-Text-Length", text.length.toString())
-    const sanitizedTone = sanitizeHeaderValue(tone) || "default"
+    const sanitizedTone = sanitizeHeaderValue(customTone?.trim() || tone) || "default"
     apiResponse.headers.set("X-Tone-Applied", sanitizedTone)
 
     return apiResponse

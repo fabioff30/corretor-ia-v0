@@ -91,6 +91,7 @@
     }
   },
   "devDependencies": {
+    "@happy-dom/jest-environment": "^20.0.5",
     "@testing-library/jest-dom": "^6",
     "@testing-library/react": "^14",
     "@types/jest": "^29",

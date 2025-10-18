@@ -28,7 +28,7 @@ export function PremiumPlan() {
     { name: "Sem anúncios", included: true },
     { name: "Análise de estilo avançada", included: true },
     { name: "Prioridade no processamento", included: true },
-    { name: "Histórico de correções", included: false, comingSoon: true },
+    { name: "Histórico de correções inteligente", included: true },
     { name: "Extensão para navegador", included: false, comingSoon: true },
   ]
 

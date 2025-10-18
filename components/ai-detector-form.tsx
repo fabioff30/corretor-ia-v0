@@ -51,6 +51,7 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
   const [result, setResult] = useState<AIDetectionResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rateLimitError, setRateLimitError] = useState<{ message: string; resetAt: string } | null>(null)
+  const [correctionId, setCorrectionId] = useState<string | null>(null)
   const { toast } = useToast()
 
   const charCount = text.length
@@ -64,6 +65,7 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
     setError(null)
     setRateLimitError(null)
     setResult(null)
+    setCorrectionId(null)
 
     try {
       const response = await fetch("/api/ai-detector", {
@@ -95,7 +97,17 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
         return
       }
 
-      setResult(data)
+      const { correctionId: savedId, ...analysisData } = data
+      setResult(analysisData)
+
+      if (savedId) {
+        setCorrectionId(savedId)
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("user-corrections:refresh"))
+        }
+      } else {
+        setCorrectionId(null)
+      }
 
       // Send Google Analytics event
       sendGTMEvent('ai_detection_completed', {
@@ -135,6 +147,7 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
     setResult(null)
     setError(null)
     setRateLimitError(null)
+    setCorrectionId(null)
   }
 
   const formatResetTime = (resetAt: string) => {
@@ -239,6 +252,15 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
       )}
 
       {/* Result */}
+      {result && correctionId && (
+        <Alert>
+          <AlertTitle>Análise salva</AlertTitle>
+          <AlertDescription>
+            Este resultado foi adicionado ao histórico em "Meus textos" para consulta futura.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {result && <AIDetectionResult {...result} />}
     </div>
   )

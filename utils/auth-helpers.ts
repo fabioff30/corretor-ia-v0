@@ -119,5 +119,7 @@ export async function isFree(): Promise<boolean> {
  */
 export async function hasPremiumAccess(): Promise<boolean> {
   const profile = await getCurrentProfile()
-  return profile?.plan_type === 'pro' || profile?.plan_type === 'admin' ?? false
+  if (!profile) return false
+
+  return profile.plan_type === 'pro' || profile.plan_type === 'admin'
 }

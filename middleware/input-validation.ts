@@ -142,6 +142,7 @@ const baseTextValidation = z
 const correctionRequestSchema = z.object({
   text: baseTextValidation,
   isMobile: z.boolean().optional().default(false),
+  isPremium: z.boolean().optional().default(false),
   tone: z.string()
     .optional()
     .refine((tone) => {
@@ -166,6 +167,7 @@ const rewriteRequestSchema = z.object({
       return !SECURITY_PATTERNS.some((pattern) => pattern.test(style))
     }, "Estilo contém conteúdo não permitido"),
   isMobile: z.boolean().optional().default(false),
+  isPremium: z.boolean().optional().default(false),
 })
 
 // Contact form schema

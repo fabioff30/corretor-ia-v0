@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserCorrection } from '@/types/supabase'
 import { useUser } from './use-user'
@@ -24,19 +24,11 @@ export function useCorrections(filters: CorrectionFilters = {}) {
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const PAGE_SIZE = 20
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters])
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    fetchCorrections()
-  }, [user, filters, page])
-
-  const fetchCorrections = async () => {
+  const fetchCorrections = useCallback(async () => {
     if (!user) return
 
     try {
@@ -50,22 +42,23 @@ export function useCorrections(filters: CorrectionFilters = {}) {
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-      // Aplicar filtros
-      if (filters.operationType) {
-        query = query.eq('operation_type', filters.operationType)
+      const parsedFilters = filters || {}
+
+      if (parsedFilters.operationType) {
+        query = query.eq('operation_type', parsedFilters.operationType)
       }
 
-      if (filters.dateFrom) {
-        query = query.gte('created_at', filters.dateFrom)
+      if (parsedFilters.dateFrom) {
+        query = query.gte('created_at', parsedFilters.dateFrom)
       }
 
-      if (filters.dateTo) {
-        query = query.lte('created_at', filters.dateTo)
+      if (parsedFilters.dateTo) {
+        query = query.lte('created_at', parsedFilters.dateTo)
       }
 
-      if (filters.searchQuery) {
+      if (parsedFilters.searchQuery) {
         query = query.or(
-          `original_text.ilike.%${filters.searchQuery}%,corrected_text.ilike.%${filters.searchQuery}%`
+          `original_text.ilike.%${parsedFilters.searchQuery}%,corrected_text.ilike.%${parsedFilters.searchQuery}%`
         )
       }
 
@@ -76,7 +69,16 @@ export function useCorrections(filters: CorrectionFilters = {}) {
       if (page === 0) {
         setCorrections(data || [])
       } else {
-        setCorrections((prev) => [...prev, ...(data || [])])
+        setCorrections((prev) => {
+          const existingIds = new Set(prev.map((item) => item.id))
+          const merged = [...prev]
+          for (const item of data || []) {
+            if (!existingIds.has(item.id)) {
+              merged.push(item)
+            }
+          }
+          return merged
+        })
       }
 
       setHasMore((data || []).length === PAGE_SIZE)
@@ -86,7 +88,21 @@ export function useCorrections(filters: CorrectionFilters = {}) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, supabase, filtersKey, page])
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      setCorrections([])
+      return
+    }
+
+    fetchCorrections()
+  }, [user, fetchCorrections])
+
+  useEffect(() => {
+    setPage(0)
+  }, [filtersKey, user?.id])
 
   const loadMore = () => {
     if (!loading && hasMore) {
@@ -103,7 +119,6 @@ export function useCorrections(filters: CorrectionFilters = {}) {
 
       if (error) throw error
 
-      // Remover da lista local
       setCorrections((prev) => prev.filter((c) => c.id !== correctionId))
 
       return { error: null }
@@ -113,10 +128,86 @@ export function useCorrections(filters: CorrectionFilters = {}) {
     }
   }
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setPage(0)
     fetchCorrections()
-  }
+  }, [fetchCorrections])
+
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel(`user_corrections_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_corrections',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newCorrection = payload.new as UserCorrection
+          setCorrections((prev) => {
+            const exists = prev.some((item) => item.id === newCorrection.id)
+            const updated = exists
+              ? prev.map((item) => (item.id === newCorrection.id ? (newCorrection as UserCorrection) : item))
+              : [newCorrection as UserCorrection, ...prev]
+            const maxItems = PAGE_SIZE * (page + 1)
+            return updated.slice(0, maxItems)
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'user_corrections',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const deletedId = (payload.old as UserCorrection)?.id
+          if (deletedId) {
+            setCorrections((prev) => prev.filter((item) => item.id !== deletedId))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_corrections',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const updatedCorrection = payload.new as UserCorrection
+          setCorrections((prev) => prev.map((item) => (item.id === updatedCorrection.id ? updatedCorrection : item)))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [supabase, user, PAGE_SIZE, page])
+
+  useEffect(() => {
+    const handler = () => {
+      refresh()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('user-corrections:refresh', handler)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('user-corrections:refresh', handler)
+      }
+    }
+  }, [refresh])
 
   return {
     corrections,

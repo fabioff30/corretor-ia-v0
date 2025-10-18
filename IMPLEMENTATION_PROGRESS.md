@@ -81,7 +81,7 @@ Nenhuma tarefa em andamento no momento.
 
 ### 8. Páginas do Dashboard (Usuário)
 - [ ] `app/dashboard/page.tsx` - Visão geral
-- [ ] `app/dashboard/textos/page.tsx` - Histórico de textos
+- [x] `app/dashboard/textos/page.tsx` - Histórico de textos
 - [ ] `app/dashboard/configuracoes/page.tsx` - Configurações
 - [ ] `app/dashboard/upgrade/page.tsx` - Upgrade para Pro
 
@@ -97,14 +97,15 @@ Nenhuma tarefa em andamento no momento.
 - [ ] Verificação de permissões (admin)
 
 ### 11. Integração com API Routes
-- [ ] Atualizar `app/api/correct/route.ts`
-  - Verificar limites antes de processar
-  - Incrementar uso após sucesso
-  - Salvar no histórico
-- [ ] Atualizar `app/api/rewrite/route.ts`
-  - Mesma lógica de limites
-- [ ] Atualizar `app/api/ai-detector/route.ts`
-  - Verificar limite de análises de IA
+- [x] Atualizar `app/api/correct/route.ts`
+  - Persistir correções premium no Supabase
+  - Retornar `correctionId` para o cliente
+- [x] Atualizar `app/api/rewrite/route.ts`
+  - Registrar reescritas no histórico premium
+  - Incluir `correctionId` na resposta
+- [x] Atualizar `app/api/ai-detector/route.ts`
+  - Salvar análises de IA para usuários Pro
+  - Normalizar resumo compacto para histórico
 - [ ] Criar `app/api/admin/limites/route.ts` - API para admin editar limites
 
 ---

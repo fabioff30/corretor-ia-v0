@@ -166,11 +166,10 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
 
     lastRequestTime.current = now
     const textToSend = sanitizeText(originalText)
-    const newCorrectionId = crypto.randomUUID()
-    setCorrectionId(newCorrectionId)
-
     setIsLoading(true)
     setError(null)
+    setShowRating(false)
+    setCorrectionId("")
 
     const timeoutId = window.setTimeout(() => {
       if (isLoading) {
@@ -231,7 +230,16 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         },
       })
 
-      setShowRating(true)
+      if (data.correctionId) {
+        setCorrectionId(data.correctionId)
+        setShowRating(true)
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("user-corrections:refresh"))
+        }
+      } else {
+        setShowRating(false)
+        setCorrectionId("")
+      }
 
       // Enviar evento de sucesso
       sendGTMEvent("premium_rewrite_completed", {

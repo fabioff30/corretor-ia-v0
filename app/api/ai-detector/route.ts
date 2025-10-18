@@ -5,6 +5,8 @@ import { parseRequestBody, validateTextLength } from "@/lib/api/shared-handlers"
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { dailyRateLimiter } from "@/lib/api/daily-rate-limit"
+import { getCurrentUser } from "@/utils/auth-helpers"
+import { saveCorrection } from "@/utils/limit-checker"
 
 export const maxDuration = 60
 
@@ -119,6 +121,40 @@ export async function POST(request: NextRequest) {
     // Normalize response
     const normalized: AIDetectionResponse = normalizeAIDetectionResponse(data)
 
+    let correctionId: string | null = null
+
+    if (isPremium) {
+      const user = await getCurrentUser()
+      if (!user) {
+        return NextResponse.json(
+          { error: "Não autorizado", message: "Usuário não autenticado" },
+          { status: 401 }
+        )
+      }
+
+      const compactSummary = {
+        verdict: normalized.result.verdict,
+        probability: normalized.result.probability,
+        confidence: normalized.result.confidence,
+        topSignals: normalized.result.signals.slice(0, 3),
+      }
+
+      const saveResult = await saveCorrection({
+        userId: user.id,
+        originalText: text,
+        correctedText: JSON.stringify(compactSummary),
+        operationType: "ai_analysis",
+        toneStyle: "ai-detector",
+        evaluation: normalized,
+      })
+
+      if (saveResult.success && saveResult.id) {
+        correctionId = saveResult.id
+      } else if (!saveResult.success) {
+        console.error("API: Failed to persist AI detection", saveResult.error, requestId)
+      }
+    }
+
     // Log success
     const processingTime = Date.now() - startTime
     logRequest(requestId, {
@@ -131,7 +167,7 @@ export async function POST(request: NextRequest) {
     console.log("API: Sending AI detection result to client", requestId)
 
     // Build response with headers
-    const apiResponse = NextResponse.json(normalized)
+    const apiResponse = NextResponse.json({ ...normalized, correctionId })
     apiResponse.headers.set("X-API-Version", "2.0")
     apiResponse.headers.set("X-Service", "CorretorIA-AI-Detector")
     apiResponse.headers.set("X-Request-ID", requestId)

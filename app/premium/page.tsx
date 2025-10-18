@@ -19,7 +19,8 @@ export default function PremiumPage() {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Eleve sua Escrita ao Próximo Nível</h1>
             <p className="text-xl text-foreground/80 max-w-2xl mx-auto">
-              Escolha o plano ideal para suas necessidades e desbloqueie todo o potencial do CorretorIA
+              Escolha o plano ideal para suas necessidades e desbloqueie todo o potencial do CorretorIA, incluindo o novo
+              painel “Meus textos” com histórico inteligente das suas correções.
             </p>
           </div>
 
@@ -33,18 +34,20 @@ export default function PremiumPage() {
             <h2 className="text-2xl font-bold mb-4">Perguntas Frequentes</h2>
             <div className="max-w-3xl mx-auto space-y-6 text-left">
               <div>
-                <h3 className="text-lg font-medium mb-2">Quando o plano premium estará disponível?</h3>
+                <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
                 <p className="text-foreground/80">
-                  O plano premium está em desenvolvimento final e será lançado em breve. Cadastre-se para ser notificado
-                  assim que estiver disponível!
+                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários e de caracteres. O plano
+                  premium remove todos os limites, oferece processamento prioritário, histórico automático em “Meus textos” e
+                  acesso a recursos avançados.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
+                <h3 className="text-lg font-medium mb-2">O que está incluso no painel “Meus textos”?</h3>
                 <p className="text-foreground/80">
-                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários e de caracteres. O
-                  plano premium remove todos os limites, oferece processamento prioritário e acesso a recursos avançados.
+                  Usuários Premium têm acesso a uma página dedicada dentro do dashboard com todas as correções, reescritas e
+                  análises realizadas. É possível filtrar por data, tipo de operação, buscar por palavras-chave, visualizar
+                  comparativos e exportar resultados com um clique.
                 </p>
               </div>
 
