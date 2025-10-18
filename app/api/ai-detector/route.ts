@@ -5,7 +5,7 @@ import { parseRequestBody, validateTextLength } from "@/lib/api/shared-handlers"
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { dailyRateLimiter } from "@/lib/api/daily-rate-limit"
-import { getCurrentUser } from "@/utils/auth-helpers"
+import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
 
 export const maxDuration = 60
@@ -74,7 +74,36 @@ export async function POST(request: NextRequest) {
   if (parseError) return parseError
 
   try {
-    const { text, isPremium = false } = requestBody
+    const { text, isPremium: isPremiumRequest = false } = requestBody || {}
+
+    let isPremium = false
+    let premiumContext: AuthContext | null = null
+
+    if (isPremiumRequest) {
+      premiumContext = await getCurrentUserWithProfile()
+
+      const premiumUser = premiumContext.user
+      const premiumProfile = premiumContext.profile
+
+      if (!premiumUser || !premiumProfile) {
+        return NextResponse.json(
+          { error: "Não autorizado", message: "Usuário não autenticado" },
+          { status: 401 },
+        )
+      }
+
+      if (premiumProfile.plan_type !== "pro" && premiumProfile.plan_type !== "admin") {
+        return NextResponse.json(
+          {
+            error: "Acesso restrito",
+            message: "É necessário um plano Premium ou Admin para usar este recurso.",
+          },
+          { status: 403 },
+        )
+      }
+
+      isPremium = true
+    }
 
     // Apply daily rate limiting (skip for premium users)
     if (!isPremium) {
@@ -124,11 +153,12 @@ export async function POST(request: NextRequest) {
     let correctionId: string | null = null
 
     if (isPremium) {
-      const user = await getCurrentUser()
-      if (!user) {
+      const premiumUser = premiumContext?.user
+
+      if (!premiumUser) {
         return NextResponse.json(
           { error: "Não autorizado", message: "Usuário não autenticado" },
-          { status: 401 }
+          { status: 401 },
         )
       }
 
@@ -140,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
 
       const saveResult = await saveCorrection({
-        userId: user.id,
+        userId: premiumUser.id,
         originalText: text,
         correctedText: JSON.stringify(compactSummary),
         operationType: "ai_analysis",

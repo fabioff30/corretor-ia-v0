@@ -5,6 +5,46 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { Profile } from '@/types/supabase'
+import type { User } from '@supabase/supabase-js'
+
+export interface AuthContext {
+  user: User | null
+  profile: Profile | null
+}
+
+export async function getCurrentUserWithProfile(): Promise<AuthContext> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return {
+      user: null,
+      profile: null,
+    }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    return {
+      user,
+      profile: null,
+    }
+  }
+
+  return {
+    user,
+    profile: profile ?? null,
+  }
+}
 
 /**
  * Busca o usuário autenticado atual
