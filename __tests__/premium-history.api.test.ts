@@ -5,7 +5,7 @@ jest.mock("@/lib/api/webhook-client", () => ({
 }))
 
 jest.mock("@/utils/auth-helpers", () => ({
-  getCurrentUser: jest.fn(),
+  getCurrentUserWithProfile: jest.fn(),
 }))
 
 jest.mock("@/utils/limit-checker", () => ({
@@ -20,7 +20,7 @@ import { POST as correctPOST } from "@/app/api/correct/route"
 import { POST as rewritePOST } from "@/app/api/rewrite/route"
 import { POST as detectorPOST } from "@/app/api/ai-detector/route"
 import { callWebhook } from "@/lib/api/webhook-client"
-import { getCurrentUser } from "@/utils/auth-helpers"
+import { getCurrentUserWithProfile } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
 
 const withNextUrl = (request: Request) => {
@@ -34,7 +34,10 @@ describe("Premium API history integration", () => {
   })
 
   it("saves premium correction and returns id", async () => {
-    ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user-1" })
+    ;(getCurrentUserWithProfile as jest.Mock).mockResolvedValue({
+      user: { id: "user-1" } as any,
+      profile: { plan_type: "pro" } as any,
+    })
     ;(saveCorrection as jest.Mock).mockResolvedValue({ success: true, id: "corr-123" })
     ;(callWebhook as jest.Mock).mockResolvedValue(
       new Response(
@@ -72,7 +75,10 @@ describe("Premium API history integration", () => {
   })
 
   it("rejects premium correction without authenticated user", async () => {
-    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
+    ;(getCurrentUserWithProfile as jest.Mock).mockResolvedValue({
+      user: null,
+      profile: null,
+    })
     ;(callWebhook as jest.Mock).mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -98,8 +104,30 @@ describe("Premium API history integration", () => {
     expect(saveCorrection).not.toHaveBeenCalled()
   })
 
+  it("rejects premium correction when user does not have premium access", async () => {
+    ;(getCurrentUserWithProfile as jest.Mock).mockResolvedValue({
+      user: { id: "user-free" } as any,
+      profile: { plan_type: "free" } as any,
+    })
+
+    const request = withNextUrl(new Request("http://localhost/api/correct", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "Teste", isPremium: true }),
+    }))
+
+    const response = await correctPOST(request as any)
+
+    expect(response.status).toBe(403)
+    expect(saveCorrection).not.toHaveBeenCalled()
+    expect(callWebhook).not.toHaveBeenCalled()
+  })
+
   it("returns correctionId for premium rewrite", async () => {
-    ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user-2" })
+    ;(getCurrentUserWithProfile as jest.Mock).mockResolvedValue({
+      user: { id: "user-2" } as any,
+      profile: { plan_type: "pro" } as any,
+    })
     ;(saveCorrection as jest.Mock).mockResolvedValue({ success: true, id: "rewrite-1" })
     ;(callWebhook as jest.Mock).mockResolvedValue(
       new Response(
@@ -136,7 +164,10 @@ describe("Premium API history integration", () => {
   })
 
   it("persists AI detector analysis for premium users", async () => {
-    ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user-3" })
+    ;(getCurrentUserWithProfile as jest.Mock).mockResolvedValue({
+      user: { id: "user-3" } as any,
+      profile: { plan_type: "admin" } as any,
+    })
     ;(saveCorrection as jest.Mock).mockResolvedValue({ success: true, id: "analysis-42" })
     ;(callWebhook as jest.Mock).mockResolvedValue(
       new Response(

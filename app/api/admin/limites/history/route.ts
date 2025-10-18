@@ -8,16 +8,16 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getCurrentUser } from '@/utils/auth-helpers'
+import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 
 export const maxDuration = 60
 
 export async function GET(request: NextRequest) {
   try {
     // Verify admin access
-    const currentUser = await getCurrentUser()
+    const { user: currentUser, profile } = await getCurrentUserWithProfile()
 
-    if (!currentUser || currentUser.plan_type !== 'admin') {
+    if (!currentUser || !profile || profile.plan_type !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized: Admin access required' },
         { status: 401 }

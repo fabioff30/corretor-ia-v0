@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -50,11 +50,13 @@ export function EditUserPlanDialog({
   const { toast } = useToast()
 
   // Update selected plan when user changes
-  useState(() => {
+  useEffect(() => {
     if (user) {
       setSelectedPlan(user.plan_type)
+    } else {
+      setSelectedPlan('free')
     }
-  })
+  }, [user])
 
   const handleSubmit = async () => {
     if (!user) return
