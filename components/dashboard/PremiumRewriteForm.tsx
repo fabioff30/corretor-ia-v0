@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge"
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { sanitizeUserInput } from "@/utils/html-sanitizer"
 
 interface PremiumRewriteFormProps {
   onTextRewritten?: () => void
@@ -103,13 +104,13 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
   }
 
   const sanitizeText = (text: string) => {
-    let sanitized = text
+    const normalized = text
       .trim()
       .replace(/[\u200B-\u200D\uFEFF]/g, "")
       .replace(/\u00A0/g, " ")
-      .replace(/[\r\n]+/g, "\n")
+      .replace(/\r\n/g, "\n")
 
-    sanitized = sanitized.replace(/<(?!br\s*\/?)[^>]+>/gi, "")
+    const sanitized = sanitizeUserInput(normalized)
 
     return sanitized
   }

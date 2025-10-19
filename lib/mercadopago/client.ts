@@ -94,6 +94,25 @@ export class MercadoPagoClient {
   }
 
   /**
+   * Validate and sanitize identifiers used in Mercado Pago API paths/query params
+   */
+  private sanitizeIdentifier(value: string, fieldName: string): string {
+    const trimmed = value?.trim()
+
+    if (!trimmed) {
+      throw new Error(`Invalid ${fieldName}`)
+    }
+
+    const allowedPattern = /^[a-zA-Z0-9_.-]+$/
+
+    if (!allowedPattern.test(trimmed)) {
+      throw new Error(`Invalid ${fieldName} format`)
+    }
+
+    return encodeURIComponent(trimmed)
+  }
+
+  /**
    * Create a new subscription (preapproval)
    */
   async createSubscription(
@@ -130,8 +149,9 @@ export class MercadoPagoClient {
    */
   async getSubscription(subscriptionId: string): Promise<MPSubscriptionDetails> {
     try {
+      const safeId = this.sanitizeIdentifier(subscriptionId, 'subscription id')
       const response = await fetch(
-        `${this.baseUrl}/preapproval/${subscriptionId}`,
+        `${this.baseUrl}/preapproval/${safeId}`,
         {
           method: 'GET',
           headers: {
@@ -157,8 +177,9 @@ export class MercadoPagoClient {
    */
   async cancelSubscription(subscriptionId: string): Promise<void> {
     try {
+      const safeId = this.sanitizeIdentifier(subscriptionId, 'subscription id')
       const response = await fetch(
-        `${this.baseUrl}/preapproval/${subscriptionId}`,
+        `${this.baseUrl}/preapproval/${safeId}`,
         {
           method: 'PUT',
           headers: {
@@ -185,8 +206,9 @@ export class MercadoPagoClient {
    */
   async pauseSubscription(subscriptionId: string): Promise<void> {
     try {
+      const safeId = this.sanitizeIdentifier(subscriptionId, 'subscription id')
       const response = await fetch(
-        `${this.baseUrl}/preapproval/${subscriptionId}`,
+        `${this.baseUrl}/preapproval/${safeId}`,
         {
           method: 'PUT',
           headers: {
@@ -213,7 +235,8 @@ export class MercadoPagoClient {
    */
   async getPayment(paymentId: string): Promise<MPPaymentDetails> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/payments/${paymentId}`, {
+      const safeId = this.sanitizeIdentifier(paymentId, 'payment id')
+      const response = await fetch(`${this.baseUrl}/v1/payments/${safeId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
@@ -239,8 +262,9 @@ export class MercadoPagoClient {
     externalReference: string
   ): Promise<MPPaymentDetails[]> {
     try {
+      const safeReference = this.sanitizeIdentifier(externalReference, 'external reference')
       const response = await fetch(
-        `${this.baseUrl}/v1/payments/search?external_reference=${externalReference}`,
+        `${this.baseUrl}/v1/payments/search?external_reference=${safeReference}`,
         {
           method: 'GET',
           headers: {

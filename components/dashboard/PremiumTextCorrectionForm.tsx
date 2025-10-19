@@ -35,6 +35,7 @@ import { API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
+import { sanitizeUserInput } from "@/utils/html-sanitizer"
 
 interface PremiumTextCorrectionFormProps {
   onTextCorrected?: () => void
@@ -105,13 +106,13 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
   }
 
   const sanitizeText = (text: string) => {
-    let sanitized = text
+    const normalized = text
       .trim()
       .replace(/[\u200B-\u200D\uFEFF]/g, "")
       .replace(/\u00A0/g, " ")
-      .replace(/[\r\n]+/g, "\n")
+      .replace(/\r\n/g, "\n")
 
-    sanitized = sanitized.replace(/<(?!br\s*\/?)[^>]+>/gi, "")
+    const sanitized = sanitizeUserInput(normalized)
 
     return sanitized
   }
