@@ -4,10 +4,9 @@
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { UserCorrection } from '@/types/supabase'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useUser } from './use-user'
+import type { UserCorrection } from '@/types/supabase'
 
 export interface CorrectionFilters {
   operationType?: 'correct' | 'rewrite' | 'ai_analysis'
@@ -23,72 +22,93 @@ export function useCorrections(filters: CorrectionFilters = {}) {
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
 
-  const supabase = useMemo(() => createClient(), [])
   const PAGE_SIZE = 20
   const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters])
 
-  const fetchCorrections = useCallback(async () => {
-    if (!user) return
+  const fetchCorrections = useCallback(
+    async (targetPage: number, replace = false) => {
+      if (!user) return
 
-    try {
-      setLoading(true)
-      setError(null)
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
 
-      let query = supabase
-        .from('user_corrections')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      const params = new URLSearchParams()
+      params.set('page', String(targetPage))
+      params.set('pageSize', String(PAGE_SIZE))
 
-      const parsedFilters = filters || {}
+      if (filters.operationType) params.set('operationType', filters.operationType)
+      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
+      if (filters.dateTo) params.set('dateTo', filters.dateTo)
+      if (filters.searchQuery) params.set('searchQuery', filters.searchQuery)
 
-      if (parsedFilters.operationType) {
-        query = query.eq('operation_type', parsedFilters.operationType)
-      }
+      try {
+        setLoading(true)
+        setError(null)
 
-      if (parsedFilters.dateFrom) {
-        query = query.gte('created_at', parsedFilters.dateFrom)
-      }
+        const response = await fetch(`/api/dashboard/correcoes?${params.toString()}`, {
+          signal: controller.signal,
+        })
 
-      if (parsedFilters.dateTo) {
-        query = query.lte('created_at', parsedFilters.dateTo)
-      }
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null)
+          throw new Error(payload?.error || 'Não foi possível carregar o histórico de textos')
+        }
 
-      if (parsedFilters.searchQuery) {
-        query = query.or(
-          `original_text.ilike.%${parsedFilters.searchQuery}%,corrected_text.ilike.%${parsedFilters.searchQuery}%`
-        )
-      }
+        const payload = (await response.json()) as {
+          items: UserCorrection[]
+          hasMore: boolean
+          page: number
+        }
 
-      const { data, error: fetchError } = await query
+        if (!isMountedRef.current) return
 
-      if (fetchError) throw fetchError
-
-      if (page === 0) {
-        setCorrections(data || [])
-      } else {
         setCorrections((prev) => {
+          const incoming = payload.items || []
+
+          if (replace) {
+            return incoming
+          }
+
           const existingIds = new Set(prev.map((item) => item.id))
           const merged = [...prev]
-          for (const item of data || []) {
+
+          for (const item of incoming) {
             if (!existingIds.has(item.id)) {
               merged.push(item)
             }
           }
+
           return merged
         })
-      }
 
-      setHasMore((data || []).length === PAGE_SIZE)
-    } catch (err) {
-      console.error('Erro ao buscar correções:', err)
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
-    } finally {
-      setLoading(false)
+        setHasMore(payload.hasMore)
+        setPage(payload.page)
+      } catch (err) {
+        if (controller.signal.aborted) return
+
+        console.error('Erro ao buscar correções:', err)
+        setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    },
+    [filters, user],
+  )
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+      abortControllerRef.current?.abort()
     }
-  }, [user, supabase, filtersKey, page])
+  }, [])
 
   useEffect(() => {
     if (!user) {
@@ -97,27 +117,32 @@ export function useCorrections(filters: CorrectionFilters = {}) {
       return
     }
 
-    fetchCorrections()
-  }, [user, fetchCorrections])
+    setPage(0)
+    fetchCorrections(0, true)
+  }, [user, fetchCorrections, filtersKey])
 
   useEffect(() => {
-    setPage(0)
-  }, [filtersKey, user?.id])
+    if (!user) return
+    setCorrections([])
+    setHasMore(true)
+  }, [user?.id, filtersKey])
 
   const loadMore = () => {
-    if (!loading && hasMore) {
-      setPage((prev) => prev + 1)
-    }
+    if (loading || !hasMore) return
+    const nextPage = page + 1
+    fetchCorrections(nextPage)
   }
 
   const deleteCorrection = async (correctionId: string) => {
     try {
-      const { error } = await supabase
-        .from('user_corrections')
-        .delete()
-        .eq('id', correctionId)
+      const response = await fetch(`/api/dashboard/correcoes?id=${encodeURIComponent(correctionId)}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error || 'Erro ao deletar correção')
+      }
 
       setCorrections((prev) => prev.filter((c) => c.id !== correctionId))
 
@@ -129,85 +154,8 @@ export function useCorrections(filters: CorrectionFilters = {}) {
   }
 
   const refresh = useCallback(() => {
-    setPage(0)
-    fetchCorrections()
+    fetchCorrections(0, true)
   }, [fetchCorrections])
-
-  useEffect(() => {
-    if (!user) return
-
-    const channel = supabase
-      .channel(`user_corrections_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_corrections',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newCorrection = payload.new as UserCorrection
-          setCorrections((prev) => {
-            const exists = prev.some((item) => item.id === newCorrection.id)
-            const updated = exists
-              ? prev.map((item) => (item.id === newCorrection.id ? (newCorrection as UserCorrection) : item))
-              : [newCorrection as UserCorrection, ...prev]
-            const maxItems = PAGE_SIZE * (page + 1)
-            return updated.slice(0, maxItems)
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'user_corrections',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const deletedId = (payload.old as UserCorrection)?.id
-          if (deletedId) {
-            setCorrections((prev) => prev.filter((item) => item.id !== deletedId))
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_corrections',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const updatedCorrection = payload.new as UserCorrection
-          setCorrections((prev) => prev.map((item) => (item.id === updatedCorrection.id ? updatedCorrection : item)))
-        }
-      )
-      .subscribe()
-
-    return () => {
-      channel.unsubscribe()
-    }
-  }, [supabase, user, PAGE_SIZE, page])
-
-  useEffect(() => {
-    const handler = () => {
-      refresh()
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('user-corrections:refresh', handler)
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('user-corrections:refresh', handler)
-      }
-    }
-  }, [refresh])
 
   return {
     corrections,
