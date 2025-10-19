@@ -8,11 +8,17 @@ import { GET } from '@/app/api/admin/users/route'
 
 // Mock auth helper
 jest.mock('@/utils/auth-helpers', () => ({
-  getCurrentUser: jest.fn(() =>
+  getCurrentUserWithProfile: jest.fn(() =>
     Promise.resolve({
-      id: 'admin-user-id',
-      email: 'admin@example.com',
-      plan_type: 'admin',
+      user: {
+        id: 'admin-user-id',
+        email: 'admin@example.com',
+      },
+      profile: {
+        id: 'admin-user-id',
+        plan_type: 'admin',
+        email: 'admin@example.com',
+      },
     })
   ),
 }))
