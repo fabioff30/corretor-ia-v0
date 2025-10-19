@@ -91,6 +91,27 @@ export default function CadastroPage() {
 
       if (error) throw error
 
+      if (data.user) {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+
+        fetch('/api/emails/welcome', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            name: formData.fullName,
+          }),
+          signal: controller.signal,
+        }).catch((welcomeError) => {
+          console.error('Erro ao enviar email de boas-vindas:', welcomeError)
+        }).finally(() => {
+          clearTimeout(timeout)
+        })
+      }
+
       // Verificar se precisa confirmar email
       if (data.user && !data.session) {
         toast({

@@ -5,6 +5,7 @@
 
 import Stripe from 'stripe'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { sendCancellationEmail, sendPremiumUpgradeEmail } from '@/lib/email/send'
 
 /**
  * Handle checkout.session.completed event
@@ -157,6 +158,23 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice) {
     }
 
     console.log('[Stripe Webhook] Subscription activated for user:', subscription.user_id)
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', subscription.user_id)
+        .single()
+
+      if (profile?.email) {
+        await sendPremiumUpgradeEmail({
+          to: { email: profile.email, name: profile.full_name },
+          name: profile.full_name,
+        })
+      }
+    } catch (emailError) {
+      console.error('[Stripe Webhook] Failed to send premium upgrade email:', emailError)
+    }
   }
 
   console.log('[Stripe Webhook] Invoice payment processed successfully')
@@ -266,4 +284,21 @@ export async function handleSubscriptionDeleted(
   }
 
   console.log('[Stripe Webhook] Subscription canceled for user:', dbSubscription.user_id)
+
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', dbSubscription.user_id)
+      .single()
+
+    if (profile?.email) {
+      await sendCancellationEmail({
+        to: { email: profile.email, name: profile.full_name },
+        name: profile.full_name,
+      })
+    }
+  } catch (emailError) {
+    console.error('[Stripe Webhook] Failed to send cancellation email:', emailError)
+  }
 }
