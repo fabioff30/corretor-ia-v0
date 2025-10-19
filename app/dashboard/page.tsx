@@ -118,7 +118,7 @@ export default function DashboardPage() {
 
         {/* Limites de Uso Detalhados - Apenas para Free */}
         {!isPremium && (
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {loading ? (
               <>
                 <Skeleton className="h-48" />
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               Comece a usar o CorretorIA agora mesmo
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Button asChild variant="outline" className="h-24 flex-col gap-2">
               <Link href="/">
                 <FileText className="h-6 w-6" />

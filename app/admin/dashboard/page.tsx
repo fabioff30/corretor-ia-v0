@@ -189,7 +189,7 @@ export default function AdminDashboardPage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
             Atualizar
@@ -198,6 +198,12 @@ export default function AdminDashboardPage() {
             <Button className="gap-2">
               Gerenciar Usuários
               <ArrowUpRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/admin/coupons">
+            <Button variant="secondary" className="gap-2">
+              Criar Cupom
+              <Crown className="h-4 w-4" />
             </Button>
           </Link>
         </div>

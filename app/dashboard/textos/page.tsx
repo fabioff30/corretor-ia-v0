@@ -327,8 +327,8 @@ export default function CorrectionsHistoryPage() {
         <div className="space-y-6">
           <div className="rounded-lg border bg-background p-4 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <Tabs value={activeType} onValueChange={(value) => setActiveType(value as typeof activeType)}>
-                <TabsList className="grid grid-cols-4">
+              <Tabs value={activeType} onValueChange={(value) => setActiveType(value as typeof activeType)} className="w-full lg:w-auto">
+                <TabsList className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
                   {typeTabs.map((tab) => (
                     <TabsTrigger key={tab.value} value={tab.value} className="text-xs sm:text-sm">
                       {tab.label}
@@ -337,8 +337,8 @@ export default function CorrectionsHistoryPage() {
                 </TabsList>
               </Tabs>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:items-center lg:gap-4">
-                <div className="relative">
+              <div className="flex w-full flex-col gap-3 lg:max-w-3xl">
+                <div className="relative w-full lg:w-80">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={searchTerm}
@@ -348,28 +348,38 @@ export default function CorrectionsHistoryPage() {
                   />
                 </div>
 
-                <div className="flex gap-3">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(event) => setDateFrom(event.target.value)}
+                      className="flex-1 min-w-[160px]"
+                    />
                   </div>
-                  <span className="self-center text-sm text-muted-foreground">até</span>
-                  <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-                </div>
+                  <span className="text-sm text-muted-foreground">até</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    className="min-w-[160px] flex-1 sm:w-auto"
+                  />
 
-                {(dateFrom || dateTo || searchTerm) && (
-                  <Button
-                    variant="ghost"
-                    className="justify-self-start"
-                    onClick={() => {
-                      setSearchTerm("")
-                      setDateFrom("")
-                      setDateTo("")
-                    }}
-                  >
-                    Limpar filtros
-                  </Button>
-                )}
+                  {(dateFrom || dateTo || searchTerm) && (
+                    <Button
+                      variant="ghost"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setSearchTerm("")
+                        setDateFrom("")
+                        setDateTo("")
+                      }}
+                    >
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -387,22 +397,23 @@ export default function CorrectionsHistoryPage() {
           )}
 
           <div className="overflow-hidden rounded-lg border bg-background">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-36">Data</TableHead>
-                  <TableHead className="w-32">Tipo</TableHead>
-                  <TableHead className="w-24 text-right">Caracteres</TableHead>
-                  <TableHead>Prévia</TableHead>
-                  <TableHead className="w-[180px] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && corrections.length === 0 &&
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`} data-testid="history-row-skeleton">
-                      <TableCell>
-                        <Skeleton className="h-4 w-24" />
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[140px]">Data</TableHead>
+                    <TableHead className="min-w-[120px]">Tipo</TableHead>
+                    <TableHead className="min-w-[120px] text-right">Caracteres</TableHead>
+                    <TableHead className="min-w-[220px]">Prévia</TableHead>
+                    <TableHead className="min-w-[200px] text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading && corrections.length === 0 &&
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`} data-testid="history-row-skeleton">
+                        <TableCell>
+                          <Skeleton className="h-4 w-24" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-24" />
@@ -442,7 +453,7 @@ export default function CorrectionsHistoryPage() {
                       <div className="max-w-xl truncate text-sm text-muted-foreground">{formatPreview(correction)}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button
                           variant="outline"
                           size="icon"
@@ -490,8 +501,9 @@ export default function CorrectionsHistoryPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {hasMore && (

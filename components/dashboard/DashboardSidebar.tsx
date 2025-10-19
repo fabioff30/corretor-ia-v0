@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -34,7 +34,13 @@ interface NavItem {
   adminOnly?: boolean
 }
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isMobile?: boolean
+  onNavigate?: () => void
+  className?: string
+}
+
+export function DashboardSidebar({ isMobile = false, onNavigate, className }: DashboardSidebarProps) {
   const pathname = usePathname()
   const { profile } = useUser()
   const [collapsed, setCollapsed] = useState(false)
@@ -130,6 +136,12 @@ export function DashboardSidebar() {
     return true
   })
 
+  useEffect(() => {
+    if (isMobile && collapsed) {
+      setCollapsed(false)
+    }
+  }, [isMobile, collapsed])
+
   const isActive = (href: string) => {
     if (href === '/dashboard') {
       return pathname === href
@@ -140,41 +152,44 @@ export function DashboardSidebar() {
   return (
     <div
       className={cn(
-        'relative flex flex-col h-full border-r bg-card transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        'relative flex h-full flex-col bg-card transition-all duration-300',
+        isMobile ? 'w-full max-w-[18rem]' : collapsed ? 'w-16 border-r' : 'w-64 border-r',
+        className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between border-b p-4">
         {!collapsed && (
           <Link href="/" className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="font-bold text-lg gradient-text">CorretorIA</span>
           </Link>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn('h-8 w-8', collapsed && 'mx-auto')}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className={cn('h-8 w-8', collapsed && 'mx-auto')}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Plano Badge */}
       {!collapsed && profile && (
-        <div className="px-4 py-3 border-b">
+        <div className="border-b px-4 py-3">
           <PlanBadge planType={profile.plan_type} className="w-full justify-center" />
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {filteredItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -191,6 +206,11 @@ export function DashboardSidebar() {
                 item.badge === 'PRO' && 'border-l-2 border-pink-500'
               )}
               title={collapsed ? item.title : undefined}
+              onClick={() => {
+                if (isMobile) {
+                  onNavigate?.()
+                }
+              }}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {!collapsed && <span>{item.title}</span>}
@@ -206,7 +226,7 @@ export function DashboardSidebar() {
 
       {/* Footer */}
       {!collapsed && (
-        <div className="p-4 border-t">
+        <div className="border-t p-4">
           <Button asChild variant="outline" className="w-full" size="sm">
             <Link href="/">
               Voltar ao Site

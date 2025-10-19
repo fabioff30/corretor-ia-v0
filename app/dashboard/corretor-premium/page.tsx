@@ -57,7 +57,7 @@ export default function CorretorPremiumPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-start gap-3">
                 <div className="rounded-lg bg-purple-100 dark:bg-purple-900/30 p-2">
                   <Zap className="h-5 w-5 text-purple-600" />
@@ -109,7 +109,7 @@ export default function CorretorPremiumPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-3xl font-bold text-purple-600">
                     {stats?.corrections_used || 0}

@@ -162,6 +162,11 @@ export function Header() {
                           Estatísticas de Avaliações
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/coupons" className="cursor-pointer">
+                          Cupons de Desconto
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleAdminLogout} className="text-red-500 cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Sair</span>
