@@ -10,6 +10,7 @@ import { UsageLimitCard } from '@/components/dashboard/UsageLimitCard'
 import { UpgradeBanner } from '@/components/dashboard/UpgradeBanner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useUser } from '@/hooks/use-user'
 import { useUsageLimits } from '@/hooks/use-usage-limits'
 import { FileText, Wand2, Sparkles, TrendingUp } from 'lucide-react'
@@ -18,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
   const { profile } = useUser()
-  const { stats, loading, showAds, maxCharacters } = useUsageLimits()
+  const { stats, loading, showAds, maxCharacters, error } = useUsageLimits()
 
   const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
 
@@ -28,6 +29,12 @@ export default function DashboardPage() {
       description="Bem-vindo ao seu painel de controle"
     >
       <div className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Estatísticas Rápidas */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading ? (

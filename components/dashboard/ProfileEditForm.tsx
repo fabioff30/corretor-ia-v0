@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -28,6 +28,7 @@ export function ProfileEditForm() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -41,7 +42,7 @@ export function ProfileEditForm() {
     setSuccess(false)
 
     try {
-      const { error } = await updateProfile({ full_name: data.full_name })
+      const { data: updatedProfile, error } = await updateProfile({ full_name: data.full_name })
 
       if (error) {
         toast({
@@ -53,6 +54,9 @@ export function ProfileEditForm() {
       }
 
       setSuccess(true)
+      if (updatedProfile) {
+        reset({ full_name: updatedProfile.full_name || data.full_name })
+      }
       toast({
         title: 'Perfil atualizado',
         description: 'Suas informações foram atualizadas com sucesso.',
@@ -69,6 +73,10 @@ export function ProfileEditForm() {
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    reset({ full_name: profile?.full_name || '' })
+  }, [profile?.full_name, reset])
 
   return (
     <Card>

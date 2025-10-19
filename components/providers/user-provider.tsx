@@ -124,8 +124,28 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       if (!user) return { data: null, error: "Usuário não autenticado" }
 
       try {
-        setLoading(true)
         setError(null)
+
+        // Para atualizações simples de nome, usar API dedicada (otimizada)
+        if ('full_name' in updates && Object.keys(updates).length === 1) {
+          const response = await fetch('/api/dashboard/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full_name: updates.full_name }),
+          })
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => null)
+            const message = payload?.error || 'Erro ao atualizar perfil'
+            setError(message)
+            return { data: null, error: message }
+          }
+
+          const payload = await response.json()
+          const updatedProfile = payload.profile as Profile
+          setProfile(updatedProfile)
+          return { data: updatedProfile, error: null }
+        }
 
         const { data, error: updateError } = await supabase
           .from("profiles")
@@ -142,8 +162,6 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         const message = err instanceof Error ? err.message : "Erro ao atualizar perfil"
         setError(message)
         return { data: null, error: message }
-      } finally {
-        setLoading(false)
       }
     },
     [supabase, user]
@@ -154,7 +172,6 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       if (!user) return { data: null, error: "Usuário não autenticado" }
 
       try {
-        setLoading(true)
         setError(null)
 
         const fileExt = file.name.split(".").pop()
@@ -185,8 +202,6 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         const message = err instanceof Error ? err.message : "Erro ao fazer upload do avatar"
         setError(message)
         return { data: null, error: message }
-      } finally {
-        setLoading(false)
       }
     },
     [supabase, user]
