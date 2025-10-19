@@ -3,24 +3,41 @@
 import { useEffect, useState } from "react"
 import { AdBanner } from "@/components/ad-banner"
 import { usePathname } from "next/navigation"
+import { useUser } from "@/hooks/use-user"
 
 export function AdController() {
   const [shouldShowAd, setShouldShowAd] = useState(false)
   const pathname = usePathname()
+  const { profile } = useUser()
 
   // Não mostrar no caminho /apoiar
   const shouldHideBasedOnPath = pathname?.startsWith("/apoiar")
+
+  // Verificar se o usuário é premium ou admin
+  const isAdmin = profile?.plan_type === "admin"
+  const isPremium = profile?.plan_type === "pro" || isAdmin
+  const shouldHideForPremium = isPremium
 
   useEffect(() => {
     // Verificar inicialmente
     const cookieConsent = localStorage.getItem("cookie-consent")
     const bannerClosed = localStorage.getItem("banner-closed")
 
-    // Só mostrar o banner se o usuário deu consentimento para cookies,
-    // o banner não foi fechado e não estamos na página de doação
-    if (cookieConsent === "accepted" && !bannerClosed && !shouldHideBasedOnPath) {
+    // Só mostrar o banner se:
+    // 1. O usuário deu consentimento para cookies
+    // 2. O banner não foi fechado
+    // 3. Não estamos na página de doação
+    // 4. O usuário NÃO é premium ou admin
+    if (
+      cookieConsent === "accepted" &&
+      !bannerClosed &&
+      !shouldHideBasedOnPath &&
+      !shouldHideForPremium
+    ) {
       console.log("AdController: Mostrando banner apenas com consentimento de cookies")
       setShouldShowAd(true)
+    } else {
+      setShouldShowAd(false)
     }
 
     // Função para verificar mudanças no localStorage
@@ -28,9 +45,16 @@ export function AdController() {
       const updatedCookieConsent = localStorage.getItem("cookie-consent")
       const updatedBannerClosed = localStorage.getItem("banner-closed")
 
-      if (updatedCookieConsent === "accepted" && !updatedBannerClosed && !shouldHideBasedOnPath) {
+      if (
+        updatedCookieConsent === "accepted" &&
+        !updatedBannerClosed &&
+        !shouldHideBasedOnPath &&
+        !shouldHideForPremium
+      ) {
         console.log("AdController: Mostrando banner após evento de storage")
         setShouldShowAd(true)
+      } else {
+        setShouldShowAd(false)
       }
 
       if (updatedBannerClosed === "true") {
@@ -46,7 +70,12 @@ export function AdController() {
       const currentCookieConsent = localStorage.getItem("cookie-consent")
       const currentBannerClosed = localStorage.getItem("banner-closed")
 
-      if (currentCookieConsent === "accepted" && !currentBannerClosed && !shouldHideBasedOnPath) {
+      if (
+        currentCookieConsent === "accepted" &&
+        !currentBannerClosed &&
+        !shouldHideBasedOnPath &&
+        !shouldHideForPremium
+      ) {
         console.log("AdController: Mostrando banner via evento personalizado")
         setShouldShowAd(true)
       }
@@ -62,7 +91,7 @@ export function AdController() {
       window.removeEventListener("showAdBanner", handleCustomEvent)
       clearInterval(interval)
     }
-  }, [shouldHideBasedOnPath])
+  }, [shouldHideBasedOnPath, shouldHideForPremium])
 
   // Função para fechar o banner
   const handleClose = () => {

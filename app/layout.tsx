@@ -177,11 +177,35 @@ export default async function RootLayout({
         {/* Initialize AdSense only once */}
         <Script id="adsense-init" strategy="afterInteractive">
           {`
+            // Verificar se o usuário é premium ou admin
+            // Essa informação vem da sessão do Supabase armazenada no localStorage
+            function shouldShowAds() {
+              // Tentar obter do localStorage (armazenado pelo UserProvider/session)
+              var userPlan = localStorage.getItem('user-plan-type');
+
+              // Se for "pro" ou "admin", não mostrar anúncios
+              if (userPlan === 'pro' || userPlan === 'admin') {
+                console.log('AdSense desabilitado: usuário é premium/admin');
+                return false;
+              }
+
+              return true;
+            }
+
+            // Só inicializar AdSense se o usuário não for premium
+            if (!shouldShowAds()) {
+              return;
+            }
+
             // Initialize adsbygoogle array only if it doesn't exist
             window.adsbygoogle = window.adsbygoogle || [];
-            
+
             // Set up consent handling for AdSense
             function handleAdsenseConsent() {
+              if (!shouldShowAds()) {
+                return;
+              }
+
               var adsenseConsent = localStorage.getItem('cookie-consent');
               if (adsenseConsent === 'accepted') {
                 // User accepted personalized ads
@@ -191,10 +215,10 @@ export default async function RootLayout({
                 window.adsbygoogle.requestNonPersonalizedAds = 1;
               }
             }
-            
+
             // Handle initial consent
             handleAdsenseConsent();
-            
+
             // Listen for consent changes
             window.addEventListener('storage', handleAdsenseConsent);
           `}

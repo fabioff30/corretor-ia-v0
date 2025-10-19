@@ -51,6 +51,12 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
       setProfile(data)
       setError(null)
+
+      // Armazenar plan-type no localStorage para scripts acessarem (ex: AdSense)
+      if (typeof window !== 'undefined' && data?.plan_type) {
+        localStorage.setItem('user-plan-type', data.plan_type)
+      }
+
       return data
     },
     [supabase]
@@ -110,6 +116,10 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         await fetchProfile(nextUser.id)
       } else {
         setProfile(null)
+        // Limpar plan-type ao fazer logout
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user-plan-type')
+        }
       }
     })
 
@@ -210,6 +220,11 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
   const signOut = useCallback(async () => {
     setUser(null)
     setProfile(null)
+
+    // Limpar plan-type do localStorage ao fazer logout
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user-plan-type')
+    }
 
     const { error: signOutError } = await supabase.auth.signOut()
 
