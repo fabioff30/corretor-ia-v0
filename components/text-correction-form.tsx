@@ -15,11 +15,12 @@ import {
   AlertTriangle,
   Sparkles,
   Clock,
-  Heart,
   FileText,
   Pencil,
   Wand2,
   CheckCircle,
+  Crown,
+  LayoutDashboard,
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
@@ -51,6 +52,8 @@ type OperationMode = "correct" | "rewrite"
 
 // Atualizar o tipo RewriteStyle para substituir "informal" por "humanized"
 type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
+
+const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {
@@ -101,6 +104,43 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
   const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>("formal")
+  const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
+  const correctionsDailyLimit = limits?.corrections_per_day ?? 5
+  const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
+
+  const readFreeCorrectionUsage = () => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = new Date().toISOString().split("T")[0]
+
+    try {
+      const raw = window.localStorage.getItem(FREE_CORRECTIONS_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível ler o uso diário de correções gratuitas:", error)
+    }
+
+    const initialValue = { date: today, count: 0 }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FREE_CORRECTIONS_STORAGE_KEY, JSON.stringify(initialValue))
+    }
+    return initialValue
+  }
+
+  useEffect(() => {
+    if (isPremium) {
+      setFreeCorrectionsCount(0)
+      return
+    }
+    const usage = readFreeCorrectionUsage()
+    setFreeCorrectionsCount(usage.count)
+  }, [isPremium])
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -240,6 +280,28 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         variant: "destructive",
       })
       return
+    }
+
+    if (!isPremium && operationMode === "correct") {
+      const usage = readFreeCorrectionUsage()
+      if (usage.count >= correctionsDailyLimit) {
+        const description =
+          correctionsDailyLimit === 1
+            ? "Você já realizou a correção gratuita de hoje. Assine o Premium para continuar agora ou aguarde 24 horas."
+            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Assine o Premium para continuar agora ou aguarde 24 horas para renovar o limite.`
+
+        toast({
+          title: "Limite diário atingido",
+          description,
+          variant: "destructive",
+        })
+
+        sendGTMEvent("free_correction_limit_reached", {
+          limit: correctionsDailyLimit,
+          usage: usage.count,
+        })
+        return
+      }
     }
 
     // Verificar intervalo entre requisições
@@ -567,6 +629,21 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         description: "Confira os resultados abaixo.",
       })
 
+      if (!isPremium && operationMode === "correct") {
+        const usage = readFreeCorrectionUsage()
+        const updatedCount = Math.min(correctionsDailyLimit, usage.count + 1)
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            FREE_CORRECTIONS_STORAGE_KEY,
+            JSON.stringify({
+              date: usage.date || new Date().toISOString().split("T")[0],
+              count: updatedCount,
+            }),
+          )
+        }
+        setFreeCorrectionsCount(updatedCount)
+      }
+
       // Mostrar a avaliação após a correção bem-sucedida
       setShowRating(true)
 
@@ -767,26 +844,59 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           </Alert>
         )}
 
-        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-start">
-          <Heart className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-foreground/80">
-            Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX. Sua contribuição é
-            fundamental para continuarmos oferecendo correções de texto de qualidade.{" "}
-            <Link
-              href="/apoiar"
-              onClick={() => {
-                sendGTMEvent("donation_click", {
-                  location: "correction_form",
-                  element_type: "notice_link",
-                  section: "form_header",
-                })
-              }}
-              className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
-            >
-              Faça sua doação aqui
-            </Link>
-            .
-          </p>
+        <div
+          className={`mb-4 rounded-lg border p-3 sm:p-4 ${
+            isPremium ? "bg-primary/10 border-primary/30" : "bg-blue-500/10 border-blue-500/25"
+          }`}
+        >
+          {isPremium ? (
+            <div className="flex items-start gap-3">
+              <Crown className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold text-primary">Plano Premium ativo</p>
+                <p className="text-foreground/80">
+                  Correções ilimitadas liberadas. Precisa de ajuda? Escreva para{" "}
+                  <a
+                    href="mailto:suporte@corretordetextoonline.com.br"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
+                  >
+                    suporte@corretordetextoonline.com.br
+                  </a>{" "}
+                  e nosso time responde em até <strong>24 horas úteis</strong>.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="font-semibold text-blue-700 dark:text-blue-300">
+                    Desbloqueie todo o poder do CorretorIA Premium
+                  </p>
+                  <p className="text-foreground/80">
+                    Correções ilimitadas, histórico inteligente e suporte prioritário. Hoje você usou{" "}
+                    <strong>{freeCorrectionsCount}</strong> de{" "}
+                    <strong>{correctionsDailyLimit}</strong> correções gratuitas.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:opacity-90"
+                  onClick={() =>
+                    sendGTMEvent("premium_banner_cta_click", {
+                      location: "correction_form_header",
+                    })
+                  }
+                  asChild
+                >
+                  <Link href="/premium">
+                    Conhecer o plano Premium
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Abas para alternar entre correção e reescrita */}
@@ -846,6 +956,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         </Tabs>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            {isPremium ? (
+              <span className="flex items-center gap-2 font-medium text-primary">
+                <Crown className="h-3.5 w-3.5" />
+                Plano Premium ativo · correções ilimitadas
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Plano gratuito: até {correctionsDailyLimit} correções por dia
+              </span>
+            )}
+          </div>
           <div className="relative">
             <Textarea
               placeholder={
@@ -878,6 +1001,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
               : `${charCount.toLocaleString("pt-BR")}/${characterLimit.toLocaleString("pt-BR")} caracteres`}
           </div>
+          {!isPremium && (
+            <div className="text-xs text-right text-muted-foreground">
+              Correções gratuitas restantes hoje: {remainingCorrections} de {correctionsDailyLimit}
+            </div>
+          )}
           {!isUnlimited && limitsLoading && (
             <div className="text-xs text-right text-muted-foreground">Atualizando limite...</div>
           )}
@@ -908,31 +1036,45 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 Limpar
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20 relative group w-full sm:w-auto order-2 sm:order-2"
-              onClick={() => {
-                sendGTMEvent("donation_button_click", {
-                  location: "correction_form",
-                })
-              }}
-              asChild
-            >
-              <Link
-                href="/apoiar"
-                onClick={() => {
-                  sendGTMEvent("donation_click", {
-                    location: "correction_form",
-                    element_type: "donate_button",
-                    section: "form_actions",
-                  })
-                }}
+            {!isPremium ? (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto order-2 sm:order-2 border-primary/40 text-primary hover:bg-primary/10"
+                asChild
               >
-                <Heart className="mr-2 h-4 w-4 transition-transform group-hover:animate-heartbeat" />
-                <span className="relative z-10">Doar</span>
-                <span className="absolute inset-0 bg-green-500/0 group-hover:bg-green-500/10 transition-colors duration-300 rounded-md"></span>
-              </Link>
-            </Button>
+                <Link
+                  href="/premium"
+                  onClick={() =>
+                    sendGTMEvent("premium_cta_click", {
+                      location: "correction_form_actions",
+                    })
+                  }
+                  className="inline-flex items-center"
+                >
+                  <Crown className="mr-2 h-4 w-4" />
+                  Assinar Premium
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto order-2 sm:order-2"
+                asChild
+              >
+                <a
+                  href="mailto:suporte@corretordetextoonline.com.br"
+                  className="inline-flex items-center"
+                  onClick={() =>
+                    sendGTMEvent("premium_support_click", {
+                      location: "correction_form_actions",
+                    })
+                  }
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Falar com suporte
+                </a>
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={
@@ -1011,25 +1153,45 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                         <Copy className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                         Copiar Texto
                       </Button>
-                      <Button
-                        onClick={() => {
-                          // Registrar evento no GTM
-                          sendGTMEvent("donation_button_click", {
-                            source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
-                            textLength: result.correctedText.length,
-                            amount: 5,
-                            location: "result_actions",
-                          })
-
-                          // Redirecionar para a página de doação
-                          window.location.href = "/apoiar?valor=5"
-                        }}
-                        size="sm"
-                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
-                      >
-                        <Heart className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-pulse" />
-                        Doar R$5
-                      </Button>
+                      {!isPremium ? (
+                        <Button
+                          size="sm"
+                          className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-primary text-primary-foreground hover:opacity-90 flex items-center justify-center"
+                          asChild
+                        >
+                          <Link
+                            href="/premium"
+                            onClick={() =>
+                              sendGTMEvent("premium_result_cta_click", {
+                                location: "result_actions",
+                                mode: operationMode,
+                              })
+                            }
+                          >
+                            <Crown className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Migrar para o Premium
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto flex items-center justify-center"
+                          asChild
+                        >
+                          <Link
+                            href="/dashboard"
+                            onClick={() =>
+                              sendGTMEvent("premium_dashboard_cta_click", {
+                                location: "result_actions",
+                              })
+                            }
+                          >
+                            <LayoutDashboard className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Ver no Dashboard
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1077,46 +1239,47 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               transition={{ delay: 1, duration: 0.5 }}
               className="mt-6 flex justify-center"
             >
-              <Button
-                size="lg"
-                className="bg-green-500 hover:bg-green-600 text-white px-8 w-full sm:w-auto"
-                onClick={() => {
-                  sendGTMEvent("donation_button_click", {
-                    location: "after_rating",
-                  })
-                }}
-                asChild
-              >
-                <Link
-                  href="/apoiar"
-                  onClick={() => {
-                    sendGTMEvent("donation_click", {
-                      location: "after_rating",
-                      element_type: "support_button",
-                      section: "rating_section",
-                    })
-                  }}
+              {!isPremium ? (
+                <Button
+                  size="lg"
+                  className="bg-primary hover:opacity-90 text-primary-foreground px-8 w-full sm:w-auto"
+                  asChild
                 >
-                  <Heart className="mr-2 h-5 w-5" />
-                  Apoiar o CorretorIA
-                </Link>
-              </Button>
+                  <Link
+                    href="/premium"
+                    onClick={() =>
+                      sendGTMEvent("premium_after_rating_cta_click", {
+                        location: "rating_section",
+                      })
+                    }
+                  >
+                    <Crown className="mr-2 h-5 w-5" />
+                    Assinar Premium agora
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 w-full sm:w-auto"
+                  asChild
+                >
+                  <a
+                    href="mailto:suporte@corretordetextoonline.com.br"
+                    onClick={() =>
+                      sendGTMEvent("premium_support_click", {
+                        location: "rating_section",
+                      })
+                    }
+                  >
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Falar com o suporte Premium
+                  </a>
+                </Button>
+              )}
             </motion.div>
           </motion.div>
         )}
-
-        <style jsx global>{`
-         @keyframes heartbeat {
-           0%, 100% { transform: scale(1); }
-           25% { transform: scale(1.4); }
-           50% { transform: scale(1); }
-           75% { transform: scale(1.2); }
-         }
-         
-         .animate-heartbeat {
-           animation: heartbeat 1.2s ease-in-out infinite;
-         }
-       `}</style>
       </CardContent>
     </Card>
   )

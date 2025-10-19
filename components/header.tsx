@@ -7,7 +7,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard } from "lucide-react"
+import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard, Crown } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
@@ -102,12 +102,6 @@ export function Header() {
             Início
           </Link>
           <Link
-            href="/recursos"
-            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/recursos") ? "text-primary" : "text-foreground/60"}`}
-          >
-            Recursos
-          </Link>
-          <Link
             href="/detector-ia"
             className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/detector-ia") ? "text-primary" : "text-foreground/60"}`}
           >
@@ -134,6 +128,16 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
+          <Button
+            asChild
+            className="hidden md:inline-flex bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90"
+          >
+            <Link href="/premium">
+              <Crown className="mr-2 h-4 w-4" />
+              Plano Premium
+            </Link>
+          </Button>
+
           {/* Admin Access Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -245,11 +249,11 @@ export function Header() {
               Início
             </Link>
             <Link
-              href="/recursos"
-              className={`px-2 py-1 rounded-md ${isActive("/recursos") ? "bg-primary/10 text-primary" : ""}`}
+              href="/premium"
+              className={`px-2 py-1 rounded-md ${isActive("/premium") ? "bg-primary/10 text-primary" : ""}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Recursos
+              Plano Premium
             </Link>
             <Link
               href="/detector-ia"

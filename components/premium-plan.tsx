@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Zap, Check, X, AlertTriangle, Loader2, Calendar } from "lucide-react"
+import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { useSubscription } from "@/hooks/use-subscription"
 import { useToast } from "@/hooks/use-toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type PlanType = 'monthly' | 'annual'
 
@@ -58,6 +59,13 @@ export function PremiumPlan() {
       setIsLoading(planType)
 
       const amount = planType === 'monthly' ? 29.90 : 299.00
+      const analyticsPayload = {
+        user_id: user.id,
+        email: user.email,
+        plan: planType,
+        value: amount,
+        currency: 'BRL',
+      }
 
       // Track event
       sendGTMEvent({
@@ -65,6 +73,17 @@ export function PremiumPlan() {
         user_id: user.id,
         email: user.email,
         plan: planType,
+      })
+      sendGTMEvent('add_to_cart', {
+        ...analyticsPayload,
+        items: [
+          {
+            item_id: `premium_${planType}`,
+            item_name: planType === 'monthly' ? 'CorretorIA Premium Mensal' : 'CorretorIA Premium Anual',
+            price: amount,
+            quantity: 1,
+          },
+        ],
       })
 
       // Create subscription
@@ -77,11 +96,15 @@ export function PremiumPlan() {
       // Track checkout initiated
       sendGTMEvent({
         event: 'begin_checkout',
-        user_id: user.id,
-        email: user.email,
-        value: amount,
-        currency: 'BRL',
-        plan: planType,
+        ...analyticsPayload,
+        items: [
+          {
+            item_id: `premium_${planType}`,
+            item_name: planType === 'monthly' ? 'CorretorIA Premium Mensal' : 'CorretorIA Premium Anual',
+            price: amount,
+            quantity: 1,
+          },
+        ],
       })
 
       // Redirect to Stripe checkout
@@ -316,6 +339,84 @@ export function PremiumPlan() {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto mt-12">
+        <Tabs defaultValue="benefits" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:max-w-md mx-auto bg-muted/50 p-1 rounded-lg">
+            <TabsTrigger value="benefits">Benefícios</TabsTrigger>
+            <TabsTrigger value="support">Suporte</TabsTrigger>
+          </TabsList>
+          <TabsContent value="benefits" className="mt-6">
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle>Por que escolher o Premium?</CardTitle>
+                <CardDescription>
+                  Recursos avançados, velocidade máxima e foco total na sua escrita.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-4 md:grid-cols-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-primary" />
+                    Correções, reescritas e análises ilimitadas sem filas.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-primary" />
+                    Histórico inteligente dos seus textos e exportação rápida.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-primary" />
+                    Processamento prioritário mesmo em horários de pico.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 text-primary" />
+                    Novos recursos liberados primeiro para assinantes.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="support" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Suporte Premium dedicado</CardTitle>
+                <CardDescription>
+                  Atendimento humano em até 24h para assinantes ativos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5 text-sm leading-relaxed">
+                <div className="flex items-start gap-3">
+                  <Headset className="h-5 w-5 text-primary mt-0.5" />
+                  <p>
+                    Precisa de ajuda? Escreva para{" "}
+                    <a
+                      href="mailto:suporte@corretordetextoonline.com.br"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      suporte@corretordetextoonline.com.br
+                    </a>{" "}
+                    e nossa equipe responde em até <strong>24 horas úteis</strong>.
+                  </p>
+                </div>
+                <ul className="space-y-3 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <Clock className="mt-0.5 h-4 w-4 text-primary" />
+                    Atualizações sobre correções e roadmap prioritário direto com o time.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Mail className="mt-0.5 h-4 w-4 text-primary" />
+                    Orientação personalizada sobre melhores práticas e onboarding premium.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Plug className="mt-0.5 h-4 w-4 text-primary" />
+                    Sugestões de integrações e uso avançado avaliados com prioridade.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

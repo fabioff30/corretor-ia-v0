@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Search, RotateCcw, AlertCircle, Clock, Heart } from "lucide-react"
+import { Loader2, Search, RotateCcw, AlertCircle, Clock, Sparkles, Crown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { AI_DETECTOR_CHARACTER_LIMIT } from "@/utils/constants"
+import { AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT } from "@/utils/constants"
 import { AIDetectionResult } from "@/components/ai-detection-result"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
+import { useUser } from "@/hooks/use-user"
 
 interface AIDetectionResponse {
   result: {
@@ -45,7 +46,10 @@ interface AIDetectorFormProps {
   onAnalysisComplete?: () => void
 }
 
-export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDetectorFormProps = {}) {
+export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplete }: AIDetectorFormProps = {}) {
+  const { profile } = useUser()
+  const derivedPlanIsPremium = profile?.plan_type === "pro" || profile?.plan_type === "admin"
+  const resolvedIsPremium = isPremiumOverride !== undefined ? isPremiumOverride : !!derivedPlanIsPremium
   const [text, setText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<AIDetectionResponse | null>(null)
@@ -55,8 +59,10 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
   const { toast } = useToast()
 
   const charCount = text.length
-  const isOverLimit = !isPremium && charCount > AI_DETECTOR_CHARACTER_LIMIT
+  const isOverLimit = !resolvedIsPremium && charCount > AI_DETECTOR_CHARACTER_LIMIT
   const canAnalyze = text.trim().length > 0 && !isOverLimit
+  const formattedCharacterLimit = AI_DETECTOR_CHARACTER_LIMIT.toLocaleString("pt-BR")
+  const formattedDailyLimit = AI_DETECTOR_DAILY_LIMIT.toLocaleString("pt-BR")
 
   const handleAnalyze = async () => {
     if (!canAnalyze) return
@@ -73,7 +79,7 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text, isPremium }),
+        body: JSON.stringify({ text, isPremium: resolvedIsPremium }),
       })
 
       const data = await response.json()
@@ -118,6 +124,7 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
         words_count: data.textStats.words,
         grammar_errors: data.grammarSummary?.errors || 0,
         brazilianism_found: data.brazilianism?.found || false,
+        plan: resolvedIsPremium ? "premium" : "free",
       })
 
       toast({
@@ -163,28 +170,74 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
       {/* Input Card */}
       <Card>
         <CardHeader>
-          {/* Donation Banner */}
-          <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-start">
-            <Heart className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-foreground/80">
-              Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX. Sua contribuição é fundamental para continuarmos oferecendo correções de texto de qualidade.{" "}
-              <Link
-                href="/apoiar"
-                className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
-              >
-                Faça sua doação aqui
-              </Link>.
-            </p>
+          <div
+            className={`mb-4 rounded-lg border p-3 ${
+              resolvedIsPremium ? "bg-primary/10 border-primary/25" : "bg-blue-500/10 border-blue-500/25"
+            }`}
+          >
+            {resolvedIsPremium ? (
+              <div className="flex items-start gap-3">
+                <Crown className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-foreground/80">
+                  Plano Premium ativo. Execute detecções ilimitadas e conte com suporte respondendo em até{" "}
+                  <strong>24 horas úteis</strong> pelo{" "}
+                  <a
+                    href="mailto:suporte@corretordetextoonline.com.br"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
+                  >
+                    suporte@corretordetextoonline.com.br
+                  </a>
+                  .
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2 text-sm">
+                  <p className="text-foreground/80">
+                    Libere detecções ilimitadas, histórico completo e suporte dedicado no plano Premium.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="bg-primary text-primary-foreground hover:opacity-90"
+                    asChild
+                  >
+                    <Link
+                      href="/premium"
+                      onClick={() =>
+                        sendGTMEvent("premium_detector_banner_cta_click", {
+                          location: "detector_form_header",
+                        })
+                      }
+                    >
+                      Conhecer o plano Premium
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <CardTitle>Analisar Texto</CardTitle>
           <CardDescription>
-            Cole o texto que deseja analisar. Limite: {AI_DETECTOR_CHARACTER_LIMIT} caracteres.
-            Você pode usar esta ferramenta 2 vezes por dia gratuitamente.
+            {resolvedIsPremium
+              ? "Detecção sem limite diário para assinantes Premium. Cole o texto que deseja analisar."
+              : `Cole o texto que deseja analisar. Limite: ${formattedCharacterLimit} caracteres. Você pode usar esta ferramenta ${formattedDailyLimit} vezes por dia gratuitamente.`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              {resolvedIsPremium ? (
+                <span className="flex items-center gap-2 font-medium text-primary">
+                  <Crown className="h-3.5 w-3.5" /> Plano Premium ativo · detecção sem limite diário
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5" /> Gratuito: até {formattedDailyLimit} análises por dia
+                </span>
+              )}
+            </div>
             <Textarea
               placeholder="Cole seu texto aqui..."
               value={text}
@@ -194,7 +247,9 @@ export function AIDetectorForm({ isPremium = false, onAnalysisComplete }: AIDete
             />
             <div className="flex justify-between items-center text-sm">
               <span className={`${isOverLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                {charCount} / {AI_DETECTOR_CHARACTER_LIMIT} caracteres
+                {resolvedIsPremium
+                  ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
+                  : `${charCount.toLocaleString("pt-BR")} / ${formattedCharacterLimit} caracteres`}
               </span>
               {isOverLimit && (
                 <span className="text-destructive">

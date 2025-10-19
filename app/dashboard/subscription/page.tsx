@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -30,6 +30,7 @@ import {
 import { useSubscription } from "@/hooks/use-subscription"
 import { useUser } from "@/hooks/use-user"
 import { useToast } from "@/hooks/use-toast"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 
 function SubscriptionContent() {
   const router = useRouter()
@@ -51,18 +52,37 @@ function SubscriptionContent() {
   } = useSubscription()
 
   const [isCanceling, setIsCanceling] = useState(false)
+  const purchaseTrackedRef = useRef(false)
 
   // Handle payment success/failure from redirect
   useEffect(() => {
     const paymentStatus = searchParams.get('payment')
+    const checkoutSuccess = searchParams.get('success')
+    const isSuccess = paymentStatus === 'success' || checkoutSuccess === 'true'
 
-    if (paymentStatus === 'success') {
+    if (isSuccess) {
+      if (!purchaseTrackedRef.current) {
+        const purchaseValue = amount ?? 0
+        const purchaseCurrency = currency ?? 'BRL'
+
+        sendGTMEvent('purchase', {
+          value: purchaseValue,
+          currency: purchaseCurrency,
+          plan: 'premium_subscription',
+          subscription_status: subscription?.status ?? 'unknown',
+          profile_plan: profile?.plan_type ?? 'unknown',
+        })
+
+        purchaseTrackedRef.current = true
+      }
+
       toast({
         title: "Pagamento processado!",
         description: "Seu pagamento está sendo processado. Em breve você terá acesso ao plano Premium.",
       })
       // Refresh subscription data
       refreshSubscription()
+      router.replace('/dashboard/subscription')
     } else if (paymentStatus === 'failure') {
       toast({
         title: "Pagamento falhou",
@@ -75,7 +95,7 @@ function SubscriptionContent() {
         description: "Seu pagamento está pendente. Aguarde a confirmação.",
       })
     }
-  }, [searchParams])
+  }, [searchParams, amount, currency, subscription, profile?.plan_type, refreshSubscription, router])
 
   const handleCancelSubscription = async () => {
     try {
