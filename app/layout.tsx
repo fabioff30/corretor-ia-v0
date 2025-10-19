@@ -7,10 +7,11 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
-import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
+import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
+import { AdSenseLoader } from "@/components/adsense-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
 
@@ -54,7 +55,6 @@ export default async function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="facebook-domain-verification" content="hprarr6g4519byzssy18zrs0vqdzta" />
-        <meta name="google-adsense-account" content={GOOGLE_ADSENSE_CLIENT} />
         <link
           rel="icon"
           href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/corretoria-DfN4vmv8uKDAmhlXjQNEQ2EACGGRep.png"
@@ -139,15 +139,6 @@ export default async function RootLayout({
         `}
         </Script>
 
-        {/* Google AdSense - Script - Load only once */}
-        <Script
-          id="google-adsense"
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADSENSE_CLIENT}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-
         {/* Hotjar Tracking Code for Corretor de Texto Online */}
         <Script id="hotjar-tracking" strategy="afterInteractive">
           {`
@@ -174,57 +165,10 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* Initialize AdSense only once */}
-        <Script id="adsense-init" strategy="afterInteractive">
-          {`
-            // Verificar se o usuário é premium ou admin
-            // Essa informação vem da sessão do Supabase armazenada no localStorage
-            function shouldShowAds() {
-              // Tentar obter do localStorage (armazenado pelo UserProvider/session)
-              var userPlan = localStorage.getItem('user-plan-type');
+        {/* AdSense Loader - Conditional rendering based on user plan */}
+        <AdSenseLoader initialProfile={initialProfile} />
 
-              // Se for "pro" ou "admin", não mostrar anúncios
-              if (userPlan === 'pro' || userPlan === 'admin') {
-                console.log('AdSense desabilitado: usuário é premium/admin');
-                return false;
-              }
-
-              return true;
-            }
-
-            // Só inicializar AdSense se o usuário não for premium
-            if (!shouldShowAds()) {
-              return;
-            }
-
-            // Initialize adsbygoogle array only if it doesn't exist
-            window.adsbygoogle = window.adsbygoogle || [];
-
-            // Set up consent handling for AdSense
-            function handleAdsenseConsent() {
-              if (!shouldShowAds()) {
-                return;
-              }
-
-              var adsenseConsent = localStorage.getItem('cookie-consent');
-              if (adsenseConsent === 'accepted') {
-                // User accepted personalized ads
-                window.adsbygoogle.requestNonPersonalizedAds = 0;
-              } else if (adsenseConsent === 'declined') {
-                // User declined personalized ads
-                window.adsbygoogle.requestNonPersonalizedAds = 1;
-              }
-            }
-
-            // Handle initial consent
-            handleAdsenseConsent();
-
-            // Listen for consent changes
-            window.addEventListener('storage', handleAdsenseConsent);
-          `}
-        </Script>
-
-        {/* CleverWebServer Script - Load after AdSense */}
+        {/* CleverWebServer Script */}
         <Script id="clever-webserver" strategy="afterInteractive">
           {`
             (function (document, window) {
