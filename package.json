@@ -88,7 +88,11 @@
   "pnpm": {
     "overrides": {
       "form-data": "4.0.4"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "canvas",
+      "sharp"
+    ]
   },
   "devDependencies": {
     "@happy-dom/jest-environment": "^20.0.5",

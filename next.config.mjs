@@ -7,12 +7,13 @@ const __dirname = path.dirname(__filename)
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: path.join(__dirname),
   experimental: {
-    outputFileTracingRoot: path.join(__dirname),
     serverActions: {
       bodySizeLimit: '2mb',
     },
   },
+  swcMinify: false,
   async headers() {
     return [
       {
