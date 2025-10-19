@@ -228,7 +228,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       uploadAvatar,
       signOut,
       isAuthenticated: !!user,
-      isPro: profile?.plan_type === "pro",
+      isPro: profile?.plan_type === "pro" || profile?.plan_type === "admin",
       isAdmin: profile?.plan_type === "admin",
       isFree: profile?.plan_type === "free",
     }),

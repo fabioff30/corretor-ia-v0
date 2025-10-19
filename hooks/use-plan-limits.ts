@@ -16,21 +16,15 @@ export function usePlanLimits() {
   const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
+  const planType: 'free' | 'pro' = profile?.plan_type === 'pro' || profile?.plan_type === 'admin' ? 'pro' : 'free'
 
   useEffect(() => {
-    if (!profile) {
-      setLoading(false)
-      return
-    }
+    let isMounted = true
+    setLoading(true)
+    setError(null)
 
     const fetchLimits = async () => {
       try {
-        setLoading(true)
-        setError(null)
-
-        // Admin usa limites de Pro
-        const planType = profile.plan_type === 'admin' ? 'pro' : profile.plan_type
-
         const { data, error: fetchError } = await supabase
           .from('plan_limits_config')
           .select('*')
@@ -39,12 +33,19 @@ export function usePlanLimits() {
 
         if (fetchError) throw fetchError
 
-        setLimits(data)
+        if (isMounted) {
+          setLimits(data)
+        }
       } catch (err) {
         console.error('Erro ao buscar limites do plano:', err)
-        setError(err instanceof Error ? err.message : 'Erro desconhecido')
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Erro desconhecido')
+          setLimits(null)
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -52,27 +53,31 @@ export function usePlanLimits() {
 
     // Subscrever a mudanças em tempo real (para quando admin alterar limites)
     const subscription = supabase
-      .channel('plan_limits_changes')
+      .channel(`plan_limits_${planType}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'plan_limits_config',
+          filter: `plan_type=eq.${planType}`,
         },
         (payload) => {
-          const planType = profile.plan_type === 'admin' ? 'pro' : profile.plan_type
-          if (payload.new && (payload.new as PlanLimitsConfig).plan_type === planType) {
-            setLimits(payload.new as PlanLimitsConfig)
+          if (!isMounted) return
+
+          const updated = payload.new as PlanLimitsConfig | null
+          if (updated) {
+            setLimits(updated)
           }
         }
       )
       .subscribe()
 
     return () => {
+      isMounted = false
       subscription.unsubscribe()
     }
-  }, [profile])
+  }, [planType])
 
   return {
     limits,

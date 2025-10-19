@@ -158,8 +158,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
   }, [user?.id])
 
   // Computed values
-  const isActive = subscription?.status === 'authorized'
-  const isPro = profile?.plan_type === 'pro' && profile?.subscription_status === 'active'
+  const isAdmin = profile?.plan_type === 'admin'
+  const hasActiveProSubscription = profile?.plan_type === 'pro' && profile?.subscription_status === 'active'
+  const isActive = subscription?.status === 'authorized' || isAdmin
+  const isPro = hasActiveProSubscription || isAdmin
   const canCancel = isActive && subscription !== null
   const nextPaymentDate = subscription?.next_payment_date || null
   const amount = subscription?.amount || null

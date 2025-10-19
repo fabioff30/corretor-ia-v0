@@ -40,7 +40,12 @@ interface LimitsEditorProps {
 }
 
 const limitsSchema = z.object({
-  max_characters: z.number().min(100, 'Mínimo 100 caracteres').max(50000, 'Máximo 50.000 caracteres'),
+  max_characters: z
+    .number()
+    .max(50000, 'Máximo 50.000 caracteres')
+    .refine((value) => value === -1 || value >= 100, {
+      message: 'Use -1 para ilimitado ou mínimo de 100 caracteres',
+    }),
   corrections_per_day: z.number().min(-1, 'Use -1 para ilimitado').max(1000, 'Máximo 1000 por dia'),
   rewrites_per_day: z.number().min(-1, 'Use -1 para ilimitado').max(1000, 'Máximo 1000 por dia'),
   ai_analyses_per_day: z.number().min(-1, 'Use -1 para ilimitado').max(100, 'Máximo 100 por dia'),
@@ -175,7 +180,7 @@ export function LimitsEditor({ limits, onUpdate }: LimitsEditorProps) {
                       <p className="text-sm text-destructive">{errors.max_characters.message}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Limite máximo de caracteres que o usuário pode enviar em uma correção ou reescrita
+                      Limite máximo de caracteres por operação. Use -1 para ilimitado.
                     </p>
                   </div>
                 </div>

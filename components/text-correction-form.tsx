@@ -21,14 +21,15 @@ import {
   Wand2,
   CheckCircle,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
-import { getUserSubscription, type Subscription } from "@/utils/subscription"
-import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
+import { usePlanLimits } from "@/hooks/use-plan-limits"
+import { useUser } from "@/hooks/use-user"
+import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -83,7 +84,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const { profile } = useUser()
+  const { limits, loading: limitsLoading, error: limitsError } = usePlanLimits()
+  const isAdmin = profile?.plan_type === "admin"
+  const isPremium = profile?.plan_type === "pro" || isAdmin
+  const resolvedCharacterLimit =
+    isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
+  const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
+  const characterLimit = isUnlimited ? null : resolvedCharacterLimit
+  const isOverCharacterLimit = !isUnlimited && characterLimit !== null && charCount > characterLimit
   const [selectedTone, setSelectedTone] = useState<
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
@@ -123,21 +132,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     setCharCount(originalText.length)
   }, [originalText])
 
-  // Carregar a assinatura do usuário
-  useEffect(() => {
-    const loadSubscription = async () => {
-      const userSubscription = await getUserSubscription()
-      setSubscription(userSubscription)
-    }
-
-    loadSubscription()
-  }, [])
-
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
     // Limitar o texto ao número máximo de caracteres
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (newText.length <= characterLimit) {
+    if (characterLimit === null || newText.length <= characterLimit) {
       setOriginalText(newText)
       // Atualizar o estado isTyping quando o usuário começar a digitar
       if (newText.length > 0 && !isTyping) {
@@ -187,8 +185,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     sanitized = sanitized.replace(/<(?!br\s*\/?)[^>]+>/gi, "")
 
     // Limitar o comprimento para evitar problemas com textos muito longos
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (sanitized.length > characterLimit) {
+    if (!isUnlimited && characterLimit !== null && sanitized.length > characterLimit) {
       sanitized = sanitized.substring(0, characterLimit)
     }
 
@@ -226,8 +223,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     }
 
     // Verificar limite de caracteres
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
-    if (originalText.length > characterLimit) {
+    if (!isUnlimited && characterLimit !== null && originalText.length > characterLimit) {
       toast({
         title: "Texto muito longo",
         description: `Por favor, reduza o texto para no máximo ${characterLimit} caracteres.`,
@@ -642,7 +638,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
 
   // Calcular a cor do contador de caracteres
   const getCounterColor = () => {
-    const characterLimit = subscription?.features.characterLimit || FREE_CHARACTER_LIMIT
+    if (isUnlimited || characterLimit === null) return "text-muted-foreground"
+    if (charCount > characterLimit) return "text-red-500"
     if (charCount > characterLimit * 0.9) return "text-red-500"
     if (charCount > characterLimit * 0.7) return "text-yellow-500"
     return "text-muted-foreground"
@@ -860,7 +857,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               value={originalText}
               onChange={handleTextChange}
               disabled={isLoading}
-              maxLength={subscription?.features.characterLimit || FREE_CHARACTER_LIMIT}
+              maxLength={characterLimit ?? undefined}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
             <div className="absolute top-3 right-3">
@@ -877,8 +874,18 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
 
           {/* Contador de caracteres */}
           <div className={`text-xs text-right ${getCounterColor()}`}>
-            {charCount}/{subscription?.features.characterLimit || FREE_CHARACTER_LIMIT} caracteres
+            {isUnlimited || characterLimit === null
+              ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
+              : `${charCount.toLocaleString("pt-BR")}/${characterLimit.toLocaleString("pt-BR")} caracteres`}
           </div>
+          {!isUnlimited && limitsLoading && (
+            <div className="text-xs text-right text-muted-foreground">Atualizando limite...</div>
+          )}
+          {limitsError && (
+            <div className="text-xs text-right text-amber-600">
+              Não foi possível carregar o limite mais recente. Usando valor padrão.
+            </div>
+          )}
 
           {/* Adicionar o componente de ajuste de tom */}
           {operationMode === "correct" && (
@@ -931,7 +938,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               disabled={
                 isLoading ||
                 !originalText.trim() ||
-                charCount > (subscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
+                isOverCharacterLimit
               }
               className="px-6 relative overflow-hidden group w-full sm:w-auto order-1 sm:order-3"
             >

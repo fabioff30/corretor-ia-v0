@@ -143,7 +143,8 @@ export async function isAdmin(): Promise<boolean> {
  */
 export async function isPro(): Promise<boolean> {
   const profile = await getCurrentProfile()
-  return profile?.plan_type === 'pro' ?? false
+  if (!profile) return false
+  return profile.plan_type === 'pro' || profile.plan_type === 'admin'
 }
 
 /**
