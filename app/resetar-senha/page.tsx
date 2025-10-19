@@ -27,20 +27,36 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
+
+    const setupAuth = async () => {
+      try {
+        // Forçar processamento do hash/query params do Supabase
+        await supabase.auth.getSession()
+
+        // Aguardar processamento da URL
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Verificar se há sessão ativa
+        const { data } = await supabase.auth.getSession()
+        if (mounted && data.session) {
+          setIsReady(true)
+        }
+      } catch (error) {
+        console.error("Erro ao verificar sessão:", error)
+      }
+    }
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (mounted && event === "PASSWORD_RECOVERY") {
         setIsReady(true)
       }
     })
 
-    // Verificar se já existe sessão ativa (caso link tenha sido usado)
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setIsReady(true)
-      }
-    })
+    setupAuth()
 
     return () => {
+      mounted = false
       authListener.subscription.unsubscribe()
     }
   }, [supabase])
