@@ -27,16 +27,6 @@ export function AdminRefreshButton({
   const router = useRouter()
   const [renderButton, setRenderButton] = useState(false)
 
-  // Determine whether to render the button based on admin status and loading state
-  useEffect(() => {
-    if (!isLoading) {
-      setRenderButton(!!isAuthenticated)
-    }
-  }, [isAuthenticated, isLoading])
-
-  // Se não for admin ou ainda estiver carregando, não renderiza o botão
-  if (!renderButton) return null
-
   // Usar useCallback em vez de useEffectEvent
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
@@ -72,6 +62,16 @@ export function AdminRefreshButton({
       setIsRefreshing(false)
     }
   }, [slug, toast, router])
+
+  // Determine whether to render the button based on admin status and loading state
+  useEffect(() => {
+    if (!isLoading) {
+      setRenderButton(!!isAuthenticated)
+    }
+  }, [isAuthenticated, isLoading])
+
+  // Se não for admin ou ainda estiver carregando, não renderiza o botão
+  if (!renderButton) return null
 
   return (
     <Button onClick={handleRefresh} disabled={isRefreshing} size={size} variant={variant} className={className}>

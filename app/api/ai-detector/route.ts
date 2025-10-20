@@ -8,7 +8,7 @@ import { dailyRateLimiter } from "@/lib/api/daily-rate-limit"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 interface Signal {
   category: string

@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "@/utils/fetch-retry"
-import { FETCH_TIMEOUT, AUTH_TOKEN } from "@/utils/constants"
+import { FETCH_TIMEOUT, AUTH_TOKEN, AI_DETECTOR_TIMEOUT } from "@/utils/constants"
 
 interface WebhookOptions {
   url: string
@@ -7,6 +7,7 @@ interface WebhookOptions {
   text: string
   requestId: string
   additionalData?: Record<string, any>
+  timeout?: number // Optional custom timeout for specific webhooks
 }
 
 interface WebhookHeaders {
@@ -16,12 +17,14 @@ interface WebhookHeaders {
 }
 
 /**
- * Prepares headers for webhook request
+ * Prepares headers for webhook request with keep-alive support
  */
 function prepareHeaders(requestId: string): WebhookHeaders {
   return {
     "Content-Type": "application/json; charset=utf-8",
     "X-Request-ID": requestId,
+    "Connection": "keep-alive",
+    "Keep-Alive": "timeout=5, max=100",
   }
 }
 
@@ -29,7 +32,7 @@ function prepareHeaders(requestId: string): WebhookHeaders {
  * Makes a request to the webhook with retry and fallback support
  */
 export async function callWebhook(options: WebhookOptions): Promise<Response> {
-  const { url, fallbackUrl, text, requestId, additionalData = {} } = options
+  const { url, fallbackUrl, text, requestId, additionalData = {}, timeout } = options
   const headers = prepareHeaders(requestId)
   const webhookUrl = url
 
@@ -42,6 +45,13 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
   console.log(`API: Sending request to webhook: ${webhookUrl}`, requestId)
 
   try {
+    // Determine timeout: use provided timeout, or auto-detect for AI detector
+    let effectiveTimeout = timeout || FETCH_TIMEOUT
+    if (!timeout && url.includes("analysis-ai")) {
+      effectiveTimeout = AI_DETECTOR_TIMEOUT
+      console.log(`API: Using extended timeout for AI detector: ${effectiveTimeout}ms`, requestId)
+    }
+
     const response = await fetchWithRetry(
       webhookUrl,
       {
@@ -51,7 +61,7 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
       },
       {
         maxRetries: 3,
-        timeout: FETCH_TIMEOUT,
+        timeout: effectiveTimeout,
         retryDelay: 2000,
       }
     )
@@ -84,6 +94,13 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
 async function callFallbackWebhook(fallbackUrl: string, text: string, requestId: string): Promise<Response> {
   console.log(`API: Using fallback webhook: ${fallbackUrl}`, requestId)
 
+  // Determine timeout for fallback
+  let effectiveTimeout = FETCH_TIMEOUT
+  if (fallbackUrl.includes("analysis-ai")) {
+    effectiveTimeout = AI_DETECTOR_TIMEOUT
+    console.log(`API: Using extended timeout for fallback AI detector: ${effectiveTimeout}ms`, requestId)
+  }
+
   const response = await fetchWithRetry(
     fallbackUrl,
     {
@@ -91,6 +108,8 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "X-Request-ID": requestId,
+        "Connection": "keep-alive",
+        "Keep-Alive": "timeout=5, max=100",
       },
       body: JSON.stringify({
         text,
@@ -99,7 +118,7 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
     },
     {
       maxRetries: 2,
-      timeout: FETCH_TIMEOUT,
+      timeout: effectiveTimeout,
       retryDelay: 1000,
     }
   )
