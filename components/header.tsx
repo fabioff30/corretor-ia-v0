@@ -130,11 +130,15 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Button
             asChild
-            className="hidden md:inline-flex bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90"
+            className="hidden md:inline-flex bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90 animate-pulse hover:animate-none relative"
           >
             <Link href="/premium">
               <Crown className="mr-2 h-4 w-4" />
-              Plano Premium
+              Assine já
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+              </span>
             </Link>
           </Button>
 
@@ -255,10 +259,14 @@ export function Header() {
             </Link>
             <Link
               href="/premium"
-              className={`px-2 py-1 rounded-md ${isActive("/premium") ? "bg-primary/10 text-primary" : ""}`}
+              className={`px-2 py-1 rounded-md font-semibold bg-gradient-to-r from-primary/10 to-secondary/10 border-l-4 border-primary ${isActive("/premium") ? "bg-primary/20 text-primary" : "text-primary"} flex items-center justify-between`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Plano Premium
+              <span className="flex items-center gap-2">
+                <Crown className="h-4 w-4" />
+                Assine já
+              </span>
+              <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full font-medium">🔥 Popular</span>
             </Link>
             <Link
               href="/detector-ia"

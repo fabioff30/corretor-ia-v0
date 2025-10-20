@@ -1,10 +1,13 @@
 "use client"
 
-import { CheckCircle } from "lucide-react"
+import { CheckCircle, Crown, ArrowRight } from "lucide-react"
 import { motion } from "framer-motion"
 import TextCorrectionForm from "@/components/text-correction-form"
 import { Sparkles } from "lucide-react"
 import { RatingStatsSection } from "@/components/rating-stats-section"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 
 export function HeroSection() {
   return (
@@ -75,6 +78,33 @@ export function HeroSection() {
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-primary" />
               <span className="text-xs sm:text-sm text-foreground/80">Análise Detalhada</span>
             </div>
+          </motion.div>
+
+          {/* CTA Premium Secundário */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className="w-full"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="text-primary hover:text-primary/90 hover:bg-primary/5"
+              onClick={() => {
+                sendGTMEvent("premium_cta_click", {
+                  location: "hero_section",
+                  element_type: "secondary_button",
+                })
+              }}
+            >
+              <Link href="/premium" className="inline-flex items-center gap-2">
+                <Crown className="h-4 w-4" />
+                <span className="text-sm font-medium">Ver planos Premium</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
           </motion.div>
 
           {/* Aviso sobre IA */}

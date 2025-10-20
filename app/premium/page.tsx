@@ -19,10 +19,10 @@ export default function PremiumPage() {
       <main className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Eleve sua Escrita ao Próximo Nível</h1>
+            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Escreva Sem Limites com CorretorIA Premium</h1>
             <p className="text-xl text-foreground/80 max-w-2xl mx-auto">
-              Escolha o plano ideal para suas necessidades e desbloqueie todo o potencial do CorretorIA, incluindo o novo
-              painel “Meus textos” com histórico inteligente das suas correções.
+              Correções ilimitadas, análise avançada de IA e histórico completo dos seus textos.
+              Experimente o poder total do CorretorIA e melhore sua escrita sem restrições.
             </p>
           </div>
 

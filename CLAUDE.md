@@ -61,11 +61,77 @@ CorretorIA is a Portuguese text correction application powered by AI. The main w
 
 ### API Architecture
 All API routes now use shared modules from `lib/api/` for improved maintainability:
-- `lib/api/shared-handlers.ts` - Rate limiting, input validation, request parsing
+- `lib/api/shared-handlers.ts` - Rate limiting, input validation, request parsing, text sanitization
 - `lib/api/webhook-client.ts` - Unified webhook client with retry and fallback logic
 - `lib/api/error-handlers.ts` - Centralized error handling and fallback responses
 - `lib/api/response-normalizer.ts` - Response format normalization across different webhook responses
 - `lib/api/daily-rate-limit.ts` - Daily rate limiting for AI detector (Redis-backed)
+
+### BFF Architecture Pattern (Backend-For-Frontend)
+
+**IMPORTANT**: This project implements a Backend-For-Frontend (BFF) pattern, which differs from the direct API calls described in `frontend-api.md`.
+
+#### Architecture Flow
+```
+Client (Browser)
+    ↓ fetch()
+Next.js API Routes (/api/correct, /api/rewrite, /api/ai-detector)
+    ↓ SERVER-SIDE ONLY
+    ↓ validateAndSanitizeInput() + applyRateLimit()
+    ↓ callWebhook() with AUTH_TOKEN
+Cloudflare Workers API (workers-api.fabiofariasf.workers.dev)
+```
+
+#### Why BFF vs Direct Calls?
+
+**Current Implementation (BFF)**:
+- ✅ AUTH_TOKEN remains server-side only (never exposed to client)
+- ✅ Centralized rate limiting and input validation
+- ✅ Consistent error handling and fallback logic
+- ✅ Text sanitization before sending to workers
+- ✅ CF-Ray header forwarding for support correlation
+- ✅ Metadata logging for auditing (promptVersion, termsVersion)
+
+**Direct Calls (frontend-api.md approach)**:
+- ❌ AUTH_TOKEN would be exposed in client-side code
+- ❌ Rate limiting must be handled by Cloudflare Workers
+- ❌ No centralized validation or sanitization
+- ⚠️ Suitable only for public APIs or when token exposure is acceptable
+
+#### Implementation Details
+
+1. **Error Responses**: All errors follow the format `{ error: string, message?: string, details?: string[] }`
+2. **Timeouts**: 60 seconds for all endpoints (increased from 30s for Gemini 2.5 thinking mode)
+3. **Health Checks**: GET endpoints return `{ "status": "OK" }` for monitoring
+4. **Headers**: Responses include:
+   - `X-Request-ID` - Internal request ID for debugging
+   - `CF-Ray` - Cloudflare Ray ID when available (for support)
+   - `X-Prompt-Version`, `X-Terms-Version` - AI detector metadata for auditing
+   - `X-Processing-Time` - Request processing duration
+5. **Input Sanitization**: Text is automatically sanitized to remove excessive whitespace per `frontend-api.md` spec
+
+#### Frontend Integration
+
+Client-side code should call Next.js API routes (NOT workers directly):
+```typescript
+const response = await fetch('/api/correct', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text, isMobile, isPremium })
+})
+
+const data = await response.json()
+if (!response.ok) {
+  // Error format: { error: string, message?: string, details?: string[] }
+  console.error(data.error, data.details)
+}
+```
+
+#### Observability & Auditing
+
+- All requests logged with `cf-ray` header for support correlation
+- AI detector responses include metadata (promptVersion, termsVersion, termsSignature) for auditing
+- Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) included in 429 responses
 
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
@@ -81,7 +147,7 @@ All API routes now use shared modules from `lib/api/` for improved maintainabili
 Key configuration in `utils/constants.ts`:
 - Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000), `AI_DETECTOR_CHARACTER_LIMIT` (10000)
 - Rate limits: `AI_DETECTOR_DAILY_LIMIT` (2 uses per day)
-- API timeouts: `API_REQUEST_TIMEOUT` (30s), `FETCH_TIMEOUT` (25s)
+- API timeouts: `API_REQUEST_TIMEOUT` (60s), `FETCH_TIMEOUT` (55s), `AI_DETECTOR_TIMEOUT` (60s)
 - Google Analytics, AdSense, and GTM IDs
 - Webhook URLs (Workers API base: `https://workers-api.fabiofariasf.workers.dev`):
   - `WEBHOOK_URL` - `/api/corrigir` (text correction)
@@ -177,6 +243,29 @@ UPSTASH_REDIS_REST_TOKEN=your-redis-token
 # Payments
 MERCADO_PAGO_ACCESS_TOKEN=your-token
 \`\`\`
+
+## 🔧 Common Issues & Solutions
+
+### Invalid Keep-Alive Header Error
+**Error**: `Error [InvalidArgumentError]: invalid keep-alive header` with code `UND_ERR_INVALID_ARG`
+
+**Cause**: Node.js fetch (undici) automatically manages connection keep-alive and doesn't allow manual `Connection` or `Keep-Alive` headers.
+
+**Solution**: Remove these headers from fetch requests. Node.js handles keep-alive automatically:
+```typescript
+// ❌ WRONG - causes UND_ERR_INVALID_ARG
+headers: {
+  "Connection": "keep-alive",
+  "Keep-Alive": "timeout=5, max=100"
+}
+
+// ✅ CORRECT - let Node.js manage it
+headers: {
+  "Content-Type": "application/json"
+}
+```
+
+**Fixed in**: `lib/api/webhook-client.ts` (removed manual keep-alive headers)
 
 ## 📚 Additional Documentation
 
