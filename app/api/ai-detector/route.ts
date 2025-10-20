@@ -145,10 +145,11 @@ export async function POST(request: NextRequest) {
     // Parse response
     console.log("API: Processing JSON response", requestId)
     const data = await response.json()
-    console.log("API: AI detection response received", requestId)
+    console.log("API: Webhook raw response data:", JSON.stringify(data).substring(0, 200), requestId)
 
     // Normalize response
     const normalized: AIDetectionResponse = normalizeAIDetectionResponse(data)
+    console.log("API: Normalized response:", JSON.stringify(normalized).substring(0, 200), requestId)
 
     let correctionId: string | null = null
 

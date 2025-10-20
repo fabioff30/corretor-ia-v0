@@ -14,31 +14,51 @@ import Link from "next/link"
 import { useUser } from "@/hooks/use-user"
 
 interface AIDetectionResponse {
-  result: {
+  result?: {
     verdict: "ai" | "human" | "uncertain"
     probability: number
     confidence: "low" | "medium" | "high"
     signals: string[]
+    explanation?: string
   }
-  textStats: {
+  textStats?: {
     words: number
     characters: number
-    paragraphs: number
+    sentences?: number
+    paragraphs?: number
+    avgSentenceLength?: number
+    avgWordLength?: number
+    uppercaseRatio?: number
+    digitRatio?: number
+    punctuationRatio?: number
   }
   brazilianism?: {
     found: boolean
+    count?: number
+    score?: number
+    explanation?: string
     terms?: Array<{ term: string; count: number }>
+    source?: string
+    version?: string
   }
   grammarSummary?: {
     errors: number
+    grammarErrors?: number
+    orthographyErrors?: number
+    concordanceErrors?: number
+    evaluation?: string
+    confidence?: string
+    model?: string
     details?: string[]
   }
-  metadata: {
+  metadata?: {
     promptVersion?: string
     termsVersion?: string
+    termsSignature?: string
     models?: string[]
     grammarErrors?: number
   }
+  correctionId?: string | null
 }
 
 interface AIDetectorFormProps {
@@ -83,6 +103,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
       })
 
       const data = await response.json()
+      console.log("AI Detector API Response:", { ok: response.ok, status: response.status, data })
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -316,7 +337,25 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         </Alert>
       )}
 
-      {result && <AIDetectionResult {...result} />}
+      {result && result.result && result.textStats && (
+        <AIDetectionResult
+          result={result.result}
+          textStats={result.textStats}
+          brazilianism={result.brazilianism}
+          grammarSummary={result.grammarSummary}
+          metadata={result.metadata || {}}
+        />
+      )}
+
+      {result && (!result.result || !result.textStats) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro na Análise</AlertTitle>
+          <AlertDescription>
+            A resposta do servidor está incompleta ou malformada. Por favor, tente novamente.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }
