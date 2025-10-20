@@ -136,9 +136,14 @@ export async function rateLimiter(req: NextRequest) {
         {
           error: "Rate limit exceeded",
           message: "Too many requests. Please try again later.",
+          details: [
+            `Você atingiu o limite de ${config.requests} requisições por minuto`,
+            `Aguarde ${Math.ceil(config.windowMs / 1000)} segundos antes de tentar novamente`,
+            "Considere um plano Premium para limites maiores"
+          ],
           retryAfter: Math.ceil(config.windowMs / 1000),
         },
-        { 
+        {
           status: 429,
           headers: {
             'Retry-After': Math.ceil(config.windowMs / 1000).toString(),
@@ -157,7 +162,10 @@ export async function rateLimiter(req: NextRequest) {
     // In case of error, allow request in development, block in production for safety
     if (isProduction()) {
       return NextResponse.json(
-        { error: "Service temporarily unavailable" },
+        {
+          error: "Service temporarily unavailable",
+          details: ["O serviço está temporariamente indisponível", "Tente novamente em alguns minutos"]
+        },
         { status: 503 }
       )
     }

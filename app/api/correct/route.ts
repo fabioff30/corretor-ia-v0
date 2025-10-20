@@ -16,10 +16,16 @@ import { saveCorrection } from "@/utils/limit-checker"
 
 export const maxDuration = 60
 
+// Health check endpoint (GET /api/correct)
+export async function GET() {
+  return NextResponse.json({ status: "OK" })
+}
+
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
   const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown"
+  const cfRay = request.headers.get("cf-ray") || undefined
 
   // Parse request body
   const { body: requestBody, error: parseError } = await parseRequestBody(request, requestId)
@@ -53,7 +59,11 @@ export async function POST(request: NextRequest) {
 
       if (!premiumUser || !premiumProfile) {
         return NextResponse.json(
-          { error: "Não autorizado", message: "Usuário não autenticado" },
+          {
+            error: "Não autorizado",
+            message: "Usuário não autenticado",
+            details: ["Faça login para usar recursos premium"]
+          },
           { status: 401 },
         )
       }
@@ -63,6 +73,7 @@ export async function POST(request: NextRequest) {
           {
             error: "Acesso restrito",
             message: "É necessário um plano Premium ou Admin para usar este recurso.",
+            details: ["Faça upgrade para um plano Premium ou Admin"]
           },
           { status: 403 },
         )
@@ -128,6 +139,7 @@ export async function POST(request: NextRequest) {
         processingTime: Date.now() - startTime,
         textLength: text.length,
         ip,
+        cfRay,
         fallbackUsed: true,
         webhookError: parseError instanceof Error ? parseError.message : String(parseError),
       })
@@ -183,6 +195,7 @@ export async function POST(request: NextRequest) {
       processingTime,
       textLength: text.length,
       ip,
+      cfRay,
     })
 
     console.log("API: Sending processed response to client", requestId)
@@ -195,7 +208,11 @@ export async function POST(request: NextRequest) {
 
       if (!premiumUser) {
         return NextResponse.json(
-          { error: "Não autorizado", message: "Usuário não autenticado" },
+          {
+            error: "Não autorizado",
+            message: "Usuário não autenticado",
+            details: ["Faça login para usar recursos premium"]
+          },
           { status: 401 },
         )
       }
@@ -235,6 +252,9 @@ export async function POST(request: NextRequest) {
     apiResponse.headers.set("X-Text-Length", text.length.toString())
     const sanitizedTone = sanitizeHeaderValue(customTone?.trim() || tone) || "default"
     apiResponse.headers.set("X-Tone-Applied", sanitizedTone)
+    if (cfRay) {
+      apiResponse.headers.set("CF-Ray", cfRay)
+    }
 
     return apiResponse
   } catch (error) {

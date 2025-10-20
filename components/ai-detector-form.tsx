@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Search, RotateCcw, AlertCircle, Clock, Sparkles, Crown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { RetryButton } from "@/components/ui/retry-button"
 import { AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT } from "@/utils/constants"
 import { AIDetectionResult } from "@/components/ai-detection-result"
 import { sendGTMEvent } from "@/utils/gtm-helper"
@@ -84,6 +85,16 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
   const canAnalyze = text.trim().length > 0 && !isOverLimit
   const formattedCharacterLimit = AI_DETECTOR_CHARACTER_LIMIT.toLocaleString("pt-BR")
   const formattedDailyLimit = AI_DETECTOR_DAILY_LIMIT.toLocaleString("pt-BR")
+
+  /**
+   * Retry handler - Re-runs analysis with existing text
+   * Per frontend-api.md spec (line 263): "Implementar botão 'Tentar novamente'"
+   */
+  const handleRetry = () => {
+    setError(null)
+    setRateLimitError(null)
+    handleAnalyze()
+  }
 
   const handleAnalyze = async () => {
     if (!canAnalyze) return
@@ -365,7 +376,16 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Erro na Análise</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{error}</p>
+            <RetryButton
+              onClick={handleRetry}
+              isLoading={isLoading}
+              size="sm"
+              variant="outline"
+              className="border-destructive/30 hover:bg-destructive/10"
+            />
+          </AlertDescription>
         </Alert>
       )}
 
@@ -393,8 +413,15 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Erro na Análise</AlertTitle>
-          <AlertDescription>
-            A resposta do servidor está incompleta ou malformada. Por favor, tente novamente.
+          <AlertDescription className="space-y-3">
+            <p>A resposta do servidor está incompleta ou malformada. Por favor, tente novamente.</p>
+            <RetryButton
+              onClick={handleRetry}
+              isLoading={isLoading}
+              size="sm"
+              variant="outline"
+              className="border-destructive/30 hover:bg-destructive/10"
+            />
           </AlertDescription>
         </Alert>
       )}

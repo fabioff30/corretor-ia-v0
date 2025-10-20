@@ -17,14 +17,13 @@ interface WebhookHeaders {
 }
 
 /**
- * Prepares headers for webhook request with keep-alive support
+ * Prepares headers for webhook request
+ * Note: Connection/Keep-Alive headers are managed automatically by Node.js fetch
  */
 function prepareHeaders(requestId: string): WebhookHeaders {
   return {
     "Content-Type": "application/json; charset=utf-8",
     "X-Request-ID": requestId,
-    "Connection": "keep-alive",
-    "Keep-Alive": "timeout=5, max=100",
   }
 }
 
@@ -108,8 +107,6 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "X-Request-ID": requestId,
-        "Connection": "keep-alive",
-        "Keep-Alive": "timeout=5, max=100",
       },
       body: JSON.stringify({
         text,

@@ -38,6 +38,7 @@ import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { sanitizeUserInput } from "@/utils/html-sanitizer"
+import { RetryButton } from "@/components/ui/retry-button"
 
 interface PremiumRewriteFormProps {
   onTextRewritten?: () => void
@@ -129,6 +130,18 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
     ]
 
     return suspiciousPatterns.some((pattern) => pattern.test(text))
+  }
+
+  /**
+   * Retry handler - Re-submits the form with existing text
+   * Per frontend-api.md spec (line 263): "Implementar botão 'Tentar novamente'"
+   */
+  const handleRetry = () => {
+    setError(null)
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent
+    handleSubmit(syntheticEvent)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -402,7 +415,16 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{error}</p>
+            <RetryButton
+              onClick={handleRetry}
+              isLoading={isLoading}
+              size="sm"
+              variant="outline"
+              className="border-destructive/30 hover:bg-destructive/10"
+            />
+          </AlertDescription>
         </Alert>
       )}
 

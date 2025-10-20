@@ -7,11 +7,11 @@ export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2
 
-// API timeouts - Optimized for better performance
-export const API_REQUEST_TIMEOUT = 30000 // 30 seconds (reduced from 60s)
+// API timeouts - Increased to 60s for Gemini 2.5 thinking mode (frontend-api.md spec)
+export const API_REQUEST_TIMEOUT = 60000 // 60 seconds for long AI processing
 export const MIN_REQUEST_INTERVAL = 5000 // 5 seconds
-export const FETCH_TIMEOUT = 25000 // 25 seconds (reduced from 55s)
-export const AI_DETECTOR_TIMEOUT = 40000 // 40 seconds for AI detector webhook (longer processing)
+export const FETCH_TIMEOUT = 55000 // 55 seconds (slightly less than API timeout)
+export const AI_DETECTOR_TIMEOUT = 60000 // 60 seconds for AI detector webhook (same as main timeout)
 
 // Z-index values
 export const POPUP_OVERLAY_Z_INDEX = 9999

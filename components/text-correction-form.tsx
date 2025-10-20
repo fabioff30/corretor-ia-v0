@@ -35,6 +35,8 @@ import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { RetryButton } from "@/components/ui/retry-button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
@@ -189,8 +191,17 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
-        description: `O texto foi limitado a ${characterLimit} caracteres.`,
+        description: `O texto foi limitado a ${characterLimit} caracteres. Assine o Premium para textos de até 5.000 caracteres sem limites!`,
         variant: "destructive",
+        action: (
+          <Link
+            href="/premium"
+            className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+            onClick={() => sendGTMEvent("premium_cta_click", { location: "character_limit_toast" })}
+          >
+            Ver Premium
+          </Link>
+        ),
       })
     }
   }
@@ -249,6 +260,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     return suspiciousPatterns.some((pattern) => pattern.test(text))
   }
 
+  /**
+   * Retry handler - Re-submits the form with existing text
+   * Per frontend-api.md spec (line 263): "Implementar botão 'Tentar novamente'"
+   */
+  const handleRetry = () => {
+    setError(null)
+    // Create synthetic event to reuse handleSubmit logic
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent
+    handleSubmit(syntheticEvent)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -294,6 +318,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           title: "Limite diário atingido",
           description,
           variant: "destructive",
+          action: (
+            <Link
+              href="/premium"
+              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+              onClick={() => sendGTMEvent("premium_cta_click", { location: "daily_limit_toast" })}
+            >
+              Assinar Premium
+            </Link>
+          ),
         })
 
         sendGTMEvent("free_correction_limit_reached", {
@@ -840,7 +873,16 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive/30">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Erro no serviço</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="space-y-3">
+              <p>{error}</p>
+              <RetryButton
+                onClick={handleRetry}
+                isLoading={isLoading}
+                size="sm"
+                variant="outline"
+                className="border-destructive/30 hover:bg-destructive/10"
+              />
+            </AlertDescription>
           </Alert>
         )}
 
@@ -996,11 +1038,28 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           </div>
 
           {/* Contador de caracteres */}
-          <div className={`text-xs text-right ${getCounterColor()}`}>
-            {isUnlimited || characterLimit === null
-              ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
-              : `${charCount.toLocaleString("pt-BR")}/${characterLimit.toLocaleString("pt-BR")} caracteres`}
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={`text-xs text-right ${getCounterColor()} ${!isUnlimited && characterLimit && charCount > characterLimit * 0.7 ? 'font-semibold' : ''}`}>
+                  {isUnlimited || characterLimit === null
+                    ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
+                    : `${charCount.toLocaleString("pt-BR")}/${characterLimit.toLocaleString("pt-BR")} caracteres`}
+                </div>
+              </TooltipTrigger>
+              {!isUnlimited && !isPremium && characterLimit && charCount > characterLimit * 0.7 && (
+                <TooltipContent side="left" className="max-w-xs">
+                  <p className="font-medium mb-1">Chegando no limite!</p>
+                  <p className="text-xs">
+                    Com o Premium você pode usar até <strong>5.000 caracteres</strong> por texto.{" "}
+                    <Link href="/premium" className="underline font-medium">
+                      Saiba mais
+                    </Link>
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           {!isPremium && (
             <div className="text-xs text-right text-muted-foreground">
               Correções gratuitas restantes hoje: {remainingCorrections} de {correctionsDailyLimit}

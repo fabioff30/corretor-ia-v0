@@ -46,6 +46,7 @@ export function handleTimeoutError(): NextResponse {
     {
       error: "Tempo limite excedido",
       message: "O servidor demorou muito para responder. Por favor, tente novamente com um texto menor ou mais tarde.",
+      details: ["O processamento excedeu o tempo limite de 60 segundos", "Tente reduzir o tamanho do texto ou tente novamente mais tarde"],
       code: "TIMEOUT_ERROR",
     },
     { status: 504 }
@@ -97,6 +98,11 @@ export function handleGeneralError(
       {
         error: error instanceof Error ? error.message : "Erro desconhecido",
         message: "Erro ao processar o texto. Por favor, verifique se o texto contém apenas caracteres válidos e tente novamente.",
+        details: [
+          "Verifique se o texto contém apenas caracteres válidos",
+          "Tente reduzir o tamanho do texto",
+          "Aguarde alguns minutos antes de tentar novamente"
+        ],
         code: "GENERAL_ERROR",
       },
       { status: 500 }

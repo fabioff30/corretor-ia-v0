@@ -224,6 +224,7 @@ export async function validateInput(req: NextRequest | Request) {
         {
           error: "Erro de validação",
           message: result.error.errors.map((e: any) => e.message).join(", "),
+          details: result.error.errors.map((e: any) => e.message),
         },
         { status: 400 },
       )
@@ -253,6 +254,11 @@ export async function validateInput(req: NextRequest | Request) {
           {
             error: "Conteúdo suspeito detectado",
             message: "O texto contém padrões que podem ser perigosos. Por favor, revise seu texto.",
+            details: [
+              "Foram detectados padrões potencialmente perigosos no texto",
+              "Remova qualquer código ou script do texto",
+              "Certifique-se de que o texto contém apenas conteúdo textual"
+            ],
           },
           { status: 400 },
         )
@@ -274,6 +280,7 @@ export async function validateInput(req: NextRequest | Request) {
       {
         error: "Erro ao validar entrada",
         message: "Formato de dados inválido",
+        details: ["O corpo da requisição não pôde ser processado", "Verifique o formato JSON"],
       },
       { status: 400 },
     )

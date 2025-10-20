@@ -10,6 +10,11 @@ import { saveCorrection } from "@/utils/limit-checker"
 
 export const maxDuration = 120
 
+// Health check endpoint (GET /api/ai-detector)
+export async function GET() {
+  return NextResponse.json({ status: "OK" })
+}
+
 interface Signal {
   category: string
   direction: string
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
   const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown"
+  const cfRay = request.headers.get("cf-ray") || undefined
 
   // Parse request body
   const { body: requestBody, error: parseError } = await parseRequestBody(request, requestId)
@@ -87,7 +93,11 @@ export async function POST(request: NextRequest) {
 
       if (!premiumUser || !premiumProfile) {
         return NextResponse.json(
-          { error: "Não autorizado", message: "Usuário não autenticado" },
+          {
+            error: "Não autorizado",
+            message: "Usuário não autenticado",
+            details: ["Faça login para usar recursos premium"]
+          },
           { status: 401 },
         )
       }
@@ -97,6 +107,7 @@ export async function POST(request: NextRequest) {
           {
             error: "Acesso restrito",
             message: "É necessário um plano Premium ou Admin para usar este recurso.",
+            details: ["Faça upgrade para um plano Premium ou Admin"]
           },
           { status: 403 },
         )
@@ -115,7 +126,11 @@ export async function POST(request: NextRequest) {
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
-        { error: "Texto inválido", message: "O campo 'text' é obrigatório" },
+        {
+          error: "Texto inválido",
+          message: "O campo 'text' é obrigatório",
+          details: ["Envie um texto válido para análise"]
+        },
         { status: 400 }
       )
     }
@@ -158,7 +173,11 @@ export async function POST(request: NextRequest) {
 
       if (!premiumUser) {
         return NextResponse.json(
-          { error: "Não autorizado", message: "Usuário não autenticado" },
+          {
+            error: "Não autorizado",
+            message: "Usuário não autenticado",
+            details: ["Faça login para usar recursos premium"]
+          },
           { status: 401 },
         )
       }
@@ -186,23 +205,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log success
+    // Log success with metadata for auditing (frontend-api.md spec)
     const processingTime = Date.now() - startTime
     logRequest(requestId, {
       status: 200,
       processingTime,
       textLength: text.length,
       ip,
+      cfRay,
+      promptVersion: normalized.metadata.promptVersion,
+      termsVersion: normalized.metadata.termsVersion,
+      termsSignature: normalized.metadata.termsSignature,
+      verdict: normalized.result.verdict,
+      confidence: normalized.result.confidence,
     })
 
     console.log("API: Sending AI detection result to client", requestId)
+    console.log(`API: Metadata - promptVersion: ${normalized.metadata.promptVersion}, termsVersion: ${normalized.metadata.termsVersion}`, requestId)
 
-    // Build response with headers
+    // Build response with headers (including metadata for auditing)
     const apiResponse = NextResponse.json({ ...normalized, correctionId })
     apiResponse.headers.set("X-API-Version", "2.0")
     apiResponse.headers.set("X-Service", "CorretorIA-AI-Detector")
     apiResponse.headers.set("X-Request-ID", requestId)
     apiResponse.headers.set("X-Processing-Time", `${processingTime}ms`)
+    if (cfRay) {
+      apiResponse.headers.set("CF-Ray", cfRay)
+    }
+    // Add metadata headers for auditing (frontend-api.md spec)
+    if (normalized.metadata.promptVersion) {
+      apiResponse.headers.set("X-Prompt-Version", normalized.metadata.promptVersion)
+    }
+    if (normalized.metadata.termsVersion) {
+      apiResponse.headers.set("X-Terms-Version", normalized.metadata.termsVersion)
+    }
+    if (normalized.metadata.termsSignature) {
+      apiResponse.headers.set("X-Terms-Signature", normalized.metadata.termsSignature)
+    }
 
     return apiResponse
   } catch (error) {

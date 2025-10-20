@@ -20,6 +20,18 @@ export async function applyRateLimit(request: NextRequest, requestId: string): P
 }
 
 /**
+ * Sanitizes text by removing excessive whitespace (frontend-api.md spec)
+ * @param text - Text to sanitize
+ * @returns Sanitized text
+ */
+export function sanitizeText(text: string): string {
+  return text
+    .trim() // Remove leading/trailing whitespace
+    .replace(/[ \t]+/g, ' ') // Replace multiple spaces/tabs with single space
+    .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with 2 newlines
+}
+
+/**
  * Validates and sanitizes request input
  * @returns Validated input or NextResponse if validation fails
  */
@@ -28,10 +40,16 @@ export async function validateAndSanitizeInput(
   requestBody: any,
   requestId: string
 ) {
+  // Sanitize text field if present (frontend-api.md spec line 45)
+  const sanitizedBody = { ...requestBody }
+  if (typeof sanitizedBody.text === 'string') {
+    sanitizedBody.text = sanitizeText(sanitizedBody.text)
+  }
+
   const mockRequest = new Request(request.url, {
     method: request.method,
     headers: request.headers,
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(sanitizedBody),
   })
 
   const validatedInput = await validateInput(mockRequest)
@@ -62,7 +80,11 @@ export async function parseRequestBody(request: NextRequest, requestId: string) 
     return {
       body: null,
       error: NextResponse.json(
-        { error: "Formato JSON inválido", message: "Corpo da requisição deve ser um JSON válido" },
+        {
+          error: "Formato JSON inválido",
+          message: "Corpo da requisição deve ser um JSON válido",
+          details: ["Certifique-se de que o corpo da requisição está em formato JSON válido"]
+        },
         { status: 400 }
       ),
     }
@@ -82,7 +104,15 @@ export function validateTextLength(text: string, maxLength: number, requestId: s
       ip,
     })
     return NextResponse.json(
-      { error: "Texto muito grande", message: `O texto não pode exceder ${maxLength} caracteres` },
+      {
+        error: "Texto muito grande",
+        message: `O texto não pode exceder ${maxLength} caracteres`,
+        details: [
+          `Tamanho atual: ${text.length} caracteres`,
+          `Limite: ${maxLength} caracteres`,
+          `Considere usar um plano Premium para textos maiores`
+        ]
+      },
       { status: 413 }
     )
   }
