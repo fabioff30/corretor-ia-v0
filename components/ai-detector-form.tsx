@@ -12,6 +12,7 @@ import { AIDetectionResult } from "@/components/ai-detection-result"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import { useUser } from "@/hooks/use-user"
+import { safeJsonParse, extractValidJson, createAIDetectionResponseValidator } from "@/utils/safe-json-fetch"
 
 interface AIDetectionResponse {
   result?: {
@@ -102,28 +103,66 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         body: JSON.stringify({ text, isPremium: resolvedIsPremium }),
       })
 
-      const data = await response.json()
-      console.log("AI Detector API Response:", { ok: response.ok, status: response.status, data })
-
       if (!response.ok) {
-        if (response.status === 429) {
-          // Rate limit exceeded
-          const resetDate = new Date(data.resetAt)
-          const resetTime = resetDate.toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-          const resetDay = resetDate.toLocaleDateString("pt-BR")
-          setRateLimitError({
-            message: data.message,
-            resetAt: `${resetDay} às ${resetTime}`,
-          })
-        } else {
-          throw new Error(data.message || "Erro ao analisar texto")
+        // Handle error responses
+        const responseText = await response.text()
+        console.error("API error response:", { status: response.status, text: responseText })
+
+        // Try to parse error response
+        const parseResult = safeJsonParse(responseText)
+        if (parseResult.success && typeof parseResult.data === "object" && parseResult.data !== null) {
+          const data = parseResult.data as any
+          if (response.status === 429 && data.resetAt) {
+            const resetDate = new Date(data.resetAt)
+            const resetTime = resetDate.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+            const resetDay = resetDate.toLocaleDateString("pt-BR")
+            setRateLimitError({
+              message: data.message || "Limite diário atingido",
+              resetAt: `${resetDay} às ${resetTime}`,
+            })
+            return
+          }
         }
-        return
+
+        throw new Error(`Erro na análise (${response.status})`)
       }
 
+      // Get response text first
+      const responseText = await response.text()
+
+      if (!responseText) {
+        throw new Error("Servidor retornou resposta vazia")
+      }
+
+      // Try safe parsing with validation
+      const validator = createAIDetectionResponseValidator()
+      let parseResult = safeJsonParse<AIDetectionResponse>(responseText)
+
+      // If parsing fails, try to extract valid JSON
+      if (!parseResult.success) {
+        console.info("Attempting to recover from malformed response...")
+        parseResult = extractValidJson<AIDetectionResponse>(responseText)
+      }
+
+      if (!parseResult.success) {
+        console.error("Failed to parse AI detection response:", parseResult)
+        throw new Error(`Erro ao processar resposta: ${parseResult.error}`)
+      }
+
+      if (!parseResult.data) {
+        throw new Error("Resposta do servidor está vazia")
+      }
+
+      // Validate response structure
+      if (!validator.isValid(parseResult.data)) {
+        console.warn("Response failed validation, using fallback:", parseResult.data)
+        parseResult.data = validator.getDefaultFallback()
+      }
+
+      const data = parseResult.data
       const { correctionId: savedId, ...analysisData } = data
       setResult(analysisData)
 
@@ -136,17 +175,19 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         setCorrectionId(null)
       }
 
-      // Send Google Analytics event
-      sendGTMEvent('ai_detection_completed', {
-        verdict: data.result.verdict,
-        probability: data.result.probability,
-        confidence: data.result.confidence,
-        text_length: text.length,
-        words_count: data.textStats.words,
-        grammar_errors: data.grammarSummary?.errors || 0,
-        brazilianism_found: data.brazilianism?.found || false,
-        plan: resolvedIsPremium ? "premium" : "free",
-      })
+      // Send Google Analytics event - safely access nested properties
+      if (data.result) {
+        sendGTMEvent('ai_detection_completed', {
+          verdict: data.result.verdict,
+          probability: data.result.probability,
+          confidence: data.result.confidence,
+          text_length: text.length,
+          words_count: data.textStats?.words || 0,
+          grammar_errors: data.grammarSummary?.errors || 0,
+          brazilianism_found: data.brazilianism?.found || false,
+          plan: resolvedIsPremium ? "premium" : "free",
+        })
+      }
 
       toast({
         title: "Análise concluída!",
@@ -159,6 +200,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido ao analisar o texto"
+      console.error("Analysis error:", errorMessage)
       setError(errorMessage)
       toast({
         variant: "destructive",
