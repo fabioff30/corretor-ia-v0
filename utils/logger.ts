@@ -21,6 +21,11 @@ type RequestLogData = {
   processingTime?: number
   textLength?: number
   ip: string
+  fallbackUsed?: boolean
+  webhookError?: string
+  processingError?: string
+  generalError?: string
+  [key: string]: any // Allow additional fields
 }
 
 type ErrorLogData = {

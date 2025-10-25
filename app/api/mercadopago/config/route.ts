@@ -1,27 +1,29 @@
-import { NextResponse } from "next/server"
-import { isValidMercadoPagoToken } from "@/utils/payment-utils"
+/**
+ * API Route: Mercado Pago Config
+ * GET /api/mercadopago/config
+ *
+ * Returns public Mercado Pago configuration for debugging
+ */
+
+import { NextResponse } from 'next/server'
+import { getServerConfig } from '@/utils/env-config'
 
 export async function GET() {
   try {
-    // Get the public key from environment variables
-    const publicKey = process.env.MERCADO_PAGO_PUBLIC_KEY
+    const config = getServerConfig()
 
-    // Validate the key
-    if (!publicKey) {
-      console.error("Mercado Pago public key not found in environment variables")
-      return NextResponse.json({ error: "Payment service configuration missing" }, { status: 500 })
-    }
-
-    // Check if the key has the correct format
-    if (!isValidMercadoPagoToken(publicKey)) {
-      console.error("Mercado Pago public key has invalid format")
-      return NextResponse.json({ error: "Payment service configuration invalid" }, { status: 500 })
-    }
-
-    // Return the public key securely
-    return NextResponse.json({ publicKey })
+    // Return safe, public configuration info
+    return NextResponse.json({
+      publicKey: config.MERCADO_PAGO_PUBLIC_KEY || null,
+      isTest: config.MERCADO_PAGO_PUBLIC_KEY?.startsWith('TEST-') || false,
+      hasAccessToken: !!config.MERCADO_PAGO_ACCESS_TOKEN,
+      configured: !!(config.MERCADO_PAGO_PUBLIC_KEY && config.MERCADO_PAGO_ACCESS_TOKEN),
+    })
   } catch (error) {
-    console.error("Error retrieving Mercado Pago configuration:", error)
-    return NextResponse.json({ error: "Failed to retrieve payment configuration" }, { status: 500 })
+    console.error('Error getting MP config:', error)
+    return NextResponse.json(
+      { error: 'Failed to get configuration' },
+      { status: 500 }
+    )
   }
 }

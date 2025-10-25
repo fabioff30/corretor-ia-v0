@@ -6,6 +6,7 @@ import { UseCasesSection } from "@/components/use-cases-section"
 import { FAQSection } from "@/components/faq-section"
 import { CTASection } from "@/components/cta-section"
 import { SupportersSection } from "@/components/supporters-section"
+import Link from "next/link"
 import Script from "next/script"
 
 // Atualizar os metadados da página inicial
@@ -60,6 +61,24 @@ export default function Home() {
       <BenefitsSection />
       <HowToUseSection />
       <UseCasesSection />
+      <section className="py-16 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight mb-4">Amplie seu alcance com QR Codes</h2>
+          <p className="text-muted-foreground text-lg">
+            Além do CorretorIA, criei o
+            {" "}
+            <Link
+              href="https://qrcodesimples.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary font-semibold underline-offset-4 hover:underline"
+            >
+              QR Code Simples
+            </Link>
+            , uma plataforma para gerar QR Codes personalizados e rastreáveis para suas campanhas impressas ou digitais.
+          </p>
+        </div>
+      </section>
       <FAQSection />
       <CTASection />
     </>

@@ -1,5 +1,5 @@
-import createDOMPurify from 'dompurify'
-import { JSDOM } from 'jsdom'
+let createDOMPurify: any = null
+let JSDOM: any = null
 
 /**
  * HTML Sanitization Utility
@@ -11,13 +11,20 @@ let purify: any
 let hooksInitialized = false
 
 // Initialize DOMPurify based on environment
-if (typeof window !== 'undefined') {
-  // Client-side: use window
-  purify = createDOMPurify(window as any)
-} else {
-  // Server-side: use JSDOM
-  const { window } = new JSDOM('<!DOCTYPE html><p></p>')
-  purify = createDOMPurify(window as any)
+const initializePurify = () => {
+  if (purify) return purify
+
+  if (typeof window !== 'undefined') {
+    createDOMPurify = require('dompurify')
+    purify = createDOMPurify(window as any)
+  } else {
+    createDOMPurify = require('dompurify')
+    JSDOM = require('jsdom').JSDOM
+    const { window } = new JSDOM('<!DOCTYPE html><p></p>')
+    purify = createDOMPurify(window as any)
+  }
+
+  return purify
 }
 
 /**
@@ -64,10 +71,11 @@ export function sanitizeHtml(
   }
   
   try {
+    const purifyInstance = initializePurify()
     const sanitizeConfig = SANITIZE_CONFIG[config]
 
     if (!hooksInitialized) {
-      purify.addHook('beforeSanitizeElements', (node: Element) => {
+      purifyInstance.addHook('beforeSanitizeElements', (node: Element) => {
         if (node.attributes) {
           const attrs = node.attributes
           for (let i = attrs.length - 1; i >= 0; i--) {
@@ -81,7 +89,7 @@ export function sanitizeHtml(
       hooksInitialized = true
     }
 
-    const clean = purify.sanitize(html, sanitizeConfig)
+    const clean = purifyInstance.sanitize(html, sanitizeConfig)
     return clean
   } catch (error) {
     console.error('HTML sanitization error:', error)
@@ -114,7 +122,8 @@ export function stripHtml(html: string): string {
   
   try {
     // Use DOMPurify to completely strip HTML
-    const stripped = purify.sanitize(html, {
+    const purifyInstance = initializePurify()
+    const stripped = purifyInstance.sanitize(html, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
       KEEP_CONTENT: true,

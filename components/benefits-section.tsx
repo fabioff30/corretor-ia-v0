@@ -1,7 +1,4 @@
-"use client"
-
 import { Check, Zap, Shield, Clock } from "lucide-react"
-import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 
 export function BenefitsSection() {
@@ -50,23 +47,15 @@ export function BenefitsSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <Card className="h-full">
-                <div className="p-6">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-foreground">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+            <Card key={index} className="h-full">
+              <div className="p-6">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  {feature.icon}
                 </div>
-              </Card>
-            </motion.div>
+                <h3 className="text-xl font-semibold mb-2 text-foreground">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
+              </div>
+            </Card>
           ))}
         </div>
       </div>

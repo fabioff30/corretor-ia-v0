@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { PremiumPlan } from "@/components/premium-plan"
 import { BackgroundGradient } from "@/components/background-gradient"
-import { DonationTiers } from "@/components/donation-tiers"
+import { Button } from "@/components/ui/button"
+import { Building2, Plug, ShieldCheck, Headset, ArrowRight } from "lucide-react"
 
 // Atualizar os metadados da página premium
 export const metadata: Metadata = {
@@ -17,51 +19,119 @@ export default function PremiumPage() {
       <main className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Eleve sua Escrita ao Próximo Nível</h1>
+            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Escreva Sem Limites com CorretorIA Premium</h1>
             <p className="text-xl text-foreground/80 max-w-2xl mx-auto">
-              Escolha o plano ideal para suas necessidades e desbloqueie todo o potencial do CorretorIA
+              Correções ilimitadas, análise avançada de IA e histórico completo dos seus textos.
+              Experimente o poder total do CorretorIA e melhore sua escrita sem restrições.
             </p>
           </div>
 
           <PremiumPlan />
-
-          <div className="my-16 border-t border-b py-16">
-            <DonationTiers />
-          </div>
+          <section className="mt-16 rounded-3xl border border-primary/15 bg-primary/5 p-8 sm:p-12 shadow-sm">
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary">
+                  <Building2 className="h-4 w-4" />
+                  Empresas
+                </span>
+                <h2 className="mt-4 text-3xl font-bold tracking-tight">API e integrações sob medida</h2>
+                <p className="mt-4 text-lg text-foreground/80">
+                  Conecte o CorretorIA ao seu fluxo de trabalho com uma infraestrutura pensada para escalar produção de
+                  conteúdo, revisar textos em larga escala e oferecer correções automatizadas dentro das suas plataformas.
+                </p>
+                <ul className="mt-6 space-y-3 text-sm text-foreground/80">
+                  <li className="flex items-start gap-2">
+                    <Plug className="mt-0.5 h-4 w-4 text-primary" />
+                    Integração com CRMs, ERPs, LMS e fluxos internos via API segura e documentada.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
+                    SLA dedicado, logs de auditoria e opções de processamento em ambiente isolado.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Headset className="mt-0.5 h-4 w-4 text-primary" />
+                    Time técnico respondendo em até 24 horas úteis para ajustes, onboarding e suporte contínuo.
+                  </li>
+                </ul>
+              </div>
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-primary/10 bg-background p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold">Casos de uso que aceleramos</h3>
+                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                    <li>• Revisão automatizada de artigos, provas e materiais educacionais.</li>
+                    <li>• Geração de relatórios de qualidade de escrita em fluxos editoriais.</li>
+                    <li>• Avaliação de conteúdo UGC em marketplaces e plataformas de carreira.</li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-primary/10 bg-background p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold">Como funciona</h3>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Definimos volume, endpoints e autenticação em conjunto com seu time. Entregamos um ambiente de
+                    homologação, monitoramento contínuo e treinamentos para a sua equipe.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                asChild
+                className="bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90"
+              >
+                <Link href="/contato?assunto=empresas">
+                  Fale com o time comercial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <a href="mailto:contato@corretordetextoonline.com.br">Enviar email para o suporte</a>
+              </Button>
+            </div>
+          </section>
 
           <div className="mt-16 text-center">
             <h2 className="text-2xl font-bold mb-4">Perguntas Frequentes</h2>
             <div className="max-w-3xl mx-auto space-y-6 text-left">
               <div>
-                <h3 className="text-lg font-medium mb-2">Qual a diferença entre doação e assinatura premium?</h3>
+                <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
                 <p className="text-foreground/80">
-                  As doações são contribuições únicas para apoiar o projeto, com alguns benefícios temporários como
-                  agradecimento. A assinatura premium é um serviço recorrente que oferece acesso contínuo a todos os
-                  recursos avançados.
+                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários e de caracteres. O plano
+                  premium remove todos os limites, oferece processamento prioritário, histórico automático em “Meus textos” e
+                  acesso a recursos avançados.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">O que está incluso no painel “Meus textos”?</h3>
+                <p className="text-foreground/80">
+                  Usuários Premium têm acesso a uma página dedicada dentro do dashboard com todas as correções, reescritas e
+                  análises realizadas. É possível filtrar por data, tipo de operação, buscar por palavras-chave, visualizar
+                  comparativos e exportar resultados com um clique.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Existe um plano para empresas?</h3>
+                <p className="text-foreground/80">
+                  Sim. O plano Empresas disponibiliza API dedicada, integrações personalizadas e suporte técnico com SLA.
+                  Nossa equipe ajuda a configurar endpoints, credenciais e monitoramento de uso conforme a necessidade do
+                  seu time.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-lg font-medium mb-2">Posso cancelar minha assinatura a qualquer momento?</h3>
                 <p className="text-foreground/80">
-                  Sim, você pode cancelar sua assinatura a qualquer momento pela sua conta. Após o cancelamento, você
-                  continuará tendo acesso aos recursos premium até o final do período pago.
+                  Sim, você poderá cancelar sua assinatura a qualquer momento. Após o cancelamento, você continuará tendo
+                  acesso aos recursos premium até o final do período pago.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium mb-2">Como funciona a garantia de reembolso?</h3>
+                <h3 className="text-lg font-medium mb-2">Quais métodos de pagamento serão aceitos?</h3>
                 <p className="text-foreground/80">
-                  Se você não estiver satisfeito com o serviço premium, pode solicitar um reembolso em até 7 dias após a
-                  assinatura. Basta entrar em contato conosco por email.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Quais métodos de pagamento são aceitos?</h3>
-                <p className="text-foreground/80">
-                  Aceitamos cartões de crédito (Visa, Mastercard, American Express) e pagamentos via PIX. Todos os
-                  pagamentos são processados com segurança pelo Mercado Pago.
+                  Aceitaremos cartões de crédito (Visa, Mastercard, American Express) e pagamentos via PIX. Todos os
+                  pagamentos serão processados com segurança.
                 </p>
               </div>
             </div>

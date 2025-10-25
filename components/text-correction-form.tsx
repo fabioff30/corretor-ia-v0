@@ -15,44 +15,60 @@ import {
   AlertTriangle,
   Sparkles,
   Clock,
-  Heart,
   FileText,
   Pencil,
   Wand2,
   CheckCircle,
   Crown,
-  User,
+  LayoutDashboard,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
-import { getUserSubscription, type Subscription } from "@/utils/subscription"
-import { FREE_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
-import { useSubscription, useFeatureAccess } from "@/hooks/use-subscription"
-import { useAuth } from "@/contexts/auth-context"
+import { usePlanLimits } from "@/hooks/use-plan-limits"
+import { useUser } from "@/hooks/use-user"
+import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { Badge } from "@/components/ui/badge"
 import { SupabaseConfigNotice } from "@/components/supabase-config-notice"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { RetryButton } from "@/components/ui/retry-button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
+
+// Importar componentes de reescrita
+import { RewriteStyleSelector } from "@/components/rewrite/rewrite-style-selector"
+import { PremiumRewriteUpsellModal } from "@/components/rewrite/premium-rewrite-upsell-modal"
+import {
+  RewriteStyleInternal,
+  STYLE_DISPLAY_TO_INTERNAL,
+  STYLE_INTERNAL_TO_DISPLAY,
+  convertToApiFormat,
+  getRewriteStyle,
+} from "@/utils/rewrite-styles"
 
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
   onTextCorrected?: () => void
   initialMode?: OperationMode
+  enableCrossNavigation?: boolean // Se habilitado, permite navegação entre páginas
 }
 
 // Tipos para os modos de operação
 type OperationMode = "correct" | "rewrite"
 
-// Atualizar o tipo RewriteStyle para substituir "informal" por "humanized"
+// Tipos de estilo (mantém retrocompatibilidade com código antigo)
 type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
+
+const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
+const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {
@@ -60,7 +76,8 @@ interface RewriteEvaluation {
   changes: string[]
 }
 
-export default function TextCorrectionForm({ onTextCorrected, initialMode }: TextCorrectionFormProps) {
+export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false }: TextCorrectionFormProps) {
+  const router = useRouter()
   const [originalText, setOriginalText] = useState("")
   const [charCount, setCharCount] = useState(0)
   const [result, setResult] = useState<{
@@ -85,10 +102,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const [legacySubscription, setLegacySubscription] = useState<Subscription | null>(null)
-  const subscription = useSubscription()
-  const { characterLimit } = useFeatureAccess()
-  const { user } = useAuth()
+  const { profile } = useUser()
+  const { limits, loading: limitsLoading, error: limitsError } = usePlanLimits()
+  const isAdmin = profile?.plan_type === "admin"
+  const isPremium = profile?.plan_type === "pro" || isAdmin
+  const resolvedCharacterLimit =
+    isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
+  const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
+  const characterLimit = isUnlimited ? null : resolvedCharacterLimit
+  const isOverCharacterLimit = !isUnlimited && characterLimit !== null && charCount > characterLimit
   const [selectedTone, setSelectedTone] = useState<
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
@@ -97,6 +119,46 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
   const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>("formal")
+  const [selectedRewriteStyleInternal, setSelectedRewriteStyleInternal] = useState<RewriteStyleInternal>("formal")
+  const [showPremiumUpsellModal, setShowPremiumUpsellModal] = useState(false)
+  const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
+  const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
+  const correctionsDailyLimit = limits?.corrections_per_day ?? 5
+  const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
+
+  const readFreeCorrectionUsage = () => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = new Date().toISOString().split("T")[0]
+
+    try {
+      const raw = window.localStorage.getItem(FREE_CORRECTIONS_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível ler o uso diário de correções gratuitas:", error)
+    }
+
+    const initialValue = { date: today, count: 0 }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FREE_CORRECTIONS_STORAGE_KEY, JSON.stringify(initialValue))
+    }
+    return initialValue
+  }
+
+  useEffect(() => {
+    if (isPremium) {
+      setFreeCorrectionsCount(0)
+      return
+    }
+    const usage = readFreeCorrectionUsage()
+    setFreeCorrectionsCount(usage.count)
+  }, [isPremium])
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -114,6 +176,25 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
+  // Carregar último estilo de reescrita do localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    try {
+      const saved = window.localStorage.getItem(LAST_REWRITE_STYLE_KEY)
+      if (saved && (["formal", "humanized", "academic", "creative", "childlike", "technical", "journalistic", "advertising", "blog_post", "reels_script", "youtube_script", "presentation"] as RewriteStyleInternal[]).includes(saved as RewriteStyleInternal)) {
+        const style = saved as RewriteStyleInternal
+        setSelectedRewriteStyleInternal(style)
+        // Para retrocompatibilidade, também atualiza o antigo estado se for um dos 5 estilos free
+        if (["formal", "humanized", "academic", "creative", "childlike"].includes(style)) {
+          setSelectedRewriteStyle(style as RewriteStyle)
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível carregar o último estilo de reescrita:", error)
+    }
+  }, [])
+
   // Limpar o timer quando o componente for desmontado
   useEffect(() => {
     return () => {
@@ -128,24 +209,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     setCharCount(originalText.length)
   }, [originalText])
 
-  // Carregar a assinatura legacy como fallback
-  useEffect(() => {
-    const loadLegacySubscription = async () => {
-      // Só carrega subscription legacy se não há usuário autenticado
-      if (!user) {
-        const userSubscription = await getUserSubscription()
-        setLegacySubscription(userSubscription)
-      }
-    }
-
-    loadLegacySubscription()
-  }, [user])
-
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
     // Limitar o texto ao número máximo de caracteres
-    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
-    if (newText.length <= currentCharLimit) {
+    if (characterLimit === null || newText.length <= characterLimit) {
       setOriginalText(newText)
       // Atualizar o estado isTyping quando o usuário começar a digitar
       if (newText.length > 0 && !isTyping) {
@@ -159,8 +226,17 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
-        description: `O texto foi limitado a ${currentCharLimit} caracteres.`,
+        description: `O texto foi limitado a ${characterLimit} caracteres. Assine o Premium para textos de até 5.000 caracteres sem limites!`,
         variant: "destructive",
+        action: (
+          <Link
+            href="/premium"
+            className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+            onClick={() => sendGTMEvent("premium_cta_click", { location: "character_limit_toast" })}
+          >
+            Ver Premium
+          </Link>
+        ),
       })
     }
   }
@@ -175,10 +251,53 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     console.log(`Tom selecionado: ${tone}`)
   }
 
-  // Função para lidar com a mudança de estilo de reescrita
-  const handleRewriteStyleChange = (style: RewriteStyle) => {
-    setSelectedRewriteStyle(style)
+  // Função para lidar com a mudança de estilo de reescrita (novo sistema com validação premium)
+  const handleRewriteStyleChange = (style: RewriteStyleInternal) => {
+    // Persistir no localStorage
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(LAST_REWRITE_STYLE_KEY, style)
+      } catch (error) {
+        console.warn("Não foi possível salvar o estilo de reescrita:", error)
+      }
+    }
+
+    setSelectedRewriteStyleInternal(style)
+
+    // Para retrocompatibilidade, também atualiza o antigo estado se for um dos 5 estilos free
+    if (["formal", "humanized", "academic", "creative", "childlike"].includes(style)) {
+      setSelectedRewriteStyle(style as RewriteStyle)
+    }
+
+    // Emitir evento GTM
+    sendGTMEvent("rewrite_model_selected", {
+      model_id: style,
+      tier: ["formal", "humanized", "academic", "creative", "childlike"].includes(style) ? "free" : "premium",
+    })
+
+    // Emitir evento Meta Pixel
+    trackPixelCustomEvent("RewriteModelSelected", {
+      modelId: style,
+      tier: ["formal", "humanized", "academic", "creative", "childlike"].includes(style) ? "free" : "premium",
+    })
+
     console.log(`Estilo de reescrita selecionado: ${style}`)
+  }
+
+  // Função para lidar quando usuário free tenta selecionar estilo premium
+  const handlePremiumStyleLocked = (style: RewriteStyleInternal) => {
+    setPendingPremiumStyle(style)
+    setShowPremiumUpsellModal(true)
+
+    // Emitir evento GTM
+    sendGTMEvent("rewrite_model_locked_premium", {
+      model_id: style,
+    })
+
+    // Emitir evento Meta Pixel
+    trackPixelCustomEvent("PremiumRewriteLocked", {
+      modelId: style,
+    })
   }
 
   // Modificar a função sanitizeText para preservar acentuação
@@ -195,9 +314,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     sanitized = sanitized.replace(/<(?!br\s*\/?)[^>]+>/gi, "")
 
     // Limitar o comprimento para evitar problemas com textos muito longos
-    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
-    if (sanitized.length > currentCharLimit) {
-      sanitized = sanitized.substring(0, currentCharLimit)
+    if (!isUnlimited && characterLimit !== null && sanitized.length > characterLimit) {
+      sanitized = sanitized.substring(0, characterLimit)
     }
 
     return sanitized
@@ -220,6 +338,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     return suspiciousPatterns.some((pattern) => pattern.test(text))
   }
 
+  /**
+   * Retry handler - Re-submits the form with existing text
+   * Per frontend-api.md spec (line 263): "Implementar botão 'Tentar novamente'"
+   */
+  const handleRetry = () => {
+    setError(null)
+    // Create synthetic event to reuse handleSubmit logic
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent
+    handleSubmit(syntheticEvent)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -234,8 +365,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     }
 
     // Verificar limite de caracteres
-    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
-    if (originalText.length > currentCharLimit) {
+    if (!isUnlimited && characterLimit !== null && originalText.length > characterLimit) {
       toast({
         title: "Texto muito longo",
         description: `Por favor, reduza o texto para no máximo ${currentCharLimit} caracteres.`,
@@ -252,6 +382,65 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         variant: "destructive",
       })
       return
+    }
+
+    if (!isPremium && operationMode === "correct") {
+      const usage = readFreeCorrectionUsage()
+      if (usage.count >= correctionsDailyLimit) {
+        const description =
+          correctionsDailyLimit === 1
+            ? "Você já realizou a correção gratuita de hoje. Assine o Premium para continuar agora ou aguarde 24 horas."
+            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Assine o Premium para continuar agora ou aguarde 24 horas para renovar o limite.`
+
+        toast({
+          title: "Limite diário atingido",
+          description,
+          variant: "destructive",
+          action: (
+            <Link
+              href="/premium"
+              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+              onClick={() => sendGTMEvent("premium_cta_click", { location: "daily_limit_toast" })}
+            >
+              Assinar Premium
+            </Link>
+          ),
+        })
+
+        sendGTMEvent("free_correction_limit_reached", {
+          limit: correctionsDailyLimit,
+          usage: usage.count,
+        })
+        return
+      }
+    }
+
+    // Verificar se usuário free está tentando usar estilo premium para reescrita
+    if (!isPremium && operationMode === "rewrite") {
+      const styleDef = getRewriteStyle(selectedRewriteStyleInternal)
+      if (styleDef?.tier === "premium") {
+        setShowPremiumUpsellModal(true)
+        toast({
+          title: "Estilo Premium",
+          description: "Este estilo de reescrita é exclusivo para assinantes Premium.",
+          variant: "destructive",
+          action: (
+            <Link
+              href="/pricing"
+              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+              onClick={() => sendGTMEvent("premium_cta_click", { location: "premium_style_toast" })}
+            >
+              Assinar Premium
+            </Link>
+          ),
+        })
+
+        sendGTMEvent("premium_style_blocked", {
+          style: selectedRewriteStyleInternal,
+          location: "rewrite_form",
+        })
+        return
+      }
     }
 
     // Verificar intervalo entre requisições
@@ -579,6 +768,21 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         description: "Confira os resultados abaixo.",
       })
 
+      if (!isPremium && operationMode === "correct") {
+        const usage = readFreeCorrectionUsage()
+        const updatedCount = Math.min(correctionsDailyLimit, usage.count + 1)
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            FREE_CORRECTIONS_STORAGE_KEY,
+            JSON.stringify({
+              date: usage.date || new Date().toISOString().split("T")[0],
+              count: updatedCount,
+            }),
+          )
+        }
+        setFreeCorrectionsCount(updatedCount)
+      }
+
       // Mostrar a avaliação após a correção bem-sucedida
       setShowRating(true)
 
@@ -650,9 +854,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
 
   // Calcular a cor do contador de caracteres
   const getCounterColor = () => {
-    const currentCharLimit = user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)
-    if (charCount > currentCharLimit * 0.9) return "text-red-500"
-    if (charCount > currentCharLimit * 0.7) return "text-yellow-500"
+    if (isUnlimited || characterLimit === null) return "text-muted-foreground"
+    if (charCount > characterLimit) return "text-red-500"
+    if (charCount > characterLimit * 0.9) return "text-red-500"
+    if (charCount > characterLimit * 0.7) return "text-yellow-500"
     return "text-muted-foreground"
   }
 
@@ -663,33 +868,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
     // ou armazená-la de alguma forma
   }
 
-  // Atualizar a função renderRewriteStyleSelector para substituir o estilo "informal" por "humanizado"
+  // Renderizar o novo seletor de estilos de reescrita
   const renderRewriteStyleSelector = () => {
-    const styles = [
-      { value: "formal", label: "Formal", description: "Linguagem séria e profissional" },
-      { value: "humanized", label: "Humanizado", description: "Tom natural e conversacional" },
-      { value: "academic", label: "Acadêmico", description: "Estilo técnico e científico" },
-      { value: "creative", label: "Criativo", description: "Linguagem expressiva e original" },
-      { value: "childlike", label: "Como uma Criança", description: "Linguagem simples e inocente" },
-    ]
-
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
-        {styles.map((style) => (
-          <div
-            key={style.value}
-            className={`p-3 border rounded-lg cursor-pointer transition-all ${
-              selectedRewriteStyle === style.value
-                ? "border-primary bg-primary/10 shadow-sm"
-                : "border-muted hover:border-primary/50 hover:bg-muted/50"
-            }`}
-            onClick={() => handleRewriteStyleChange(style.value as RewriteStyle)}
-          >
-            <div className="font-medium text-sm">{style.label}</div>
-            <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
-          </div>
-        ))}
-      </div>
+      <RewriteStyleSelector
+        value={selectedRewriteStyleInternal}
+        onChange={handleRewriteStyleChange}
+        isPremium={isPremium}
+        onPremiumLocked={handlePremiumStyleLocked}
+      />
     )
   }
 
@@ -768,75 +955,103 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
   }
 
   return (
-    <Card className="w-full shadow-sm">
-      <CardContent className="p-4 sm:p-6">
-        {/* Aviso de configuração do Supabase */}
-        <SupabaseConfigNotice />
-
-        {error && (
+    <>
+      <Card className="w-full shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          {error && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive/30">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Erro no serviço</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="space-y-3">
+              <p>{error}</p>
+              <RetryButton
+                onClick={handleRetry}
+                isLoading={isLoading}
+                size="sm"
+                variant="outline"
+                className="border-destructive/30 hover:bg-destructive/10"
+              />
+            </AlertDescription>
           </Alert>
         )}
 
-        {!user || !subscription.isPremium ? (
-          <div className="mb-4 bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-purple-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start">
-            <div className="flex-shrink-0 mr-2 mt-0.5">
-              {!user ? (
-                <User className="h-5 w-5 text-amber-500" />
-              ) : (
-                <Heart className="h-5 w-5 text-green-500" />
-              )}
-            </div>
-            <div className="text-sm text-foreground/80">
-              {!user ? (
-                <p>
-                  <strong>Crie sua conta gratuita</strong> para acessar mais recursos, ou{" "}
-                  <Link
-                    href="/upgrade"
-                    className="font-medium text-amber-500 hover:text-amber-600 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-amber-500/10"
+        <div
+          className={`mb-4 rounded-lg border p-3 sm:p-4 ${
+            isPremium ? "bg-primary/10 border-primary/30" : "bg-blue-500/10 border-blue-500/25"
+          }`}
+        >
+          {isPremium ? (
+            <div className="flex items-start gap-3">
+              <Crown className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold text-primary">Plano Premium ativo</p>
+                <p className="text-foreground/80">
+                  Correções ilimitadas liberadas. Precisa de ajuda? Escreva para{" "}
+                  <a
+                    href="mailto:contato@corretordetextoonline.com.br"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
                   >
-                    upgrade para CorretorIA Pro
-                  </Link>
-                  {" "}e tenha 10.000 caracteres, sem anúncios e processamento prioritário por apenas R$ 19,90/mês.
+                    contato@corretordetextoonline.com.br
+                  </a>{" "}
+                  e nosso time responde em até <strong>24 horas úteis</strong>.
                 </p>
-              ) : (
-                <p>
-                  Ajude a manter este serviço gratuito! Aceitamos doações a partir de R$1 via PIX.{" "}
-                  <Link
-                    href="/apoiar"
-                    onClick={() => {
-                      sendGTMEvent("donation_click", {
-                        location: "correction_form",
-                        element_type: "notice_link",
-                        section: "form_header",
-                      })
-                    }}
-                    className="font-medium text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 transition-colors px-1 rounded hover:bg-green-500/10"
-                  >
-                    Faça sua doação aqui
-                  </Link>
-                  .
-                </p>
-              )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="mb-4 bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 rounded-lg p-3 flex items-center">
-            <Crown className="h-5 w-5 text-amber-500 mr-2" />
-            <p className="text-sm text-foreground/80">
-              <strong>CorretorIA Pro ativado!</strong> Você tem acesso a 10.000 caracteres, sem anúncios e processamento prioritário.
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="font-semibold text-blue-700 dark:text-blue-300">
+                    Desbloqueie todo o poder do CorretorIA Premium
+                  </p>
+                  <p className="text-foreground/80">
+                    Correções ilimitadas, histórico inteligente e suporte prioritário. Hoje você usou{" "}
+                    <strong>{freeCorrectionsCount}</strong> de{" "}
+                    <strong>{correctionsDailyLimit}</strong> correções gratuitas.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:opacity-90"
+                  onClick={() =>
+                    sendGTMEvent("premium_banner_cta_click", {
+                      location: "correction_form_header",
+                    })
+                  }
+                  asChild
+                >
+                  <Link href="/premium">
+                    Conhecer o plano Premium
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Abas para alternar entre correção e reescrita */}
         <Tabs
-          defaultValue={operationMode}
+          value={operationMode} // Usar value em vez de defaultValue para controle preciso
           className="w-full mb-4"
-          onValueChange={(value) => setOperationMode(value as OperationMode)}
+          onValueChange={(value) => {
+            if (enableCrossNavigation) {
+              if (value === "rewrite") {
+                // Redirecionar para a página dedicada de reescrita
+                router.push("/reescrever-texto")
+              } else if (value === "correct") {
+                // Redirecionar para a home page
+                router.push("/")
+              }
+            } else {
+              // Comportamento padrão na home - só navegar para reescrita
+              if (value === "rewrite") {
+                router.push("/reescrever-texto")
+              } else {
+                setOperationMode(value as OperationMode)
+              }
+            }
+          }}
         >
           <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-0.5 sm:p-1 rounded-lg">
             <TabsTrigger
@@ -848,7 +1063,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
             </TabsTrigger>
             <TabsTrigger
               value="rewrite"
-              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white"
+              className="rounded-md py-1.5 px-1 sm:px-2 data-[state=active]:bg-blue-800 data-[state=active]:text-white cursor-pointer"
             >
               <Pencil className="h-4 w-4 mr-2" />
               Reescrever Texto
@@ -872,6 +1087,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
         </Tabs>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            {isPremium ? (
+              <span className="flex items-center gap-2 font-medium text-primary">
+                <Crown className="h-3.5 w-3.5" />
+                Plano Premium ativo · correções ilimitadas
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Plano gratuito: até {correctionsDailyLimit} correções por dia
+              </span>
+            )}
+          </div>
           <div className="relative">
             <Textarea
               placeholder={
@@ -883,7 +1111,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               value={originalText}
               onChange={handleTextChange}
               disabled={isLoading}
-              maxLength={user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)}
+              maxLength={characterLimit ?? undefined}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
             <div className="absolute top-3 right-3">
@@ -899,14 +1127,41 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
           </div>
 
           {/* Contador de caracteres */}
-          <div className={`text-xs text-right ${getCounterColor()}`}>
-            {charCount}/{user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT)} caracteres
-            {user && subscription.isPremium && (
-              <Badge variant="outline" className="ml-2 text-xs">
-                Premium
-              </Badge>
-            )}
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={`text-xs text-right ${getCounterColor()} ${!isUnlimited && characterLimit && charCount > characterLimit * 0.7 ? 'font-semibold' : ''}`}>
+                  {isUnlimited || characterLimit === null
+                    ? `${charCount.toLocaleString("pt-BR")} caracteres (sem limite)`
+                    : `${charCount.toLocaleString("pt-BR")}/${characterLimit.toLocaleString("pt-BR")} caracteres`}
+                </div>
+              </TooltipTrigger>
+              {!isUnlimited && !isPremium && characterLimit && charCount > characterLimit * 0.7 && (
+                <TooltipContent side="left" className="max-w-xs">
+                  <p className="font-medium mb-1">Chegando no limite!</p>
+                  <p className="text-xs">
+                    Com o Premium você pode usar até <strong>5.000 caracteres</strong> por texto.{" "}
+                    <Link href="/premium" className="underline font-medium">
+                      Saiba mais
+                    </Link>
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+          {!isPremium && (
+            <div className="text-xs text-right text-muted-foreground">
+              Correções gratuitas restantes hoje: {remainingCorrections} de {correctionsDailyLimit}
+            </div>
+          )}
+          {!isUnlimited && limitsLoading && (
+            <div className="text-xs text-right text-muted-foreground">Atualizando limite...</div>
+          )}
+          {limitsError && (
+            <div className="text-xs text-right text-amber-600">
+              Não foi possível carregar o limite mais recente. Usando valor padrão.
+            </div>
+          )}
 
           {/* Adicionar o componente de ajuste de tom */}
           {operationMode === "correct" && (
@@ -929,37 +1184,50 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                 Limpar
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20 relative group w-full sm:w-auto order-2 sm:order-2"
-              onClick={() => {
-                sendGTMEvent("donation_button_click", {
-                  location: "correction_form",
-                })
-              }}
-              asChild
-            >
-              <Link
-                href="/apoiar"
-                onClick={() => {
-                  sendGTMEvent("donation_click", {
-                    location: "correction_form",
-                    element_type: "donate_button",
-                    section: "form_actions",
-                  })
-                }}
+            {!isPremium ? (
+              <Button
+                className="w-full sm:w-auto order-2 sm:order-2 bg-green-600 text-white hover:bg-green-700 border-0"
+                asChild
               >
-                <Heart className="mr-2 h-4 w-4 transition-transform group-hover:animate-heartbeat" />
-                <span className="relative z-10">Doar</span>
-                <span className="absolute inset-0 bg-green-500/0 group-hover:bg-green-500/10 transition-colors duration-300 rounded-md"></span>
-              </Link>
-            </Button>
+                <Link
+                  href="/premium"
+                  onClick={() =>
+                    sendGTMEvent("premium_cta_click", {
+                      location: "correction_form_actions",
+                    })
+                  }
+                  className="inline-flex items-center"
+                >
+                  <Crown className="mr-2 h-4 w-4" />
+                  Assinar Premium
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto order-2 sm:order-2"
+                asChild
+              >
+                <a
+                  href="mailto:contato@corretordetextoonline.com.br"
+                  className="inline-flex items-center"
+                  onClick={() =>
+                    sendGTMEvent("premium_support_click", {
+                      location: "correction_form_actions",
+                    })
+                  }
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Falar com suporte
+                </a>
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={
                 isLoading ||
                 !originalText.trim() ||
-                charCount > (user ? characterLimit : (legacySubscription?.features.characterLimit || FREE_CHARACTER_LIMIT))
+                isOverCharacterLimit
               }
               className="px-6 relative overflow-hidden group w-full sm:w-auto order-1 sm:order-3"
             >
@@ -1032,25 +1300,45 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
                         <Copy className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                         Copiar Texto
                       </Button>
-                      <Button
-                        onClick={() => {
-                          // Registrar evento no GTM
-                          sendGTMEvent("donation_button_click", {
-                            source: operationMode === "correct" ? "text_correction_result" : "text_rewrite_result",
-                            textLength: result.correctedText.length,
-                            amount: 5,
-                            location: "result_actions",
-                          })
-
-                          // Redirecionar para a página de doação
-                          window.location.href = "/apoiar?valor=5"
-                        }}
-                        size="sm"
-                        className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-green-500 hover:bg-green-600 text-white flex items-center justify-center"
-                      >
-                        <Heart className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-pulse" />
-                        Doar R$5
-                      </Button>
+                      {!isPremium ? (
+                        <Button
+                          size="sm"
+                          className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto bg-primary text-primary-foreground hover:opacity-90 flex items-center justify-center"
+                          asChild
+                        >
+                          <Link
+                            href="/premium"
+                            onClick={() =>
+                              sendGTMEvent("premium_result_cta_click", {
+                                location: "result_actions",
+                                mode: operationMode,
+                              })
+                            }
+                          >
+                            <Crown className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Migrar para o Premium
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full sm:w-auto text-xs sm:text-sm py-2 h-auto flex items-center justify-center"
+                          asChild
+                        >
+                          <Link
+                            href="/dashboard"
+                            onClick={() =>
+                              sendGTMEvent("premium_dashboard_cta_click", {
+                                location: "result_actions",
+                              })
+                            }
+                          >
+                            <LayoutDashboard className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Ver no Dashboard
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1098,47 +1386,56 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode }: Tex
               transition={{ delay: 1, duration: 0.5 }}
               className="mt-6 flex justify-center"
             >
-              <Button
-                size="lg"
-                className="bg-green-500 hover:bg-green-600 text-white px-8 w-full sm:w-auto"
-                onClick={() => {
-                  sendGTMEvent("donation_button_click", {
-                    location: "after_rating",
-                  })
-                }}
-                asChild
-              >
-                <Link
-                  href="/apoiar"
-                  onClick={() => {
-                    sendGTMEvent("donation_click", {
-                      location: "after_rating",
-                      element_type: "support_button",
-                      section: "rating_section",
-                    })
-                  }}
+              {!isPremium ? (
+                <Button
+                  size="lg"
+                  className="bg-primary hover:opacity-90 text-primary-foreground px-8 w-full sm:w-auto"
+                  asChild
                 >
-                  <Heart className="mr-2 h-5 w-5" />
-                  Apoiar o CorretorIA
-                </Link>
-              </Button>
+                  <Link
+                    href="/premium"
+                    onClick={() =>
+                      sendGTMEvent("premium_after_rating_cta_click", {
+                        location: "rating_section",
+                      })
+                    }
+                  >
+                    <Crown className="mr-2 h-5 w-5" />
+                    Assinar Premium agora
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 w-full sm:w-auto"
+                  asChild
+                >
+                  <a
+                    href="mailto:contato@corretordetextoonline.com.br"
+                    onClick={() =>
+                      sendGTMEvent("premium_support_click", {
+                        location: "rating_section",
+                      })
+                    }
+                  >
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Falar com o suporte Premium
+                  </a>
+                </Button>
+              )}
             </motion.div>
           </motion.div>
         )}
-
-        <style jsx global>{`
-         @keyframes heartbeat {
-           0%, 100% { transform: scale(1); }
-           25% { transform: scale(1.4); }
-           50% { transform: scale(1); }
-           75% { transform: scale(1.2); }
-         }
-         
-         .animate-heartbeat {
-           animation: heartbeat 1.2s ease-in-out infinite;
-         }
-       `}</style>
       </CardContent>
     </Card>
+
+    {/* Modal de Upsell para Estilo Premium */}
+    <PremiumRewriteUpsellModal
+      open={showPremiumUpsellModal}
+      onOpenChange={setShowPremiumUpsellModal}
+      selectedStyle={pendingPremiumStyle}
+    />
+  </>
   )
 }

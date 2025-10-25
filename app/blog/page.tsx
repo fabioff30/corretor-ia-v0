@@ -3,10 +3,8 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { BlogPostList } from "@/components/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
-import { getRevalidationTime } from "@/utils/cache-config"
-
-export const dynamic = "force-dynamic" // Corrigido: hífen em vez de underscore
-export const revalidate = getRevalidationTime('blog-post') // Optimized: 15 minutes (was 5)
+export const dynamic = "force-dynamic"
+export const revalidate = 900 // 15 minutes in seconds
 
 export function generateMetadata({ searchParams }: { searchParams: { page?: string } }) {
   const pageParam = searchParams.page ? `?page=${searchParams.page}` : ""

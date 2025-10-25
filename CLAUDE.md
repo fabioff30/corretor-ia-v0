@@ -5,14 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Scripts
-- `npm run dev` - Start development server (Next.js 14)
-- `npm run build` - Build production application
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint (note: linting ignored during builds)
-- `npm run test` - Run Jest test suite
+- `pnpm dev` (or `npm run dev`) - Start development server (Next.js 15)
+- `pnpm build` - Build production application
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint (note: linting ignored during builds)
+- `pnpm test` - Run Jest test suite
 
 ### Package Manager
-This project uses `pnpm` as the package manager based on `pnpm-lock.yaml`. Use `pnpm install` to install dependencies.
+This project uses `pnpm` as the package manager. Always use `pnpm install` to install dependencies and `pnpm add <package>` to add new packages.
 
 ### Testing Framework
 Jest is configured with:
@@ -25,13 +25,13 @@ Jest is configured with:
 ## Architecture Overview
 
 ### Technology Stack
-- **Framework**: Next.js 14 with App Router
-- **UI Library**: React 18 with extensive Radix UI components
+- **Framework**: Next.js 15.2.4 with App Router
+- **UI Library**: React 19 with extensive Radix UI components
 - **Styling**: Tailwind CSS with custom theming
 - **AI Integration**: OpenAI API via `ai` and `@ai-sdk/openai` packages
 - **Animation**: Framer Motion
 - **Form Handling**: React Hook Form with Zod validation
-- **Testing**: Jest + React Testing Library with jsdom
+- **Testing**: Jest + React Testing Library with jsdom and polyfills
 - **Security**: JWT authentication with `jose`, DOMPurify sanitization
 - **Database/Cache**: Redis integration via Upstash
 - **Type Safety**: Full TypeScript with strict configurations
@@ -39,47 +39,141 @@ Jest is configured with:
 ### Core Business Logic
 CorretorIA is a Portuguese text correction application powered by AI. The main workflow:
 
-1. **Text Input**: Users input text through `TextCorrectionForm` component (character limits: 1500 free, 5000 premium)
+1. **Text Input**: Users input text through `text-correction-form.tsx` component (character limits: 1500 free, 5000 premium)
 2. **API Processing**: Text is sent to `/api/correct/route.ts` which handles:
    - Rate limiting and input validation via middleware
-   - Multiple webhook endpoints for different correction modes
-   - Fallback mechanisms and error handling
+   - Multiple webhook endpoints for different correction modes (primary + fallback)
+   - Automatic fallback on errors (401, timeout, malformed responses)
+   - Authentication with AUTH_TOKEN and Vercel bypass tokens
 3. **Response Processing**: Corrected text and evaluation data returned to client
-4. **Display**: Results shown with diff highlighting and detailed analysis
+4. **Display**: Results shown with diff highlighting and detailed analysis via `TextCorrectionTabs`
 
 ### Key API Endpoints
-- `/api/correct` - Main text correction endpoint with comprehensive error handling
-- `/api/rewrite` - Text rewriting functionality  
-- `/api/custom-tone-webhook` - Custom tone adjustment processing with external webhook integration
+- `/api/correct` - Main text correction endpoint (refactored with shared modules)
+- `/api/rewrite` - Text rewriting functionality (refactored with shared modules)
+- `/api/tone` - Tone adjustment processing (refactored with shared modules)
+- `/api/ai-detector` - AI content detection with brazilianism analysis (10,000 char limit, 2 uses/day)
 - `/api/feedback` - User feedback collection
-- `/api/mercadopago/*` - Payment processing integration
 - `/api/admin/*` - Administrative functions with JWT authentication
 - `/api/admin/auth` - Secure admin authentication endpoint
 - `/api/revalidate` - Content revalidation with token protection
 - `/api/revalidate/webhook` - Webhook-based content revalidation for blog posts
 
+### API Architecture
+All API routes now use shared modules from `lib/api/` for improved maintainability:
+- `lib/api/shared-handlers.ts` - Rate limiting, input validation, request parsing, text sanitization
+- `lib/api/webhook-client.ts` - Unified webhook client with retry and fallback logic
+- `lib/api/error-handlers.ts` - Centralized error handling and fallback responses
+- `lib/api/response-normalizer.ts` - Response format normalization across different webhook responses
+- `lib/api/daily-rate-limit.ts` - Daily rate limiting for AI detector (Redis-backed)
+
+### BFF Architecture Pattern (Backend-For-Frontend)
+
+**IMPORTANT**: This project implements a Backend-For-Frontend (BFF) pattern, which differs from the direct API calls described in `frontend-api.md`.
+
+#### Architecture Flow
+```
+Client (Browser)
+    ↓ fetch()
+Next.js API Routes (/api/correct, /api/rewrite, /api/ai-detector)
+    ↓ SERVER-SIDE ONLY
+    ↓ validateAndSanitizeInput() + applyRateLimit()
+    ↓ callWebhook() with AUTH_TOKEN
+Cloudflare Workers API (workers-api.fabiofariasf.workers.dev)
+```
+
+#### Why BFF vs Direct Calls?
+
+**Current Implementation (BFF)**:
+- ✅ AUTH_TOKEN remains server-side only (never exposed to client)
+- ✅ Centralized rate limiting and input validation
+- ✅ Consistent error handling and fallback logic
+- ✅ Text sanitization before sending to workers
+- ✅ CF-Ray header forwarding for support correlation
+- ✅ Metadata logging for auditing (promptVersion, termsVersion)
+
+**Direct Calls (frontend-api.md approach)**:
+- ❌ AUTH_TOKEN would be exposed in client-side code
+- ❌ Rate limiting must be handled by Cloudflare Workers
+- ❌ No centralized validation or sanitization
+- ⚠️ Suitable only for public APIs or when token exposure is acceptable
+
+#### Implementation Details
+
+1. **Error Responses**: All errors follow the format `{ error: string, message?: string, details?: string[] }`
+2. **Timeouts**: 60 seconds for all endpoints (increased from 30s for Gemini 2.5 thinking mode)
+3. **Health Checks**: GET endpoints return `{ "status": "OK" }` for monitoring
+4. **Headers**: Responses include:
+   - `X-Request-ID` - Internal request ID for debugging
+   - `CF-Ray` - Cloudflare Ray ID when available (for support)
+   - `X-Prompt-Version`, `X-Terms-Version` - AI detector metadata for auditing
+   - `X-Processing-Time` - Request processing duration
+5. **Input Sanitization**: Text is automatically sanitized to remove excessive whitespace per `frontend-api.md` spec
+
+#### Frontend Integration
+
+Client-side code should call Next.js API routes (NOT workers directly):
+```typescript
+const response = await fetch('/api/correct', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text, isMobile, isPremium })
+})
+
+const data = await response.json()
+if (!response.ok) {
+  // Error format: { error: string, message?: string, details?: string[] }
+  console.error(data.error, data.details)
+}
+```
+
+#### Observability & Auditing
+
+- All requests logged with `cf-ray` header for support correlation
+- AI detector responses include metadata (promptVersion, termsVersion, termsSignature) for auditing
+- Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) included in 429 responses
+
 ### Component Architecture
 - **Layout Components**: `Header`, `Footer` with consistent theming
-- **Page Sections**: Modular sections like `HeroSection`, `BenefitsSection`, etc.
+- **Server Components**: Static sections converted to server components for better performance (`BenefitsSection`, `FeaturesSection`, `AboutAuthorSection`)
+- **Client Components**: Interactive components like `TextCorrectionForm`, `ToneAdjuster`, `JulinhoAssistant`
 - **Form Components**: `TextCorrectionForm` as main interaction point
 - **UI Components**: Comprehensive Radix UI component library in `/components/ui/`
-- **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat)
+- **Specialized Components**: `ToneAdjuster`, `TextDiff`, `JulinhoAssistant` (AI chat), `AIDetectorForm`, `AIDetectorRating`
 - **Result Components**: `TextCorrectionTabs` for tabbed display of correction results
 - **Advertisement Components**: Smart banner system with frequency control and user engagement tracking
 
 ### Configuration & Constants
 Key configuration in `utils/constants.ts`:
-- Character limits and API timeouts
+- Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000), `AI_DETECTOR_CHARACTER_LIMIT` (10000)
+- Rate limits: `AI_DETECTOR_DAILY_LIMIT` (2 uses per day)
+- API timeouts: `API_REQUEST_TIMEOUT` (60s), `FETCH_TIMEOUT` (55s), `AI_DETECTOR_TIMEOUT` (60s)
 - Google Analytics, AdSense, and GTM IDs
-- Webhook URLs for different correction services
-- Feature flags (e.g., `JULINHO_DISABLED`)
+- Webhook URLs (Workers API base: `https://workers-api.fabiofariasf.workers.dev`):
+  - `WEBHOOK_URL` - `/api/corrigir` (text correction)
+  - `PREMIUM_WEBHOOK_URL` - `/api/premium-corrigir` (premium correction)
+  - `REWRITE_WEBHOOK_URL` - `/api/reescrever` (text rewriting)
+  - `PREMIUM_REWRITE_WEBHOOK_URL` - `/api/premium-reescrever` (premium rewriting)
+  - `ANALYSIS_WEBHOOK_URL` - `/api/analysis-ai` (AI content detection)
+  - `FALLBACK_WEBHOOK_URL` - same as primary (automatic fallback)
+- Authentication: `AUTH_TOKEN` (server-side only)
+- Feature flags: `JULINHO_DISABLED` (currently false)
 
 ### External Integrations
-- **AI Services**: Primary and fallback webhook endpoints for text correction and custom tone adjustment
+- **AI Services**: Cloudflare Workers API (`workers-api.fabiofariasf.workers.dev`) for text correction, rewriting, and AI analysis
+  - POST `/api/corrigir` - Text correction with evaluation
+  - POST `/api/premium-corrigir` - Premium correction with advanced models
+  - POST `/api/reescrever` - Text rewriting with style options
+  - POST `/api/premium-reescrever` - Premium rewriting
+  - POST `/api/analysis-ai` - AI-generated content detection with brazilianism analysis, grammar summary, and confidence scoring
+- **Payments**: Mercado Pago integration for recurring subscriptions
+  - Subscription management with automatic renewals
+  - Webhook validation with HMAC-SHA256
+  - Full payment transaction history
+  - See `MERCADOPAGO_SETUP.md` for setup guide
 - **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
 - **Monetization**: Google AdSense with consent management, CleverWebServer script integration
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
-- **Payments**: MercadoPago integration
 - **Email**: React Email components for notifications
 - **Content Management**: WordPress API integration for blog content with automatic revalidation
 
@@ -100,18 +194,22 @@ Key configuration in `utils/constants.ts`:
 - **Token Security**: Cryptographically secure tokens with validation
 
 ### Performance Considerations
-- **Timeouts**: 60-second API timeout with fallback mechanisms
+- **Timeouts**: 30-second API timeout (reduced from 60s) with 25s fetch timeout
+- **Max Duration**: 60 seconds configured for serverless functions
 - **Caching**: Redis-backed caching and API routes configured with no-store
-- **Image Optimization**: Disabled for compatibility
+- **Image Optimization**: Disabled for compatibility (`unoptimized: true`)
 - **Server Actions**: 2MB body size limit configured
 - **Bundle Optimization**: Proper code splitting and lazy loading
+- **Build Optimization**: TypeScript and ESLint errors ignored during builds
 
 ### Error Handling Strategy
 Robust error handling with multiple fallback levels:
-1. Primary webhook failure → fallback webhook
-2. Processing errors → fallback response with original text
-3. Network timeouts → user-friendly timeout messages
-4. Comprehensive logging with request IDs
+1. Primary webhook failure → automatic fallback webhook (FALLBACK_WEBHOOK_URL)
+2. 401 authentication errors → immediate fallback retry
+3. Processing errors → fallback response with original text and generic evaluation
+4. Network timeouts → user-friendly 504 timeout messages
+5. Malformed responses → graceful fallback with original text
+6. All errors logged with request IDs and context
 
 ### Development Notes
 - TypeScript and ESLint errors ignored during builds (configured in `next.config.mjs`)
@@ -126,15 +224,15 @@ Robust error handling with multiple fallback levels:
 
 ### Required Environment Variables
 Critical production variables (see `CONFIGURATION.md` for auto-generated tokens):
-```bash
+\`\`\`bash
 AUTH_TOKEN=your-secure-32-character-token
 REVALIDATION_TOKEN=your-secure-revalidation-token  
 WEBHOOK_SECRET=your-secure-webhook-secret
 ADMIN_API_KEY=your-secure-admin-api-key
-```
+\`\`\`
 
 ### Optional Services
-```bash
+\`\`\`bash
 # AI Processing
 OPENAI_API_KEY=sk-your-key
 
@@ -144,22 +242,57 @@ UPSTASH_REDIS_REST_TOKEN=your-redis-token
 
 # Payments
 MERCADO_PAGO_ACCESS_TOKEN=your-token
+\`\`\`
+
+## 🔧 Common Issues & Solutions
+
+### Invalid Keep-Alive Header Error
+**Error**: `Error [InvalidArgumentError]: invalid keep-alive header` with code `UND_ERR_INVALID_ARG`
+
+**Cause**: Node.js fetch (undici) automatically manages connection keep-alive and doesn't allow manual `Connection` or `Keep-Alive` headers.
+
+**Solution**: Remove these headers from fetch requests. Node.js handles keep-alive automatically:
+```typescript
+// ❌ WRONG - causes UND_ERR_INVALID_ARG
+headers: {
+  "Connection": "keep-alive",
+  "Keep-Alive": "timeout=5, max=100"
+}
+
+// ✅ CORRECT - let Node.js manage it
+headers: {
+  "Content-Type": "application/json"
+}
 ```
+
+**Fixed in**: `lib/api/webhook-client.ts` (removed manual keep-alive headers)
 
 ## 📚 Additional Documentation
 
-- **SECURITY.md** - Comprehensive security implementation guide
-- **CONFIGURATION.md** - Environment setup and configuration
+- **SECURITY.md** - Comprehensive security implementation guide with JWT auth, input validation, and CSP
+- **CONFIGURATION.md** - Environment setup with auto-generated secure tokens
 - **AGENTS.md** - AI agent integration documentation
-- **jest.config.js** - Testing configuration
-- **jest.setup.ts** - Test environment setup with polyfills and mocks
+- **jest.config.js** - Jest configuration with Next.js integration
+- **jest.setup.ts** - Test environment setup with TextEncoder/TextDecoder polyfills and crypto mocks
 - **vercel.json** - Deployment configuration
 - **actions/revalidate-content.ts** - Server Actions for content cache management
 
 ## 🆕 Recent Feature Additions
 
+### AI Content Detector (Latest)
+- New `/api/ai-detector` endpoint for detecting AI-generated content
+- Advanced analysis including:
+  - AI vs Human content classification with confidence scores
+  - Brazilian Portuguese language patterns detection (brazilianism analysis)
+  - Grammar summary with error counts and categorization
+  - Text statistics (word count, sentence length, etc.)
+- Daily rate limiting (2 uses per day per IP/session)
+- Character limit: 10,000 characters
+- Components: `AIDetectorForm`, `AIDetectorRating`
+- Feedback system for user rating and improvements
+
 ### Custom Tone Adjustment
-- New `/api/custom-tone-webhook` endpoint for processing custom tone instructions
+- `/api/custom-tone-webhook` endpoint for processing custom tone instructions
 - External webhook integration with fallback handling
 - Graceful error handling to maintain user experience
 

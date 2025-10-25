@@ -5,15 +5,22 @@
  */
 export function sendGTMEvent(eventName: string, eventData: Record<string, any> = {}) {
   // Verificar se o dataLayer existe
-  if (typeof window !== "undefined" && window.dataLayer) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  if (window.dataLayer) {
     window.dataLayer.push({
       event: eventName,
       ...eventData,
     })
+  }
 
-    // Log the event in development
-    if (process.env.NODE_ENV === "development") {
-      console.log(`[GTM Event] ${eventName}`, eventData)
-    }
+  if (typeof window.gtag === "function") {
+    window.gtag("event", eventName, eventData)
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[GTM Event] ${eventName}`, eventData)
   }
 }

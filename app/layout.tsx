@@ -8,9 +8,13 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
-import { GOOGLE_ADSENSE_CLIENT, GTM_ID } from "@/utils/constants"
+import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
+import { UserProvider } from "@/components/providers/user-provider"
+import { AdSenseLoader } from "@/components/adsense-loader"
+import { createClient as createServerClient } from "@/lib/supabase/server"
+import type { Profile } from "@/types/supabase"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,17 +27,35 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createServerClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  let initialProfile: Profile | null = null
+
+  if (session?.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single()
+
+    if (profile) {
+      initialProfile = profile as Profile
+    }
+  }
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="facebook-domain-verification" content="hprarr6g4519byzssy18zrs0vqdzta" />
-        <meta name="google-adsense-account" content={GOOGLE_ADSENSE_CLIENT} />
         <link
           rel="icon"
           href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/corretoria-DfN4vmv8uKDAmhlXjQNEQ2EACGGRep.png"
@@ -118,15 +140,6 @@ export default function RootLayout({
         `}
         </Script>
 
-        {/* Google AdSense - Script - Load only once */}
-        <Script
-          id="google-adsense"
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADSENSE_CLIENT}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-
         {/* Hotjar Tracking Code for Corretor de Texto Online */}
         <Script id="hotjar-tracking" strategy="afterInteractive">
           {`
@@ -153,33 +166,10 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* Initialize AdSense only once */}
-        <Script id="adsense-init" strategy="afterInteractive">
-          {`
-            // Initialize adsbygoogle array only if it doesn't exist
-            window.adsbygoogle = window.adsbygoogle || [];
-            
-            // Set up consent handling for AdSense
-            function handleAdsenseConsent() {
-              var adsenseConsent = localStorage.getItem('cookie-consent');
-              if (adsenseConsent === 'accepted') {
-                // User accepted personalized ads
-                window.adsbygoogle.requestNonPersonalizedAds = 0;
-              } else if (adsenseConsent === 'declined') {
-                // User declined personalized ads
-                window.adsbygoogle.requestNonPersonalizedAds = 1;
-              }
-            }
-            
-            // Handle initial consent
-            handleAdsenseConsent();
-            
-            // Listen for consent changes
-            window.addEventListener('storage', handleAdsenseConsent);
-          `}
-        </Script>
+        {/* AdSense Loader - Conditional rendering based on user plan */}
+        <AdSenseLoader initialProfile={initialProfile} />
 
-        {/* CleverWebServer Script - Load after AdSense */}
+        {/* CleverWebServer Script */}
         <Script id="clever-webserver" strategy="afterInteractive">
           {`
             (function (document, window) {
@@ -201,7 +191,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {/* Meta Pixel Code - noscript */}
         <noscript>
           <img
@@ -222,8 +212,8 @@ export default function RootLayout({
           />
         </noscript>
 
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
+        <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1">{children}</main>
@@ -232,8 +222,8 @@ export default function RootLayout({
             <Toaster />
             <CookieConsent />
             <JulinhoAssistant />
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   )

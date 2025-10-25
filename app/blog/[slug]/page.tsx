@@ -2,10 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
 import { BlogPostContent } from "@/components/blog-post-content"
-import { getRevalidationTime } from "@/utils/cache-config"
-
 export const dynamic = "force-dynamic" // Forçar renderização dinâmica
-export const revalidate = getRevalidationTime('blog-post') // Optimized: 15 minutes (was 5)
+export const revalidate = 900 // 15 minutes in seconds
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = await getPostBySlug(params.slug)

@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Sparkles, Heart } from "lucide-react"
+import { Sparkles, Heart, Crown } from "lucide-react"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
@@ -34,23 +34,43 @@ export function CTASection() {
             Experimente nosso corretor de texto gratuito e veja a diferença na qualidade da sua escrita. Sem cadastro,
             sem instalação, sem complicações - apenas correções precisas e instantâneas.
           </p>
-          <Button
-            size="lg"
-            className="px-8 h-12 text-base"
-            onClick={() => {
-              sendGTMEvent("donation_click", {
-                location: "cta_section",
-                element_type: "primary_button",
-                section: "page_bottom",
-              })
-            }}
-            asChild
-          >
-            <Link href="/apoiar">
-              Apoiar o Corretor de Texto CorretorIA
-              <Heart className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              size="lg"
+              className="px-8 h-12 text-base bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 w-full sm:w-auto"
+              onClick={() => {
+                sendGTMEvent("premium_cta_click", {
+                  location: "cta_section",
+                  element_type: "primary_button",
+                  section: "page_bottom",
+                })
+              }}
+              asChild
+            >
+              <Link href="/premium">
+                <Crown className="mr-2 h-4 w-4" />
+                Assinar Premium
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="px-8 h-12 text-base w-full sm:w-auto"
+              onClick={() => {
+                sendGTMEvent("donation_click", {
+                  location: "cta_section",
+                  element_type: "secondary_button",
+                  section: "page_bottom",
+                })
+              }}
+              asChild
+            >
+              <Link href="/apoiar">
+                <Heart className="mr-2 h-4 w-4" />
+                Apoiar o Projeto
+              </Link>
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2">
             <span className="flex items-center">
               <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>

@@ -4,22 +4,25 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Menu, Sparkles, X, Shield, LogOut } from "lucide-react"
+import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard, Crown } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
+import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { UserMenu } from "@/components/auth/user-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [adminPassword, setAdminPassword] = useState("")
   const pathname = usePathname()
+  const router = useRouter()
   const { isAuthenticated, login, logout, isLoading } = useAdminAuth()
+  const { user, signOut: userSignOut, loading: userLoading } = useUser()
   const { toast } = useToast()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -57,6 +60,29 @@ export function Header() {
     })
   }
 
+  const handleUserLogout = async () => {
+    setIsLoggingOut(true)
+    const { error } = await userSignOut()
+
+    if (error) {
+      toast({
+        title: "Erro ao sair",
+        description: error.message,
+        variant: "destructive",
+      })
+      setIsLoggingOut(false)
+      return
+    }
+
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu da sua conta.",
+    })
+
+    router.replace("/")
+    router.refresh()
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -76,10 +102,10 @@ export function Header() {
             Início
           </Link>
           <Link
-            href="/recursos"
-            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/recursos") ? "text-primary" : "text-foreground/60"}`}
+            href="/detector-ia"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/detector-ia") ? "text-primary" : "text-foreground/60"}`}
           >
-            Recursos
+            Detector de IA
           </Link>
           <Link
             href="/blog"
@@ -102,9 +128,20 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {/* User Menu */}
-          <UserMenu />
-          
+          <Button
+            asChild
+            className="hidden md:inline-flex bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90 animate-pulse hover:animate-none relative"
+          >
+            <Link href="/premium">
+              <Crown className="mr-2 h-4 w-4" />
+              Assine já
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+              </span>
+            </Link>
+          </Button>
+
           {/* Admin Access Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -127,6 +164,11 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link href="/admin/ratings" className="cursor-pointer">
                           Estatísticas de Avaliações
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/coupons" className="cursor-pointer">
+                          Cupons de Desconto
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleAdminLogout} className="text-red-500 cursor-pointer">
@@ -157,7 +199,47 @@ export function Header() {
           </DropdownMenu>
 
           <ModeToggle />
-          
+
+          {/* User Auth Button - Desktop */}
+          {!userLoading && (
+            <div className="hidden md:flex">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Ir para Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleUserLogout}
+                      className="text-red-500 cursor-pointer"
+                      disabled={isLoggingOut}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild>
+                  <Link href="/login">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Entrar
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+
           <button className="md:hidden" onClick={toggleMenu} aria-label="Toggle Menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -176,11 +258,22 @@ export function Header() {
               Início
             </Link>
             <Link
-              href="/recursos"
-              className={`px-2 py-1 rounded-md ${isActive("/recursos") ? "bg-primary/10 text-primary" : ""}`}
+              href="/premium"
+              className={`px-2 py-1 rounded-md font-semibold bg-gradient-to-r from-primary/10 to-secondary/10 border-l-4 border-primary ${isActive("/premium") ? "bg-primary/20 text-primary" : "text-primary"} flex items-center justify-between`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Recursos
+              <span className="flex items-center gap-2">
+                <Crown className="h-4 w-4" />
+                Assine já
+              </span>
+              <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full font-medium">🔥 Popular</span>
+            </Link>
+            <Link
+              href="/detector-ia"
+              className={`px-2 py-1 rounded-md ${isActive("/detector-ia") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Detector de IA
             </Link>
             <Link
               href="/blog"
@@ -203,11 +296,40 @@ export function Header() {
             >
               Contato
             </Link>
-            <Button asChild className="mt-2">
-              <Link href="/apoiar" onClick={() => setIsMenuOpen(false)}>
-                Apoiar
-              </Link>
-            </Button>
+
+            {/* User Auth Button - Mobile */}
+            {!userLoading && (
+              <div className="mt-2">
+                {user ? (
+                  <>
+                    <Button asChild className="w-full mb-2">
+                      <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full text-red-500 hover:text-red-600"
+                      onClick={() => {
+                        setIsMenuOpen(false)
+                        handleUserLogout()
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <Button asChild className="w-full">
+                    <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Entrar
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

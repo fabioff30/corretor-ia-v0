@@ -11,4 +11,3 @@ describe('utils/format', () => {
     expect(id).toMatch(/^TRX-[0-9A-Z]+-[0-9A-Z]{5}$/)
   })
 })
-

@@ -76,7 +76,7 @@ export function getServerConfig() {
   if (!isServer()) {
     throw new Error('getServerConfig can only be called on the server side')
   }
-  
+
   return {
     AUTH_TOKEN: process.env.AUTH_TOKEN || '',
     REVALIDATION_TOKEN: process.env.REVALIDATION_TOKEN || '',
@@ -88,5 +88,13 @@ export function getServerConfig() {
     MERCADO_PAGO_ACCESS_TOKEN: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
     MERCADO_PAGO_PUBLIC_KEY: process.env.MERCADO_PAGO_PUBLIC_KEY || '',
     NOTIFICATION_WEBHOOK_URL: process.env.NOTIFICATION_WEBHOOK_URL || '',
+    // Stripe
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
+    // Brevo (Sendinblue)
+    BREVO_API_KEY: process.env.BREVO_API_KEY || '',
+    BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || '',
+    BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || '',
   }
 }

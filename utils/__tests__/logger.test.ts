@@ -2,7 +2,7 @@ import { logRequest, logError } from "../logger"
 
 describe("logger utils", () => {
   it("deve logar uma requisição sem erro", () => {
-    const spy = jest.spyOn(console, "log").mockImplementation(() => {})
+    const spy = jest.spyOn(console, "info").mockImplementation(() => {})
     logRequest("req-1", { status: 200, ip: "127.0.0.1" })
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()

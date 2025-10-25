@@ -1,8 +1,16 @@
 // Extend Jest with helpful DOM matchers
 // Note: install peer deps before running tests:
 // npm i -D @testing-library/jest-dom @testing-library/react jest-environment-jsdom whatwg-fetch
+
+jest.mock('canvas', () => ({
+  createCanvas: () => ({ getContext: () => null }),
+  loadImage: async () => ({}),
+}))
+
 import '@testing-library/jest-dom'
-import 'whatwg-fetch'
+if (typeof window !== 'undefined') {
+  require('whatwg-fetch')
+}
 
 // Polyfills for Node/JSDOM environment
 import { TextEncoder, TextDecoder } from 'util'
@@ -31,3 +39,4 @@ try {
     g.crypto.getRandomValues = nodeCrypto.webcrypto.getRandomValues.bind(nodeCrypto.webcrypto)
   }
 } catch {}
+

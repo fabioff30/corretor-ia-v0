@@ -13,7 +13,7 @@ This document outlines the security measures implemented in the CorretorIA appli
 - Critical environment variables are mandatory in production
 
 **Environment Variables Required:**
-```env
+\`\`\`env
 # Critical - Must be set in production
 AUTH_TOKEN=your-secure-32-character-token
 REVALIDATION_TOKEN=your-secure-revalidation-token
@@ -25,7 +25,7 @@ UPSTASH_REDIS_REST_URL=your-redis-url
 UPSTASH_REDIS_REST_TOKEN=your-redis-token
 MERCADO_PAGO_ACCESS_TOKEN=your-mercadopago-token
 OPENAI_API_KEY=your-openai-key
-```
+\`\`\`
 
 ### 2. Authentication & Authorization
 
@@ -107,12 +107,12 @@ OPENAI_API_KEY=your-openai-key
 ### Production Deployment Checklist
 
 1. **Environment Variables**
-   ```bash
+   \`\`\`bash
    # Generate secure tokens
    openssl rand -hex 32  # For AUTH_TOKEN
    openssl rand -hex 32  # For REVALIDATION_TOKEN
    openssl rand -hex 32  # For WEBHOOK_SECRET
-   ```
+   \`\`\`
 
 2. **Security Headers**
    - Ensure `NODE_ENV=production` is set
@@ -132,21 +132,21 @@ OPENAI_API_KEY=your-openai-key
 ### Development Setup
 
 1. **Environment File**
-   ```env
+   \`\`\`env
    NODE_ENV=development
    AUTH_TOKEN=development-token-change-in-production
    REVALIDATION_TOKEN=dev-revalidation-token
    WEBHOOK_SECRET=dev-webhook-secret
-   ```
+   \`\`\`
 
 2. **Security Testing**
-   ```bash
+   \`\`\`bash
    # Run security audit
    npm audit
    
    # Check for vulnerable dependencies
    npm audit fix
-   ```
+   \`\`\`
 
 ## 🚨 Security Incident Response
 
@@ -159,12 +159,12 @@ OPENAI_API_KEY=your-openai-key
 - Suspicious content detection (logged with security patterns)
 
 **Log Analysis:**
-```bash
+\`\`\`bash
 # Check for security events
 grep "Security Event" logs/
 grep "Rate limit exceeded" logs/
 grep "Input validation failed" logs/
-```
+\`\`\`
 
 ### Response Procedures
 
@@ -195,7 +195,7 @@ grep "Input validation failed" logs/
 - `@upstash/redis` - Rate limiting storage
 
 ### Security Testing Tools
-```bash
+\`\`\`bash
 # Vulnerability scanning
 npm audit
 
@@ -204,7 +204,7 @@ eslint --ext .ts,.tsx .
 
 # Type checking
 tsc --noEmit
-```
+\`\`\`
 
 ## 📋 Security Best Practices
 
