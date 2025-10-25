@@ -302,3 +302,129 @@ export async function handleSubscriptionDeleted(
     console.error('[Stripe Webhook] Failed to send cancellation email:', emailError)
   }
 }
+
+/**
+ * Handle payment_intent.succeeded event for PIX payments
+ * Called when PIX payment is confirmed
+ */
+export async function handlePixPaymentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  console.log('[Stripe Webhook] payment_intent.succeeded (PIX)', paymentIntent.id)
+
+  const supabase = createServiceRoleClient()
+  const userId = paymentIntent.metadata?.userId
+  const planType = paymentIntent.metadata?.planType as 'monthly' | 'annual'
+
+  if (!userId || !planType) {
+    console.error('[Stripe Webhook] Missing userId or planType in payment intent metadata')
+    return
+  }
+
+  try {
+    // Update PIX payment status
+    await supabase
+      .from('pix_payments')
+      .update({
+        status: 'paid',
+        paid_at: new Date().toISOString(),
+      })
+      .eq('payment_intent_id', paymentIntent.id)
+
+    // Create subscription record
+    const stripe = (await import('./server')).stripe
+    const { STRIPE_PRICES } = await import('./server')
+    const priceId = planType === 'monthly' ? STRIPE_PRICES.MONTHLY : STRIPE_PRICES.ANNUAL
+
+    // Create subscription after PIX payment
+    const subscription = await stripe.subscriptions.create({
+      customer: paymentIntent.customer as string,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: {
+        payment_method_types: ['card', 'pix'],
+        save_default_payment_method: 'on_subscription',
+      },
+      metadata: {
+        userId,
+        paidVia: 'pix',
+        initialPaymentIntentId: paymentIntent.id,
+      },
+    })
+
+    // Save subscription to database
+    const { error: insertError } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: paymentIntent.customer as string,
+        status: 'active',
+        price_id: priceId,
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: false,
+      })
+
+    if (insertError) {
+      console.error('[Stripe Webhook] Failed to insert subscription:', insertError)
+      return
+    }
+
+    // Update user profile to pro
+    await supabase
+      .from('profiles')
+      .update({
+        is_pro: true,
+        plan_type: 'premium',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+
+    // Send upgrade email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .single()
+
+    if (profile?.email) {
+      await sendPremiumUpgradeEmail({
+        to: { email: profile.email, name: profile.full_name },
+        name: profile.full_name,
+      })
+    }
+
+    console.log('[Stripe Webhook] PIX payment processed successfully')
+  } catch (error) {
+    console.error('[Stripe Webhook] Error processing PIX payment:', error)
+    throw error
+  }
+}
+
+/**
+ * Handle payment_intent.payment_failed event for PIX payments
+ * Called when PIX payment fails or expires
+ */
+export async function handlePixPaymentFailed(
+  paymentIntent: Stripe.PaymentIntent
+) {
+  console.log('[Stripe Webhook] payment_intent.payment_failed (PIX)', paymentIntent.id)
+
+  const supabase = createServiceRoleClient()
+
+  try {
+    // Update PIX payment status
+    await supabase
+      .from('pix_payments')
+      .update({
+        status: 'failed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('payment_intent_id', paymentIntent.id)
+
+    console.log('[Stripe Webhook] PIX payment marked as failed')
+  } catch (error) {
+    console.error('[Stripe Webhook] Error updating failed PIX payment:', error)
+  }
+}

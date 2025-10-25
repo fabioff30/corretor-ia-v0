@@ -3,14 +3,18 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Trash2, RefreshCw } from "lucide-react"
+import { Loader2, Trash2, RefreshCw, QrCode } from "lucide-react"
 import { useUser } from "@/hooks/use-user"
 import { useToast } from "@/hooks/use-toast"
+import { PremiumPixModal } from "@/components/premium-pix-modal"
 
 export default function ResetSubscriptionPage() {
   const [isResetting, setIsResetting] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const [isCreatingPix, setIsCreatingPix] = useState(false)
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false)
+  const [pixPaymentData, setPixPaymentData] = useState<any>(null)
   const [subscriptionData, setSubscriptionData] = useState<any>(null)
   const [mpConfig, setMpConfig] = useState<any>(null)
   const [stripeConfig, setStripeConfig] = useState<any>(null)
@@ -171,6 +175,69 @@ export default function ResetSubscriptionPage() {
       })
     } finally {
       setIsTesting(false)
+    }
+  }
+
+  const handleTestPix = async () => {
+    if (!user?.id || !user?.email) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!confirm('🧪 Isso criará um QR Code PIX de teste de R$ 5,00. Você pode cancelar sem pagar. Continuar?')) {
+      return
+    }
+
+    try {
+      setIsCreatingPix(true)
+      const response = await fetch('/api/mercadopago/create-pix-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planType: 'test',
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create PIX payment')
+      }
+
+      const data = await response.json()
+
+      // Set PIX payment data and open modal
+      setPixPaymentData({
+        paymentId: data.paymentId,
+        qrCode: data.qrCode,
+        qrCodeText: data.qrCodeText,
+        amount: data.amount,
+        planType: 'test',
+        expiresAt: data.expiresAt,
+      })
+
+      setIsPixModalOpen(true)
+
+      toast({
+        title: "QR Code PIX gerado!",
+        description: "Escaneie o código para testar o pagamento.",
+      })
+    } catch (error) {
+      console.error('Error creating PIX payment:', error)
+      toast({
+        title: "Erro ao gerar PIX",
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreatingPix(false)
     }
   }
 
@@ -349,6 +416,36 @@ export default function ResetSubscriptionPage() {
             </div>
           </div>
 
+          {/* Test PIX Payment */}
+          <div className="pt-4 border-t">
+            <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-lg mb-4">
+              <p className="text-sm font-semibold mb-2 text-green-600 dark:text-green-400">
+                🧪 Teste de PIX (R$ 5,00)
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Gera um QR Code PIX de teste para validar o fluxo completo de pagamento via PIX. Você pode cancelar sem pagar ou pagar R$ 5,00 para testar.
+              </p>
+              <Button
+                onClick={handleTestPix}
+                disabled={isCreatingPix}
+                variant="outline"
+                className="w-full border-green-500/50 hover:bg-green-500/10"
+              >
+                {isCreatingPix ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando QR Code...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Gerar PIX de R$ 5,00
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
           {/* Reset Button */}
           <div className="pt-4 border-t">
             <Button
@@ -375,6 +472,28 @@ export default function ResetSubscriptionPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* PIX Payment Modal */}
+      <PremiumPixModal
+        isOpen={isPixModalOpen}
+        onClose={() => {
+          setIsPixModalOpen(false)
+          setPixPaymentData(null)
+        }}
+        paymentData={pixPaymentData}
+        onSuccess={() => {
+          setIsPixModalOpen(false)
+          setPixPaymentData(null)
+          toast({
+            title: "Pagamento PIX confirmado!",
+            description: "O teste foi bem-sucedido.",
+          })
+          // Refresh subscription data
+          setTimeout(() => {
+            handleCheck()
+          }, 1000)
+        }}
+      />
     </div>
   )
 }

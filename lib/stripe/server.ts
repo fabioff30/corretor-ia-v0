@@ -152,3 +152,108 @@ export async function getCustomerSubscriptions(
 
   return subscriptions.data
 }
+
+/**
+ * Create a Payment Intent for PIX payment
+ */
+export async function createPixPaymentIntent(
+  customerId: string,
+  amount: number,
+  planType: 'monthly' | 'annual',
+  userId: string,
+  userEmail: string
+): Promise<Stripe.PaymentIntent> {
+  const description = planType === 'monthly'
+    ? 'CorretorIA Premium - Plano Mensal'
+    : 'CorretorIA Premium - Plano Anual'
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    customer: customerId,
+    amount,
+    currency: 'brl',
+    payment_method_types: ['pix'],
+    description,
+    metadata: {
+      userId,
+      userEmail,
+      planType,
+      productType: 'subscription',
+    },
+    payment_method_options: {
+      pix: {
+        expires_after_seconds: 1800, // 30 minutes
+      },
+    },
+  })
+
+  return paymentIntent
+}
+
+/**
+ * Get PIX payment details (QR Code and PIX Code)
+ */
+export async function getPixPaymentDetails(
+  paymentIntentId: string
+): Promise<{ qrCode: string; pixCode: string } | null> {
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      paymentIntentId,
+      {
+        expand: ['payment_method'],
+      }
+    )
+
+    if (paymentIntent.next_action?.type === 'display_pix_qr_code') {
+      const pixData = paymentIntent.next_action.display_pix_qr_code
+      return {
+        qrCode: pixData.qr_code, // Base64 encoded QR code image
+        pixCode: pixData.text,    // PIX copy-paste code
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error getting PIX details:', error)
+    return null
+  }
+}
+
+/**
+ * Check if a payment intent was paid
+ */
+export async function checkPaymentIntentStatus(
+  paymentIntentId: string
+): Promise<{ status: string; paid: boolean }> {
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+
+  return {
+    status: paymentIntent.status,
+    paid: paymentIntent.status === 'succeeded',
+  }
+}
+
+/**
+ * Create subscription after PIX payment confirmation
+ */
+export async function createSubscriptionAfterPixPayment(
+  customerId: string,
+  priceId: string,
+  userId: string
+): Promise<Stripe.Subscription> {
+  // Create subscription with immediate payment (already paid via PIX)
+  const subscription = await stripe.subscriptions.create({
+    customer: customerId,
+    items: [{ price: priceId }],
+    payment_behavior: 'default_incomplete',
+    payment_settings: {
+      payment_method_types: ['card', 'pix'],
+      save_default_payment_method: 'on_subscription',
+    },
+    metadata: {
+      userId,
+      paidVia: 'pix',
+    },
+  })
+
+  return subscription
+}

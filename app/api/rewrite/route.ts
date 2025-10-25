@@ -13,6 +13,7 @@ import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
+import { isStylePremium } from "@/utils/rewrite-styles"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       style,
       isPremium: isPremiumRequest = false,
     } = validatedInput
-    const rewriteStyle = style || "formal"
+    const rewriteStyle = (style || "formal").toLowerCase() as any
 
     let isPremium = false
     let premiumContext: AuthContext | null = null
@@ -83,6 +84,19 @@ export async function POST(request: NextRequest) {
       isPremium = true
     }
 
+    // Validar se estilo é premium e usuário não tem acesso
+    if (isStylePremium(rewriteStyle) && !isPremium) {
+      console.log(`API: Tentativa de usar estilo premium ${rewriteStyle} sem assinatura`, requestId)
+      return NextResponse.json(
+        {
+          error: "Acesso restrito",
+          message: "Este estilo de reescrita é exclusivo do plano Premium.",
+          details: ["Faça upgrade para um plano Premium para usar este estilo"],
+        },
+        { status: 403 },
+      )
+    }
+
     // Validate text length (skip for premium users)
     if (!isPremium) {
       const lengthError = validateTextLength(text, 5000, requestId, ip)
@@ -92,15 +106,35 @@ export async function POST(request: NextRequest) {
     console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
     console.log(`API: Rewrite style selected: ${rewriteStyle}`, requestId)
 
+    // Convert style to CAPSLOCK format for webhook API
+    // Map internal style names to API format (e.g., "formal" -> "FORMAL", "blog_post" -> "BLOG POST")
+    const styleToApiFormat: Record<string, string> = {
+      "formal": "FORMAL",
+      "humanized": "HUMANIZADO",
+      "academic": "ACADÊMICO",
+      "creative": "CRIATIVO",
+      "childlike": "COMO_UMA_CRIANCA",
+      "technical": "TÉCNICO",
+      "journalistic": "JORNALÍSTICO",
+      "advertising": "PUBLICITÁRIO",
+      "blog_post": "BLOG_POST",
+      "reels_script": "ROTEIRO_REELS",
+      "youtube_script": "ROTEIRO_YOUTUBE",
+      "presentation": "PALESTRA_APRESENTACAO",
+    }
+
+    const apiStyle = styleToApiFormat[rewriteStyle] || rewriteStyle.toUpperCase()
+
     // Call webhook (use premium webhook for premium users)
     const webhookUrl = isPremium ? PREMIUM_REWRITE_WEBHOOK_URL : REWRITE_WEBHOOK_URL
     console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} rewrite webhook`, requestId)
+    console.log(`API: Sending style in API format: ${apiStyle}`, requestId)
 
     const response = await callWebhook({
       url: webhookUrl,
       text,
       requestId,
-      additionalData: { style: rewriteStyle },
+      additionalData: { style: apiStyle },
     })
 
     if (!response.ok) {

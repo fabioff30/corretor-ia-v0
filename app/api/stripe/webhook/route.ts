@@ -13,6 +13,8 @@ import {
   handleInvoicePaymentFailed,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
+  handlePixPaymentSucceeded,
+  handlePixPaymentFailed,
 } from '@/lib/stripe/webhooks'
 import Stripe from 'stripe'
 
@@ -76,6 +78,22 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        break
+
+      case 'payment_intent.succeeded':
+        // Handle PIX payment confirmation
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        if (paymentIntent.payment_method_types.includes('pix')) {
+          await handlePixPaymentSucceeded(paymentIntent)
+        }
+        break
+
+      case 'payment_intent.payment_failed':
+        // Handle PIX payment failure
+        const failedIntent = event.data.object as Stripe.PaymentIntent
+        if (failedIntent.payment_method_types.includes('pix')) {
+          await handlePixPaymentFailed(failedIntent)
+        }
         break
 
       default:

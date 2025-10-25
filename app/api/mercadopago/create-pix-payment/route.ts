@@ -12,7 +12,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 export const maxDuration = 60
 
 interface CreatePixPaymentRequest {
-  planType: 'monthly' | 'annual'
+  planType: 'monthly' | 'annual' | 'test'
   userId?: string
   userEmail?: string
 }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const body: CreatePixPaymentRequest = await request.json()
     const { planType, userId, userEmail } = body
 
-    if (!planType || !['monthly', 'annual'].includes(planType)) {
+    if (!planType || !['monthly', 'annual', 'test'].includes(planType)) {
       return NextResponse.json(
         { error: 'Tipo de plano inválido' },
         { status: 400 }
@@ -39,10 +39,14 @@ export async function POST(request: NextRequest) {
       annual: {
         amount: 299.00,
         description: 'Plano Premium Anual - CorretorIA'
+      },
+      test: {
+        amount: 5.00,
+        description: '🧪 TESTE - Pagamento PIX R$ 5,00 - CorretorIA'
       }
     }
 
-    const plan = pricing[planType as 'monthly' | 'annual']
+    const plan = pricing[planType as 'monthly' | 'annual' | 'test']
 
     // Initialize clients
     const mpClient = getMercadoPagoClient()
