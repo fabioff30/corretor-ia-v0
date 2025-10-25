@@ -111,13 +111,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Escutar mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email)
-      
+
       setSession(session)
       setLoading(true)
 
       if (session?.user) {
         const userData = await fetchUserWithSubscription(session.user)
         setUser(userData)
+
+        // After successful login/signup, try to link any pending guest payments
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          try {
+            const response = await fetch('/api/mercadopago/link-guest-payment', {
+              method: 'POST',
+            })
+
+            if (response.ok) {
+              const data = await response.json()
+
+              if (data.linked && data.payments?.length > 0) {
+                console.log('[Auth] Guest payment(s) linked successfully:', data.payments)
+
+                // Refresh user data to get updated subscription status
+                const updatedUserData = await fetchUserWithSubscription(session.user)
+                setUser(updatedUserData)
+
+                // Optionally show a toast notification (would need to be passed from provider)
+                console.log('[Auth] Premium subscription activated from guest payment!')
+              }
+            }
+          } catch (error) {
+            console.error('[Auth] Error linking guest payment:', error)
+            // Don't block login if linking fails
+          }
+        }
       } else {
         setUser(null)
       }

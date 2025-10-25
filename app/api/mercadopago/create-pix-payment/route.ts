@@ -16,22 +16,14 @@ interface CreatePixPaymentRequest {
   planType: 'monthly' | 'annual' | 'test'
   userId?: string
   userEmail?: string
+  guestEmail?: string // Email for guest (non-logged) users
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { user } = await getCurrentUserWithProfile()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Parse request body
+    // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, userEmail } = body
+    const { planType, userId, userEmail, guestEmail } = body
 
     if (!planType || !['monthly', 'annual', 'test'].includes(planType)) {
       return NextResponse.json(
@@ -45,6 +37,31 @@ export async function POST(request: NextRequest) {
         { error: 'PIX de teste indisponível em produção' },
         { status: 403 }
       )
+    }
+
+    // Try to get authenticated user (optional)
+    const { user } = await getCurrentUserWithProfile()
+
+    // Determine if this is a guest payment
+    const isGuestPayment = !user
+
+    // Validate: must have either logged user OR guestEmail
+    if (isGuestPayment && !guestEmail) {
+      return NextResponse.json(
+        { error: 'Email é obrigatório para pagamento sem login' },
+        { status: 400 }
+      )
+    }
+
+    // Validate email format for guest payments
+    if (isGuestPayment && guestEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(guestEmail)) {
+        return NextResponse.json(
+          { error: 'Email inválido' },
+          { status: 400 }
+        )
+      }
     }
 
     // Define pricing
@@ -69,50 +86,67 @@ export async function POST(request: NextRequest) {
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
 
-    // If userId not provided, fall back to authenticated user
-    let finalUserId = userId || user.id
-    let finalUserEmail = userEmail
+    // Determine user ID and email
+    let finalUserId: string | null = null
+    let finalUserEmail: string
 
-    if (finalUserId !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      )
-    }
+    if (isGuestPayment) {
+      // Guest payment - no user ID
+      finalUserId = null
+      finalUserEmail = guestEmail!
+      console.log('[MP PIX] Creating guest payment for email:', finalUserEmail)
+    } else {
+      // Authenticated user payment
+      finalUserId = userId || user!.id
 
-    // Get user profile if email not provided
-    if (!finalUserEmail) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email, full_name')
-        .eq('id', finalUserId)
-        .single()
-
-      if (!profile?.email) {
+      // Security check: user can only create payment for themselves
+      if (finalUserId !== user!.id) {
         return NextResponse.json(
-          { error: 'Email do usuário não encontrado' },
-          { status: 404 }
+          { error: 'Forbidden' },
+          { status: 403 }
         )
       }
-      finalUserEmail = profile.email
+
+      // Get user email
+      if (userEmail) {
+        finalUserEmail = userEmail
+      } else {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', finalUserId)
+          .single()
+
+        if (!profile?.email) {
+          return NextResponse.json(
+            { error: 'Email do usuário não encontrado' },
+            { status: 404 }
+          )
+        }
+        finalUserEmail = profile.email
+      }
     }
 
     // Create PIX payment with Mercado Pago
+    // Use email as external_reference for guest payments
+    const externalReference = finalUserId || `guest_${finalUserEmail}`
+
     const payment = await mpClient.createPixPayment(
       plan.amount,
       finalUserEmail,
-      finalUserId,
+      externalReference,
       plan.description,
       30 // 30 minutes expiration
     )
 
-    console.log('[MP PIX] Payment created:', payment.id)
+    console.log('[MP PIX] Payment created:', payment.id, 'for', isGuestPayment ? 'guest' : 'user')
 
     // Save PIX payment to database
     const { error: insertError } = await supabase
       .from('pix_payments')
       .insert({
-        user_id: finalUserId,
+        user_id: finalUserId, // NULL for guest payments
+        email: isGuestPayment ? finalUserEmail : null, // Store email for guest payments
         payment_intent_id: payment.id.toString(),
         amount: plan.amount,
         plan_type: planType,

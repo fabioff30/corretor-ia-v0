@@ -155,21 +155,45 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
     // Check if it's a PIX payment
     if (payment.payment_method_id === 'pix' && payment.status === 'approved') {
       // Handle PIX payment for subscription creation
-      const userId = payment.external_reference // We set this when creating the PIX payment
+      const externalReference = payment.external_reference // Can be userId or guest_email
 
-      if (!userId) {
-        console.error('PIX payment missing user ID in external_reference')
+      if (!externalReference) {
+        console.error('PIX payment missing external_reference')
         return
       }
 
+      // Check if this is a guest payment (starts with "guest_")
+      const isGuestPayment = externalReference.startsWith('guest_')
+
       // Update PIX payment record
-      await supabase
+      const { data: pixPayment } = await supabase
         .from('pix_payments')
         .update({
           status: 'paid',
           paid_at: payment.date_approved || new Date().toISOString(),
         })
         .eq('payment_intent_id', payment.id.toString())
+        .select('user_id, email, plan_type')
+        .single()
+
+      if (!pixPayment) {
+        console.error('PIX payment record not found:', payment.id)
+        return
+      }
+
+      // If this is a guest payment, mark as paid but don't create subscription yet
+      if (isGuestPayment || !pixPayment.user_id) {
+        console.log('[MP Webhook] Guest PIX payment approved:', {
+          paymentId: payment.id,
+          email: pixPayment.email,
+          amount: payment.transaction_amount,
+        })
+        console.log('[MP Webhook] Payment marked as paid. Will be linked when user registers/logs in.')
+        return
+      }
+
+      // For authenticated user payments, proceed with subscription creation
+      const userId = pixPayment.user_id
 
       // Check if user already has an active subscription
       const { data: existingSubscription } = await supabase
@@ -184,8 +208,8 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         return
       }
 
-      // Determine plan type from amount
-      const planType = payment.transaction_amount === 299.00 ? 'annual' : 'monthly'
+      // Determine plan type from database record
+      const planType = pixPayment.plan_type as 'monthly' | 'annual' | 'test'
 
       // Create subscription record
       const { data: newSubscription, error: insertError } = await supabase

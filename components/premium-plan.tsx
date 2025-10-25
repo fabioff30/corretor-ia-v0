@@ -12,6 +12,9 @@ import { useSubscription } from "@/hooks/use-subscription"
 import { usePixPayment } from "@/hooks/use-pix-payment"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
 
 type PlanType = 'monthly' | 'annual'
@@ -20,6 +23,9 @@ export function PremiumPlan() {
   const [isLoading, setIsLoading] = useState<PlanType | null>(null)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [pixLoadingPlan, setPixLoadingPlan] = useState<PlanType | null>(null)
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+  const [guestEmail, setGuestEmail] = useState('')
+  const [pendingPlanType, setPendingPlanType] = useState<PlanType | null>(null)
   const router = useRouter()
   const { user, profile } = useUser()
   const { createSubscription, isActive, isPro } = useSubscription()
@@ -140,19 +146,8 @@ export function PremiumPlan() {
   }
 
   const handlePixPayment = async (planType: PlanType) => {
-    // Check if user is logged in
-    if (!user) {
-      toast({
-        title: "Login necessário",
-        description: "Você precisa estar logado para assinar o plano premium.",
-        variant: "destructive",
-      })
-      router.push('/login?redirect=/premium')
-      return
-    }
-
-    // Check if already subscribed
-    if (isPro || isActive) {
+    // Check if already subscribed (only if logged in)
+    if (user && (isPro || isActive)) {
       toast({
         title: "Você já é Premium!",
         description: "Você já possui uma assinatura ativa.",
@@ -161,6 +156,14 @@ export function PremiumPlan() {
       return
     }
 
+    // If not logged in, ask for email first
+    if (!user) {
+      setPendingPlanType(planType)
+      setIsEmailDialogOpen(true)
+      return
+    }
+
+    // Logged in user - create PIX payment directly
     try {
       setPixLoadingPlan(planType)
 
@@ -179,6 +182,60 @@ export function PremiumPlan() {
       })
     } finally {
       setPixLoadingPlan(null)
+    }
+  }
+
+  const handleGuestPixPayment = async () => {
+    if (!guestEmail || !pendingPlanType) {
+      toast({
+        title: "Email necessário",
+        description: "Por favor, insira seu email para continuar.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(guestEmail)) {
+      toast({
+        title: "Email inválido",
+        description: "Por favor, insira um email válido.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setPixLoadingPlan(pendingPlanType)
+      setIsEmailDialogOpen(false)
+
+      // Create guest PIX payment
+      const payment = await createPixPayment(
+        pendingPlanType,
+        undefined, // no userId
+        undefined, // no userEmail
+        guestEmail // guestEmail
+      )
+
+      if (payment) {
+        setIsPixModalOpen(true)
+        toast({
+          title: "Pagamento gerado!",
+          description: "Após o pagamento, crie sua conta com este email para ativar o premium.",
+        })
+      }
+    } catch (error) {
+      console.error('Error creating guest PIX payment:', error)
+      toast({
+        title: "Erro ao gerar PIX",
+        description: "Não foi possível gerar o pagamento PIX. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setPixLoadingPlan(null)
+      setGuestEmail('')
+      setPendingPlanType(null)
     }
   }
 
@@ -519,6 +576,66 @@ export function PremiumPlan() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Email Dialog for Guest PIX Payment */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Informe seu email para continuar</DialogTitle>
+            <DialogDescription>
+              Após o pagamento, você poderá criar sua conta com este email para ativar o plano premium.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-email">Email</Label>
+              <Input
+                id="guest-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleGuestPixPayment()
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use um email válido para receber as instruções e vincular sua conta.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEmailDialogOpen(false)
+                setGuestEmail('')
+                setPendingPlanType(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleGuestPixPayment}
+              disabled={!guestEmail || pixLoadingPlan !== null}
+            >
+              {pixLoadingPlan ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando PIX...
+                </>
+              ) : (
+                <>
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Gerar PIX
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* PIX Payment Modal */}
       <PremiumPixModal

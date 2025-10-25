@@ -21,7 +21,12 @@ interface UsePixPaymentReturn {
   isLoading: boolean
   error: string | null
   paymentData: PixPaymentData | null
-  createPixPayment: (planType: 'monthly' | 'annual', userId: string, userEmail: string) => Promise<PixPaymentData | null>
+  createPixPayment: (
+    planType: 'monthly' | 'annual',
+    userId?: string,
+    userEmail?: string,
+    guestEmail?: string
+  ) => Promise<PixPaymentData | null>
   checkPaymentStatus: (paymentId: string) => Promise<boolean>
   reset: () => void
 }
@@ -34,20 +39,30 @@ export function usePixPayment(): UsePixPaymentReturn {
 
   const createPixPayment = useCallback(async (
     planType: 'monthly' | 'annual',
-    userId: string,
-    userEmail: string
+    userId?: string,
+    userEmail?: string,
+    guestEmail?: string
   ): Promise<PixPaymentData | null> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
+      const isGuestPayment = !userId
 
-      // Track initiation without exposing PII
-      sendGTMEvent('pix_payment_initiated', {
-        plan: planType,
-        user: anonymizedUser,
-      })
+      // Track initiation
+      if (userId) {
+        const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
+        sendGTMEvent('pix_payment_initiated', {
+          plan: planType,
+          user: anonymizedUser,
+        })
+      } else {
+        // Guest payment tracking (no user ID)
+        sendGTMEvent('pix_payment_initiated', {
+          plan: planType,
+          guest: true,
+        })
+      }
 
       const response = await fetch('/api/mercadopago/create-pix-payment', {
         method: 'POST',
@@ -58,6 +73,7 @@ export function usePixPayment(): UsePixPaymentReturn {
           planType,
           userId,
           userEmail,
+          guestEmail,
         }),
       })
 
@@ -90,6 +106,7 @@ export function usePixPayment(): UsePixPaymentReturn {
         payment: anonymizedPayment,
         plan: planType,
         amount: payment.amount,
+        guest: isGuestPayment,
       })
 
       return payment
@@ -98,13 +115,20 @@ export function usePixPayment(): UsePixPaymentReturn {
       setError(message)
 
       // Track error
-      const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
-
-      sendGTMEvent('pix_payment_error', {
-        error: message,
-        plan: planType,
-        user: anonymizedUser,
-      })
+      if (userId) {
+        const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
+        sendGTMEvent('pix_payment_error', {
+          error: message,
+          plan: planType,
+          user: anonymizedUser,
+        })
+      } else {
+        sendGTMEvent('pix_payment_error', {
+          error: message,
+          plan: planType,
+          guest: true,
+        })
+      }
 
       toast({
         variant: 'destructive',
