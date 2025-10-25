@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react'
 import { useToast } from './use-toast'
 import { sendGTMEvent } from '@/utils/gtm-helper'
+import { obfuscateIdentifier } from '@/utils/analytics'
 
 interface PixPaymentData {
   paymentId: string
@@ -40,11 +41,12 @@ export function usePixPayment(): UsePixPaymentReturn {
     setError(null)
 
     try {
-      // Track initiation
+      const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
+
+      // Track initiation without exposing PII
       sendGTMEvent('pix_payment_initiated', {
         plan: planType,
-        user_id: userId,
-        email: userEmail,
+        user: anonymizedUser,
       })
 
       const response = await fetch('/api/mercadopago/create-pix-payment', {
@@ -81,9 +83,11 @@ export function usePixPayment(): UsePixPaymentReturn {
 
       setPaymentData(payment)
 
-      // Track success
+      const anonymizedPayment = await obfuscateIdentifier(payment.paymentId, 'pid')
+
+      // Track success with anonymised identifiers
       sendGTMEvent('pix_payment_created', {
-        payment_id: payment.paymentId,
+        payment: anonymizedPayment,
         plan: planType,
         amount: payment.amount,
       })
@@ -94,9 +98,12 @@ export function usePixPayment(): UsePixPaymentReturn {
       setError(message)
 
       // Track error
+      const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
+
       sendGTMEvent('pix_payment_error', {
         error: message,
         plan: planType,
+        user: anonymizedUser,
       })
 
       toast({

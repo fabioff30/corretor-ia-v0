@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 
 export const maxDuration = 60
 
@@ -19,6 +20,15 @@ interface CreatePixPaymentRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await getCurrentUserWithProfile()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Parse request body
     const body: CreatePixPaymentRequest = await request.json()
     const { planType, userId, userEmail } = body
@@ -27,6 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Tipo de plano inválido' },
         { status: 400 }
+      )
+    }
+
+    if (planType === 'test' && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'PIX de teste indisponível em produção' },
+        { status: 403 }
       )
     }
 
@@ -52,16 +69,14 @@ export async function POST(request: NextRequest) {
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
 
-    // If userId not provided, get from auth header or cookie
-    let finalUserId = userId
+    // If userId not provided, fall back to authenticated user
+    let finalUserId = userId || user.id
     let finalUserEmail = userEmail
 
-    if (!finalUserId) {
-      // You might want to add authentication check here
-      // For now, userId must be provided
+    if (finalUserId !== user.id) {
       return NextResponse.json(
-        { error: 'userId é obrigatório' },
-        { status: 400 }
+        { error: 'Forbidden' },
+        { status: 403 }
       )
     }
 
@@ -138,6 +153,15 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const { user } = await getCurrentUserWithProfile()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const url = new URL(request.url)
     const paymentId = url.searchParams.get('paymentId')
 
@@ -145,6 +169,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Payment ID is required' },
         { status: 400 }
+      )
+    }
+
+    const supabase = createServiceRoleClient()
+    const { data: paymentRecord, error: paymentLookupError } = await supabase
+      .from('pix_payments')
+      .select('user_id')
+      .eq('payment_intent_id', paymentId)
+      .maybeSingle()
+
+    if (paymentLookupError) {
+      console.error('[MP PIX] Error fetching payment record:', paymentLookupError)
+      return NextResponse.json(
+        { error: 'Erro ao verificar status do pagamento' },
+        { status: 500 }
+      )
+    }
+
+    if (!paymentRecord) {
+      return NextResponse.json(
+        { error: 'Pagamento não encontrado' },
+        { status: 404 }
+      )
+    }
+
+    if (paymentRecord.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
       )
     }
 

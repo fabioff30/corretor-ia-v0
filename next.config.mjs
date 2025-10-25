@@ -20,6 +20,15 @@ const nextConfig = {
     return config
   },
   swcMinify: false,
+  async redirects() {
+    return [
+      {
+        source: '/apoiar',
+        destination: '/premium',
+        permanent: true, // 301 redirect
+      },
+    ]
+  },
   async headers() {
     return [
       {

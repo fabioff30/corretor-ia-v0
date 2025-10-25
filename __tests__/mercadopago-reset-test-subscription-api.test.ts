@@ -18,6 +18,8 @@ const { createServiceRoleClient } = require("@/lib/supabase/server") as {
 }
 
 const originalNodeEnv = process.env.NODE_ENV
+const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
+const originalAllowReset = process.env.ALLOW_TEST_SUBSCRIPTION_RESET
 
 function setAdminUser() {
   getCurrentUserWithProfile.mockResolvedValue({
@@ -114,21 +116,46 @@ describe("Mercado Pago reset test subscription API", () => {
   beforeEach(() => {
     jest.resetAllMocks()
     process.env.NODE_ENV = "test"
+    process.env.NEXT_PUBLIC_APP_URL = "https://stage.corretordetextoonline.com.br"
+    delete process.env.ALLOW_TEST_SUBSCRIPTION_RESET
   })
 
   afterAll(() => {
     process.env.NODE_ENV = originalNodeEnv
+    if (typeof originalAppUrl === "string") {
+      process.env.NEXT_PUBLIC_APP_URL = originalAppUrl
+    } else {
+      delete process.env.NEXT_PUBLIC_APP_URL
+    }
+    if (typeof originalAllowReset === "string") {
+      process.env.ALLOW_TEST_SUBSCRIPTION_RESET = originalAllowReset
+    } else {
+      delete process.env.ALLOW_TEST_SUBSCRIPTION_RESET
+    }
   })
 
   it("returns 403 in production", async () => {
     process.env.NODE_ENV = "production"
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.corretordetextoonline.com.br"
     setAdminUser()
     mockSupabaseForGet()
 
-    const request = new NextRequest("https://example.com/api/mercadopago/reset-test-subscription?userId=123")
+    const request = new NextRequest("https://www.corretordetextoonline.com.br/api/mercadopago/reset-test-subscription?userId=123")
     const response = await GET(request)
 
     expect(response.status).toBe(403)
+  })
+
+  it("allows staging host in production", async () => {
+    process.env.NODE_ENV = "production"
+    process.env.NEXT_PUBLIC_APP_URL = "https://stage.corretordetextoonline.com.br"
+    setAdminUser()
+    mockSupabaseForGet()
+
+    const request = new NextRequest("https://stage.corretordetextoonline.com.br/api/mercadopago/reset-test-subscription?userId=123")
+    const response = await GET(request)
+
+    expect(response.status).toBe(200)
   })
 
   it("rejects unauthorized users", async () => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
+import { obfuscateIdentifier } from "@/utils/analytics"
 
 interface PixPaymentData {
   paymentId: string
@@ -52,6 +53,21 @@ export function PremiumPixModal({
   const [timeLeft, setTimeLeft] = useState<number>(1800) // 30 minutes in seconds
   const { toast } = useToast()
   const router = useRouter()
+  const statusRef = useRef(status)
+  const redirectTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        window.clearTimeout(redirectTimeoutRef.current)
+        redirectTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   // Timer countdown
   useEffect(() => {
@@ -72,20 +88,46 @@ export function PremiumPixModal({
 
   // Check payment status
   useEffect(() => {
-    if (!isOpen || !paymentData || status === 'success' || status === 'error') return
+    if (!isOpen || !paymentData) {
+      return
+    }
+
+    if (statusRef.current === 'success' || statusRef.current === 'error') {
+      return
+    }
+
+    let isCancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
 
     const checkPayment = async () => {
+      if (isCancelled || !paymentData || statusRef.current === 'success' || statusRef.current === 'error') {
+        return
+      }
+
+      setStatus(current => (current === 'checking' ? current : 'checking'))
+
       try {
-        setStatus('checking')
         const response = await fetch(
           `/api/mercadopago/create-pix-payment?paymentId=${paymentData.paymentId}`
         )
+
+        if (!response.ok) {
+          throw new Error('Failed to check payment status')
+        }
+
         const data = await response.json()
 
+        if (isCancelled) {
+          return
+        }
+
         if (data.status === 'approved') {
+          const anonymizedPayment = await obfuscateIdentifier(paymentData.paymentId, 'pid')
+
           setStatus('success')
+
           sendGTMEvent('pix_payment_confirmed', {
-            payment_id: paymentData.paymentId,
+            payment: anonymizedPayment,
             plan: paymentData.planType,
             value: paymentData.amount,
           })
@@ -95,36 +137,67 @@ export function PremiumPixModal({
             description: "Seu plano Premium foi ativado com sucesso.",
           })
 
-          setTimeout(() => {
+          if (redirectTimeoutRef.current) {
+            window.clearTimeout(redirectTimeoutRef.current)
+          }
+
+          redirectTimeoutRef.current = window.setTimeout(() => {
             onSuccess?.()
             router.push('/dashboard/subscription')
           }, 2000)
+
+          if (intervalId) {
+            clearInterval(intervalId)
+          }
         } else {
           setStatus('waiting')
         }
       } catch (error) {
         console.error('Error checking payment:', error)
-        setStatus('waiting')
+        if (!isCancelled) {
+          setStatus('waiting')
+        }
       }
     }
 
-    // Check every 5 seconds
-    const interval = setInterval(checkPayment, 5000)
+    void checkPayment()
+    intervalId = setInterval(() => {
+      void checkPayment()
+    }, 5000)
 
-    // Initial check
-    checkPayment()
-
-    return () => clearInterval(interval)
-  }, [isOpen, paymentData, status, router, toast, onSuccess])
+    return () => {
+      isCancelled = true
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
+    }
+  }, [isOpen, paymentData, router, toast, onSuccess])
 
   // Track when QR is displayed
   useEffect(() => {
-    if (isOpen && paymentData) {
+    if (!isOpen || !paymentData) {
+      return
+    }
+
+    let isMounted = true
+
+    const trackDisplay = async () => {
+      const anonymizedPayment = await obfuscateIdentifier(paymentData.paymentId, 'pid')
+      if (!isMounted) {
+        return
+      }
+
       sendGTMEvent('pix_qr_displayed', {
-        payment_id: paymentData.paymentId,
+        payment: anonymizedPayment,
         plan: paymentData.planType,
         value: paymentData.amount,
       })
+    }
+
+    void trackDisplay()
+
+    return () => {
+      isMounted = false
     }
   }, [isOpen, paymentData])
 
@@ -139,10 +212,15 @@ export function PremiumPixModal({
       return // Don't allow closing on success
     }
 
-    sendGTMEvent('pix_payment_canceled', {
-      payment_id: paymentData?.paymentId,
-      plan: paymentData?.planType,
-    })
+    const logCancellation = async () => {
+      const anonymizedPayment = await obfuscateIdentifier(paymentData?.paymentId, 'pid')
+      sendGTMEvent('pix_payment_canceled', {
+        payment: anonymizedPayment,
+        plan: paymentData?.planType,
+      })
+    }
+
+    void logCancellation()
 
     onClose()
   }

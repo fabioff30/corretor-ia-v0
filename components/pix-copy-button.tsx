@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Copy, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { obfuscateIdentifier } from "@/utils/analytics"
 
 interface PixCopyButtonProps {
   pixKey: string
@@ -20,11 +21,13 @@ export function PixCopyButton({ pixKey, label = "Chave PIX copiada!" }: PixCopyB
       await navigator.clipboard.writeText(pixKey)
       setCopied(true)
 
-      // Send Google Analytics event
+      const anonymizedKey = await obfuscateIdentifier(pixKey, 'pix')
+
+      // Send Google Analytics event without exposing the raw PIX key
       sendGTMEvent('pix_key_copied', {
-        pix_key: pixKey,
+        key: anonymizedKey,
+        length: pixKey.length,
         page: window.location.pathname,
-        timestamp: new Date().toISOString(),
       })
 
       toast({

@@ -12,12 +12,53 @@ import { getCurrentUserWithProfile } from "@/utils/auth-helpers"
 
 export const maxDuration = 60
 
-function isProductionEnvironment() {
-  return process.env.NODE_ENV === "production"
+const NON_PRODUCTION_HOST_PATTERNS = ["stage.", "localhost", "127.0.0.1", ".vercel.app"]
+
+function shouldBypassProductionGuard(target?: string | null) {
+  const normalized = target?.toLowerCase() ?? ""
+  if (!normalized) {
+    return false
+  }
+  return NON_PRODUCTION_HOST_PATTERNS.some(pattern => normalized.includes(pattern))
 }
 
-async function verifyAdminAccess() {
-  if (isProductionEnvironment()) {
+function isProductionEnvironment(hostname?: string | null) {
+  if (process.env.ALLOW_TEST_SUBSCRIPTION_RESET === "true") {
+    return false
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return false
+  }
+
+  if (shouldBypassProductionGuard(hostname)) {
+    return false
+  }
+
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (configuredAppUrl) {
+    try {
+      const url = new URL(configuredAppUrl)
+      if (shouldBypassProductionGuard(url.hostname)) {
+        return false
+      }
+    } catch {
+      if (shouldBypassProductionGuard(configuredAppUrl)) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+async function verifyAdminAccess(request: NextRequest) {
+  const hostname =
+    request?.nextUrl?.hostname ||
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host")
+
+  if (isProductionEnvironment(hostname)) {
     return NextResponse.json(
       { error: "Endpoint desabilitado em produção" },
       { status: 403 }
@@ -38,7 +79,7 @@ async function verifyAdminAccess() {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const accessError = await verifyAdminAccess()
+    const accessError = await verifyAdminAccess(request)
     if (accessError) {
       return accessError
     }
@@ -124,7 +165,7 @@ export async function DELETE(request: NextRequest) {
 // GET to check current subscriptions
 export async function GET(request: NextRequest) {
   try {
-    const accessError = await verifyAdminAccess()
+    const accessError = await verifyAdminAccess(request)
     if (accessError) {
       return accessError
     }

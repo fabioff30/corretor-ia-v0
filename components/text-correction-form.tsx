@@ -1185,8 +1185,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
             )}
             {!isPremium ? (
               <Button
-                variant="outline"
-                className="w-full sm:w-auto order-2 sm:order-2 border-primary/40 text-primary hover:bg-primary/10"
+                className="w-full sm:w-auto order-2 sm:order-2 bg-green-600 text-white hover:bg-green-700 border-0"
                 asChild
               >
                 <Link
