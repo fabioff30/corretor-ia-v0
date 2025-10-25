@@ -41,6 +41,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // Importar o utilitário do Meta Pixel
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 
+// Importar componentes de reescrita
+import { RewriteStyleSelector } from "@/components/rewrite/rewrite-style-selector"
+import { PremiumRewriteUpsellModal } from "@/components/rewrite/premium-rewrite-upsell-modal"
+import {
+  RewriteStyleInternal,
+  STYLE_DISPLAY_TO_INTERNAL,
+  STYLE_INTERNAL_TO_DISPLAY,
+  convertToApiFormat,
+  getRewriteStyle,
+} from "@/utils/rewrite-styles"
+
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
@@ -52,10 +63,11 @@ interface TextCorrectionFormProps {
 // Tipos para os modos de operação
 type OperationMode = "correct" | "rewrite"
 
-// Atualizar o tipo RewriteStyle para substituir "informal" por "humanized"
+// Tipos de estilo (mantém retrocompatibilidade com código antigo)
 type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
+const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {
@@ -106,6 +118,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
   const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>("formal")
+  const [selectedRewriteStyleInternal, setSelectedRewriteStyleInternal] = useState<RewriteStyleInternal>("formal")
+  const [showPremiumUpsellModal, setShowPremiumUpsellModal] = useState(false)
+  const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
   const correctionsDailyLimit = limits?.corrections_per_day ?? 5
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
@@ -158,6 +173,25 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
 
     // Limpar listener
     return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Carregar último estilo de reescrita do localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    try {
+      const saved = window.localStorage.getItem(LAST_REWRITE_STYLE_KEY)
+      if (saved && (["formal", "humanized", "academic", "creative", "childlike", "technical", "journalistic", "advertising", "blog_post", "reels_script", "youtube_script", "presentation"] as RewriteStyleInternal[]).includes(saved as RewriteStyleInternal)) {
+        const style = saved as RewriteStyleInternal
+        setSelectedRewriteStyleInternal(style)
+        // Para retrocompatibilidade, também atualiza o antigo estado se for um dos 5 estilos free
+        if (["formal", "humanized", "academic", "creative", "childlike"].includes(style)) {
+          setSelectedRewriteStyle(style as RewriteStyle)
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível carregar o último estilo de reescrita:", error)
+    }
   }, [])
 
   // Limpar o timer quando o componente for desmontado
@@ -216,10 +250,53 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     console.log(`Tom selecionado: ${tone}`)
   }
 
-  // Função para lidar com a mudança de estilo de reescrita
-  const handleRewriteStyleChange = (style: RewriteStyle) => {
-    setSelectedRewriteStyle(style)
+  // Função para lidar com a mudança de estilo de reescrita (novo sistema com validação premium)
+  const handleRewriteStyleChange = (style: RewriteStyleInternal) => {
+    // Persistir no localStorage
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(LAST_REWRITE_STYLE_KEY, style)
+      } catch (error) {
+        console.warn("Não foi possível salvar o estilo de reescrita:", error)
+      }
+    }
+
+    setSelectedRewriteStyleInternal(style)
+
+    // Para retrocompatibilidade, também atualiza o antigo estado se for um dos 5 estilos free
+    if (["formal", "humanized", "academic", "creative", "childlike"].includes(style)) {
+      setSelectedRewriteStyle(style as RewriteStyle)
+    }
+
+    // Emitir evento GTM
+    sendGTMEvent("rewrite_model_selected", {
+      model_id: style,
+      tier: ["formal", "humanized", "academic", "creative", "childlike"].includes(style) ? "free" : "premium",
+    })
+
+    // Emitir evento Meta Pixel
+    trackPixelCustomEvent("RewriteModelSelected", {
+      modelId: style,
+      tier: ["formal", "humanized", "academic", "creative", "childlike"].includes(style) ? "free" : "premium",
+    })
+
     console.log(`Estilo de reescrita selecionado: ${style}`)
+  }
+
+  // Função para lidar quando usuário free tenta selecionar estilo premium
+  const handlePremiumStyleLocked = (style: RewriteStyleInternal) => {
+    setPendingPremiumStyle(style)
+    setShowPremiumUpsellModal(true)
+
+    // Emitir evento GTM
+    sendGTMEvent("rewrite_model_locked_premium", {
+      model_id: style,
+    })
+
+    // Emitir evento Meta Pixel
+    trackPixelCustomEvent("PremiumRewriteLocked", {
+      modelId: style,
+    })
   }
 
   // Modificar a função sanitizeText para preservar acentuação
@@ -332,6 +409,34 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         sendGTMEvent("free_correction_limit_reached", {
           limit: correctionsDailyLimit,
           usage: usage.count,
+        })
+        return
+      }
+    }
+
+    // Verificar se usuário free está tentando usar estilo premium para reescrita
+    if (!isPremium && operationMode === "rewrite") {
+      const styleDef = getRewriteStyle(selectedRewriteStyleInternal)
+      if (styleDef?.tier === "premium") {
+        setShowPremiumUpsellModal(true)
+        toast({
+          title: "Estilo Premium",
+          description: "Este estilo de reescrita é exclusivo para assinantes Premium.",
+          variant: "destructive",
+          action: (
+            <Link
+              href="/pricing"
+              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+              onClick={() => sendGTMEvent("premium_cta_click", { location: "premium_style_toast" })}
+            >
+              Assinar Premium
+            </Link>
+          ),
+        })
+
+        sendGTMEvent("premium_style_blocked", {
+          style: selectedRewriteStyleInternal,
+          location: "rewrite_form",
         })
         return
       }
@@ -762,33 +867,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     // ou armazená-la de alguma forma
   }
 
-  // Atualizar a função renderRewriteStyleSelector para substituir o estilo "informal" por "humanizado"
+  // Renderizar o novo seletor de estilos de reescrita
   const renderRewriteStyleSelector = () => {
-    const styles = [
-      { value: "formal", label: "Formal", description: "Linguagem séria e profissional" },
-      { value: "humanized", label: "Humanizado", description: "Tom natural e conversacional" },
-      { value: "academic", label: "Acadêmico", description: "Estilo técnico e científico" },
-      { value: "creative", label: "Criativo", description: "Linguagem expressiva e original" },
-      { value: "childlike", label: "Como uma Criança", description: "Linguagem simples e inocente" },
-    ]
-
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
-        {styles.map((style) => (
-          <div
-            key={style.value}
-            className={`p-3 border rounded-lg cursor-pointer transition-all ${
-              selectedRewriteStyle === style.value
-                ? "border-primary bg-primary/10 shadow-sm"
-                : "border-muted hover:border-primary/50 hover:bg-muted/50"
-            }`}
-            onClick={() => handleRewriteStyleChange(style.value as RewriteStyle)}
-          >
-            <div className="font-medium text-sm">{style.label}</div>
-            <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
-          </div>
-        ))}
-      </div>
+      <RewriteStyleSelector
+        value={selectedRewriteStyleInternal}
+        onChange={handleRewriteStyleChange}
+        isPremium={isPremium}
+        onPremiumLocked={handlePremiumStyleLocked}
+      />
     )
   }
 
@@ -867,9 +954,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   }
 
   return (
-    <Card className="w-full shadow-sm">
-      <CardContent className="p-4 sm:p-6">
-        {error && (
+    <>
+      <Card className="w-full shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          {error && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive/30">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Erro no serviço</AlertTitle>
@@ -899,10 +987,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 <p className="text-foreground/80">
                   Correções ilimitadas liberadas. Precisa de ajuda? Escreva para{" "}
                   <a
-                    href="mailto:suporte@corretordetextoonline.com.br"
+                    href="mailto:contato@corretordetextoonline.com.br"
                     className="font-medium text-primary underline-offset-2 hover:underline"
                   >
-                    suporte@corretordetextoonline.com.br
+                    contato@corretordetextoonline.com.br
                   </a>{" "}
                   e nosso time responde em até <strong>24 horas úteis</strong>.
                 </p>
@@ -1121,7 +1209,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 asChild
               >
                 <a
-                  href="mailto:suporte@corretordetextoonline.com.br"
+                  href="mailto:contato@corretordetextoonline.com.br"
                   className="inline-flex items-center"
                   onClick={() =>
                     sendGTMEvent("premium_support_click", {
@@ -1324,7 +1412,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                   asChild
                 >
                   <a
-                    href="mailto:suporte@corretordetextoonline.com.br"
+                    href="mailto:contato@corretordetextoonline.com.br"
                     onClick={() =>
                       sendGTMEvent("premium_support_click", {
                         location: "rating_section",
@@ -1341,5 +1429,13 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         )}
       </CardContent>
     </Card>
+
+    {/* Modal de Upsell para Estilo Premium */}
+    <PremiumRewriteUpsellModal
+      open={showPremiumUpsellModal}
+      onOpenChange={setShowPremiumUpsellModal}
+      selectedStyle={pendingPremiumStyle}
+    />
+  </>
   )
 }

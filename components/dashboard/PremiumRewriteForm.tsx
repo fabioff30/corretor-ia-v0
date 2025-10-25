@@ -39,20 +39,18 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { sanitizeUserInput } from "@/utils/html-sanitizer"
 import { RetryButton } from "@/components/ui/retry-button"
+import { RewriteStyleSelector } from "@/components/rewrite/rewrite-style-selector"
+import { RewriteStyleInternal, convertToApiFormat } from "@/utils/rewrite-styles"
 
 interface PremiumRewriteFormProps {
   onTextRewritten?: () => void
 }
 
+// Tipo para retrocompatibilidade
 type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
 
-const rewriteStyles: { value: RewriteStyle; label: string; description: string }[] = [
-  { value: "formal", label: "Formal", description: "Tom profissional e sério" },
-  { value: "humanized", label: "Humanizado", description: "Natural e conversacional" },
-  { value: "academic", label: "Acadêmico", description: "Estilo técnico e científico" },
-  { value: "creative", label: "Criativo", description: "Expressivo e inovador" },
-  { value: "childlike", label: "Infantil", description: "Simples e lúdico" },
-]
+// Constante para persistência
+const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style-premium"
 
 export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFormProps) {
   const [originalText, setOriginalText] = useState("")
@@ -72,7 +70,21 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const [selectedStyle, setSelectedStyle] = useState<RewriteStyle>("humanized")
+  const [selectedStyle, setSelectedStyle] = useState<RewriteStyleInternal>("humanized")
+
+  // Carregar último estilo selecionado do localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    try {
+      const saved = window.localStorage.getItem(LAST_REWRITE_STYLE_KEY)
+      if (saved && (["formal", "humanized", "academic", "creative", "childlike", "technical", "journalistic", "advertising", "blog_post", "reels_script", "youtube_script", "presentation"] as RewriteStyleInternal[]).includes(saved as RewriteStyleInternal)) {
+        setSelectedStyle(saved as RewriteStyleInternal)
+      }
+    } catch (error) {
+      console.warn("Não foi possível carregar o último estilo de reescrita:", error)
+    }
+  }, [])
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -213,6 +225,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         style: selectedStyle,
       })
 
+      // Converter estilo para formato CAPSLOCK para API
+      const apiStyle = convertToApiFormat(selectedStyle)
+
       const response = await fetch("/api/rewrite", {
         method: "POST",
         headers: {
@@ -221,7 +236,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         body: JSON.stringify({
           text: textToSend,
           isMobile,
-          style: selectedStyle,
+          style: apiStyle,
           isPremium: true, // Flag para indicar usuário premium
         }),
         signal: controller.signal,
@@ -355,33 +370,24 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
           />
         </div>
 
-        {/* Style Selector */}
+        {/* Style Selector - Novo sistema com 12 estilos */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Estilo de Reescrita</Label>
-          <RadioGroup
+          <Label className="text-sm font-medium">Estilo de Reescrita Premium</Label>
+          <RewriteStyleSelector
             value={selectedStyle}
-            onValueChange={(value) => setSelectedStyle(value as RewriteStyle)}
-            className="grid grid-cols-2 md:grid-cols-5 gap-3"
-          >
-            {rewriteStyles.map((style) => (
-              <div key={style.value} className="relative">
-                <RadioGroupItem
-                  value={style.value}
-                  id={style.value}
-                  className="peer sr-only"
-                />
-                <Label
-                  htmlFor={style.value}
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                >
-                  <span className="text-sm font-medium">{style.label}</span>
-                  <span className="text-xs text-muted-foreground text-center mt-1">
-                    {style.description}
-                  </span>
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+            onChange={(style) => {
+              setSelectedStyle(style)
+              // Persistir no localStorage
+              if (typeof window !== "undefined") {
+                try {
+                  window.localStorage.setItem(LAST_REWRITE_STYLE_KEY, style)
+                } catch (error) {
+                  console.warn("Não foi possível salvar o estilo:", error)
+                }
+              }
+            }}
+            isPremium={true}
+          />
         </div>
 
         <div className="flex gap-2">

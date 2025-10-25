@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
 
             {!success && (
               <p className="text-xs text-center text-muted-foreground">
-                Caso não lembre o email cadastrado, fale com nosso suporte em suporte@corretordetextoonline.com.br.
+                Caso não lembre o email cadastrado, fale com nosso suporte em contato@corretordetextoonline.com.br.
               </p>
             )}
           </CardContent>

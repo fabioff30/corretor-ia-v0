@@ -70,12 +70,21 @@ export interface MPPaymentDetails {
   currency_id: string
   date_created: string
   date_approved: string | null
+  date_of_expiration?: string
   payer: {
     id: string
     email: string
   }
   payment_method_id: string
   payment_type_id: string
+  external_reference?: string
+  point_of_interaction?: {
+    transaction_data?: {
+      qr_code?: string
+      qr_code_base64?: string
+      ticket_url?: string
+    }
+  }
 }
 
 /**
@@ -281,6 +290,86 @@ export class MercadoPagoClient {
       return data.results || []
     } catch (error) {
       console.error('Error searching payments:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Create a PIX payment
+   */
+  async createPixPayment(
+    amount: number,
+    userEmail: string,
+    userId: string,
+    description: string,
+    expirationMinutes: number = 30
+  ): Promise<any> {
+    try {
+      // Calculate expiration date
+      const expirationDate = new Date()
+      expirationDate.setMinutes(expirationDate.getMinutes() + expirationMinutes)
+
+      const paymentData = {
+        transaction_amount: amount,
+        description,
+        payment_method_id: 'pix',
+        payer: {
+          email: userEmail,
+          identification: {
+            type: 'CPF',
+            number: '00000000000' // This will be provided by the user in production
+          }
+        },
+        external_reference: userId,
+        date_of_expiration: expirationDate.toISOString(),
+        notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/mercadopago/webhook`
+      }
+
+      const response = await fetch(`${this.baseUrl}/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`,
+          'X-Idempotency-Key': `pix_${userId}_${Date.now()}`
+        },
+        body: JSON.stringify(paymentData)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        console.error('MP PIX API Error:', error)
+        throw new Error(
+          `Failed to create PIX payment: ${error.message || response.statusText}`
+        )
+      }
+
+      const payment = await response.json()
+      return payment
+    } catch (error) {
+      console.error('Error creating PIX payment:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get PIX payment status
+   */
+  async getPixPaymentStatus(paymentId: string): Promise<any> {
+    try {
+      const payment = await this.getPayment(paymentId)
+      return {
+        id: payment.id,
+        status: payment.status,
+        status_detail: payment.status_detail,
+        amount: payment.transaction_amount,
+        pix_code: payment.point_of_interaction?.transaction_data?.qr_code,
+        qr_code_base64: payment.point_of_interaction?.transaction_data?.qr_code_base64,
+        date_created: payment.date_created,
+        date_approved: payment.date_approved,
+        date_of_expiration: payment.date_of_expiration
+      }
+    } catch (error) {
+      console.error('Error getting PIX payment status:', error)
       throw error
     }
   }

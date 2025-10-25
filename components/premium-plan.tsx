@@ -2,23 +2,28 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug } from "lucide-react"
+import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug, QrCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { useSubscription } from "@/hooks/use-subscription"
+import { usePixPayment } from "@/hooks/use-pix-payment"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PremiumPixModal } from "@/components/premium-pix-modal"
 
 type PlanType = 'monthly' | 'annual'
 
 export function PremiumPlan() {
   const [isLoading, setIsLoading] = useState<PlanType | null>(null)
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false)
+  const [pixLoadingPlan, setPixLoadingPlan] = useState<PlanType | null>(null)
   const router = useRouter()
   const { user, profile } = useUser()
   const { createSubscription, isActive, isPro } = useSubscription()
+  const { createPixPayment, paymentData, reset: resetPixPayment } = usePixPayment()
   const { toast } = useToast()
 
   const features = [
@@ -134,6 +139,60 @@ export function PremiumPlan() {
     }
   }
 
+  const handlePixPayment = async (planType: PlanType) => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Você precisa estar logado para assinar o plano premium.",
+        variant: "destructive",
+      })
+      router.push('/login?redirect=/premium')
+      return
+    }
+
+    // Check if already subscribed
+    if (isPro || isActive) {
+      toast({
+        title: "Você já é Premium!",
+        description: "Você já possui uma assinatura ativa.",
+      })
+      router.push('/dashboard/subscription')
+      return
+    }
+
+    try {
+      setPixLoadingPlan(planType)
+
+      // Create PIX payment
+      const payment = await createPixPayment(planType, user.id, user.email!)
+
+      if (payment) {
+        setIsPixModalOpen(true)
+      }
+    } catch (error) {
+      console.error('Error creating PIX payment:', error)
+      toast({
+        title: "Erro ao gerar PIX",
+        description: "Não foi possível gerar o pagamento PIX. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setPixLoadingPlan(null)
+    }
+  }
+
+  const handlePixSuccess = () => {
+    setIsPixModalOpen(false)
+    resetPixPayment()
+    // The modal already redirects on success
+  }
+
+  const handlePixModalClose = () => {
+    setIsPixModalOpen(false)
+    resetPixPayment()
+  }
+
   return (
     <div className="py-12">
       <div className="text-center mb-10">
@@ -206,24 +265,45 @@ export function PremiumPlan() {
                 </div>
               ) : (
                 <>
-                  <Button
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-                    onClick={() => handleSubscribe('monthly')}
-                    disabled={isLoading !== null}
-                  >
-                    {isLoading === 'monthly' ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-2 h-5 w-5" />
-                        Assinar Mensal
-                      </>
-                    )}
-                  </Button>
+                  <div className="w-full space-y-2">
+                    <Button
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                      onClick={() => handleSubscribe('monthly')}
+                      disabled={isLoading !== null || pixLoadingPlan !== null}
+                    >
+                      {isLoading === 'monthly' ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="mr-2 h-5 w-5" />
+                          Pagar com Cartão
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                      onClick={() => handlePixPayment('monthly')}
+                      disabled={isLoading !== null || pixLoadingPlan !== null}
+                    >
+                      {pixLoadingPlan === 'monthly' ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Gerando PIX...
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="mr-2 h-5 w-5" />
+                          Pagar com PIX
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <p className="text-xs text-center text-muted-foreground">
                     Cancele a qualquer momento
                   </p>
@@ -299,24 +379,45 @@ export function PremiumPlan() {
                 </div>
               ) : (
                 <>
-                  <Button
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
-                    onClick={() => handleSubscribe('annual')}
-                    disabled={isLoading !== null}
-                  >
-                    {isLoading === 'annual' ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        <Calendar className="mr-2 h-5 w-5" />
-                        Assinar Anual
-                      </>
-                    )}
-                  </Button>
+                  <div className="w-full space-y-2">
+                    <Button
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
+                      onClick={() => handleSubscribe('annual')}
+                      disabled={isLoading !== null || pixLoadingPlan !== null}
+                    >
+                      {isLoading === 'annual' ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="mr-2 h-5 w-5" />
+                          Pagar com Cartão
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                      onClick={() => handlePixPayment('annual')}
+                      disabled={isLoading !== null || pixLoadingPlan !== null}
+                    >
+                      {pixLoadingPlan === 'annual' ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Gerando PIX...
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="mr-2 h-5 w-5" />
+                          Pagar com PIX
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <p className="text-xs text-center text-muted-foreground">
                     Pague 1x no ano e economize
                   </p>
@@ -391,10 +492,10 @@ export function PremiumPlan() {
                   <p>
                     Precisa de ajuda? Escreva para{" "}
                     <a
-                      href="mailto:suporte@corretordetextoonline.com.br"
+                      href="mailto:contato@corretordetextoonline.com.br"
                       className="font-medium text-primary underline-offset-2 hover:underline"
                     >
-                      suporte@corretordetextoonline.com.br
+                      contato@corretordetextoonline.com.br
                     </a>{" "}
                     e nossa equipe responde em até <strong>24 horas úteis</strong>.
                   </p>
@@ -418,6 +519,14 @@ export function PremiumPlan() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* PIX Payment Modal */}
+      <PremiumPixModal
+        isOpen={isPixModalOpen}
+        onClose={handlePixModalClose}
+        paymentData={paymentData}
+        onSuccess={handlePixSuccess}
+      />
     </div>
   )
 }

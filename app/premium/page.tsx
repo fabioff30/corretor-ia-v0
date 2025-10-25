@@ -84,7 +84,7 @@ export default function PremiumPage() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <a href="mailto:suporte@corretordetextoonline.com.br">Enviar email para o suporte</a>
+                <a href="mailto:contato@corretordetextoonline.com.br">Enviar email para o suporte</a>
               </Button>
             </div>
           </section>

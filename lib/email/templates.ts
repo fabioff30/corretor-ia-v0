@@ -41,7 +41,7 @@ export function premiumUpgradeEmailTemplate({ name }: TemplateContext) {
       <li>Prioridade no processamento das suas solicitações</li>
     </ul>
     <p>Acesse agora mesmo o painel premium e aproveite todos os recursos: <a href="${appBaseUrl}/dashboard">abrir dashboard</a>.</p>
-    <p>Precisando de ajuda? Responda este email ou fale com a gente em suporte@corretordetextoonline.com.br.</p>
+    <p>Precisando de ajuda? Responda este email ou fale com a gente em contato@corretordetextoonline.com.br.</p>
   `
   const textContent = `Parabéns, ${displayName}!
 
@@ -52,7 +52,7 @@ Sua assinatura CorretorIA Premium está ativa e pronta para uso.
 
 Acesse o painel: ${appBaseUrl}/dashboard
 
-Se precisar de ajuda, responda este email ou fale com suporte@corretordetextoonline.com.br.`
+Se precisar de ajuda, responda este email ou fale com contato@corretordetextoonline.com.br.`
 
   return { subject, htmlContent, textContent }
 }

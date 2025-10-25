@@ -4,75 +4,119 @@ import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Briefcase,
-  Heart,
-  GraduationCap,
-  Palette,
-  Baby,
   Sparkles,
   Target,
-  Clock
+  Clock,
+  Crown,
+  ArrowRight,
 } from "lucide-react"
-
-const rewriteStyles = [
-  {
-    name: "Formal",
-    icon: Briefcase,
-    description: "Ideal para documentos profissionais e comunicações corporativas",
-    color: "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800",
-    iconColor: "text-blue-600 dark:text-blue-400",
-    badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-    examples: ["E-mails corporativos", "Relatórios", "Propostas comerciais"],
-    benefits: ["Tom respeitoso", "Linguagem técnica", "Estrutura clara"]
-  },
-  {
-    name: "Humanizado",
-    icon: Heart,
-    description: "Perfeito para comunicações naturais e acessíveis",
-    color: "bg-rose-50 border-rose-200 dark:bg-rose-950 dark:border-rose-800",
-    iconColor: "text-rose-600 dark:text-rose-400",
-    badgeColor: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300",
-    examples: ["Posts em redes sociais", "E-mails pessoais", "Mensagens"],
-    benefits: ["Tom conversacional", "Linguagem simples", "Conexão emocional"]
-  },
-  {
-    name: "Acadêmico",
-    icon: GraduationCap,
-    description: "Adequado para trabalhos científicos e pesquisas",
-    color: "bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800",
-    iconColor: "text-purple-600 dark:text-purple-400",
-    badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-    examples: ["Artigos científicos", "Dissertações", "Papers"],
-    benefits: ["Linguagem técnica", "Argumentação sólida", "Estrutura acadêmica"]
-  },
-  {
-    name: "Criativo",
-    icon: Palette,
-    description: "Excelente para conteúdo expressivo e marketing",
-    color: "bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800",
-    iconColor: "text-orange-600 dark:text-orange-400",
-    badgeColor: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
-    examples: ["Conteúdo de marketing", "Histórias", "Descrições criativas"],
-    benefits: ["Linguagem envolvente", "Metáforas", "Tom inspirador"]
-  },
-  {
-    name: "Como uma Criança",
-    icon: Baby,
-    description: "Simplifica o texto para linguagem acessível",
-    color: "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800",
-    iconColor: "text-green-600 dark:text-green-400",
-    badgeColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-    examples: ["Material educativo", "Explicações simples", "Conteúdo infantil"],
-    benefits: ["Vocabulário simples", "Frases curtas", "Linguagem lúdica"]
-  }
-]
+import { FREE_REWRITE_STYLES, PREMIUM_REWRITE_STYLES } from "@/utils/rewrite-styles"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export function RewriteStyleCards() {
+  const renderStyleGroup = (
+    title: string,
+    styles: typeof FREE_REWRITE_STYLES,
+    showPremiumBadge: boolean = false
+  ) => (
+    <div className="mb-16">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" />
+            {title}
+          </h2>
+          {showPremiumBadge && (
+            <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+              <Crown className="h-3 w-3 mr-1" />
+              Exclusivo
+            </Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground">
+          {showPremiumBadge
+            ? "Desbloqueie 7 estilos exclusivos para criar conteúdo ainda mais profissional"
+            : "5 estilos poderosos para qualquer situação de escrita"}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {styles.map((style) => {
+          const Icon = style.icon
+
+          return (
+            <Card
+              key={style.id}
+              className={`transition-all duration-300 hover:shadow-lg ${style.color}`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className={`p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex-shrink-0`}>
+                      <Icon className={`h-6 w-6 ${style.iconColor}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{style.label}</h3>
+                      {style.tier === "premium" && (
+                        <Badge className={style.badgeColor}>
+                          <Crown className="h-3 w-3 mr-1" />
+                          Premium
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
+                  {style.description}
+                </p>
+
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                      <Target className="h-4 w-4" />
+                      Uso:
+                    </h4>
+                    <p className="text-xs text-muted-foreground">{style.usage}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Tom:</h4>
+                    <p className="text-xs text-muted-foreground">{style.tone}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Comprimento:</h4>
+                    <p className="text-xs text-muted-foreground">{style.length}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Exemplo:</h4>
+                    <p className="text-xs text-muted-foreground italic">{style.example}</p>
+                  </div>
+                </div>
+
+                {style.tier === "premium" && (
+                  <Link href="/dashboard/upgrade" className="block">
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Crown className="h-4 w-4 mr-1 text-amber-600" />
+                      Assinar para Usar
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   return (
     <section className="py-12">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
-          <Sparkles className="h-8 w-8 text-primary" />
+      <div className="text-center mb-12">
+        <h2 className="text-4xl font-bold mb-4">
           Estilos de Reescrita Disponíveis
         </h2>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -81,64 +125,64 @@ export function RewriteStyleCards() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {rewriteStyles.map((style, index) => {
-          const Icon = style.icon
-          return (
-            <Card key={index} className={`transition-all duration-300 hover:shadow-lg ${style.color}`}>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm`}>
-                    <Icon className={`h-6 w-6 ${style.iconColor}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{style.name}</h3>
-                    <Badge className={style.badgeColor}>IA Avançada</Badge>
-                  </div>
-                </div>
+      {/* Free Styles */}
+      {renderStyleGroup(
+        "Modelos Gratuitos",
+        FREE_REWRITE_STYLES,
+        false
+      )}
 
-                <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                  {style.description}
-                </p>
+      {/* Premium Styles */}
+      {renderStyleGroup(
+        "Modelos Premium",
+        PREMIUM_REWRITE_STYLES,
+        true
+      )}
 
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                      <Target className="h-4 w-4" />
-                      Ideal para:
-                    </h4>
-                    <ul className="text-xs space-y-1">
-                      {style.examples.map((example, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <div className="w-1 h-1 bg-current rounded-full" />
-                          {example}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+      {/* Premium CTA */}
+      <div className="mt-16 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-2xl p-8 border border-amber-200 dark:border-amber-800">
+        <div className="max-w-3xl mx-auto text-center space-y-6">
+          <div>
+            <h3 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+              <Crown className="h-6 w-6 text-amber-600" />
+              Desbloqueie 7 Estilos Exclusivos
+            </h3>
+            <p className="text-muted-foreground">
+              Com o plano Premium, você terá acesso a Técnico, Jornalístico, Publicitário, Blog Post,
+              Roteiro para Reels, Roteiro para YouTube e Palestra/Apresentação. Sem limites de caracteres.
+            </p>
+          </div>
 
-                  <div>
-                    <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                      <Sparkles className="h-4 w-4" />
-                      Características:
-                    </h4>
-                    <ul className="text-xs space-y-1">
-                      {style.benefits.map((benefit, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <div className="w-1 h-1 bg-current rounded-full" />
-                          {benefit}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2 text-left">
+              <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span>12 estilos de reescrita</span>
+            </div>
+            <div className="flex items-center gap-2 text-left">
+              <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span>Caracteres ilimitados</span>
+            </div>
+            <div className="flex items-center gap-2 text-left">
+              <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span>Sem anúncios</span>
+            </div>
+            <div className="flex items-center gap-2 text-left">
+              <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span>Histórico completo</span>
+            </div>
+          </div>
+
+          <Link href="/dashboard/upgrade">
+            <Button size="lg" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+              Assinar Agora
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="text-center">
+      {/* Bottom CTA */}
+      <div className="text-center mt-12">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
           <Clock className="h-5 w-5 text-primary" />
           <span className="text-sm font-medium">

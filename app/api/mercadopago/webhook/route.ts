@@ -148,8 +148,96 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       id: payment.id,
       status: payment.status,
       amount: payment.transaction_amount,
+      payment_method: payment.payment_method_id,
+      external_reference: payment.external_reference
     })
 
+    // Check if it's a PIX payment
+    if (payment.payment_method_id === 'pix' && payment.status === 'approved') {
+      // Handle PIX payment for subscription creation
+      const userId = payment.external_reference // We set this when creating the PIX payment
+
+      if (!userId) {
+        console.error('PIX payment missing user ID in external_reference')
+        return
+      }
+
+      // Update PIX payment record
+      await supabase
+        .from('pix_payments')
+        .update({
+          status: 'paid',
+          paid_at: payment.date_approved || new Date().toISOString(),
+        })
+        .eq('payment_intent_id', payment.id.toString())
+
+      // Check if user already has an active subscription
+      const { data: existingSubscription } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .in('status', ['authorized', 'active'])
+        .single()
+
+      if (existingSubscription) {
+        console.log('User already has an active subscription')
+        return
+      }
+
+      // Determine plan type from amount
+      const planType = payment.transaction_amount === 299.00 ? 'annual' : 'monthly'
+
+      // Create subscription record
+      const { data: newSubscription, error: insertError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          mp_subscription_id: `pix_${payment.id}`, // PIX payments don't have subscription IDs
+          mp_payer_id: payment.payer.id,
+          status: 'authorized',
+          start_date: new Date().toISOString(),
+          next_payment_date: planType === 'monthly'
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          amount: payment.transaction_amount,
+          currency: payment.currency_id,
+          payment_method_id: 'pix',
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('Error creating subscription:', insertError)
+        return
+      }
+
+      // Activate subscription
+      const { error: activateError } = await supabase.rpc('activate_subscription', {
+        p_user_id: userId,
+        p_subscription_id: newSubscription.id,
+      })
+
+      if (activateError) {
+        console.error('Error activating subscription:', activateError)
+        return
+      }
+
+      // Update user profile to premium
+      await supabase
+        .from('profiles')
+        .update({
+          is_pro: true,
+          plan_type: 'premium',
+          subscription_status: 'active',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      console.log('PIX payment processed and subscription activated for user:', userId)
+      return
+    }
+
+    // Handle regular subscription payments (non-PIX)
     // Find subscription by payer email or external reference
     const { data: subscription } = await supabase
       .from('subscriptions')

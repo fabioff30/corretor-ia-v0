@@ -256,10 +256,10 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
                   Plano Premium ativo. Execute detecções ilimitadas e conte com suporte respondendo em até{" "}
                   <strong>24 horas úteis</strong> pelo{" "}
                   <a
-                    href="mailto:suporte@corretordetextoonline.com.br"
+                    href="mailto:contato@corretordetextoonline.com.br"
                     className="font-medium text-primary underline-offset-2 hover:underline"
                   >
-                    suporte@corretordetextoonline.com.br
+                    contato@corretordetextoonline.com.br
                   </a>
                   .
                 </p>
