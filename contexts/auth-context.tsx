@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { supabase, User, UserWithSubscription } from '@/lib/supabase'
+import { sendGTMEvent } from '@/utils/gtm-helper'
 
 interface AuthContextType {
   user: UserWithSubscription | null
@@ -112,6 +113,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email)
 
+      // Track login event
+      if (event === 'SIGNED_IN' && session?.user) {
+        sendGTMEvent('login', {
+          method: session.user.app_metadata?.provider || 'unknown',
+          user_id: session.user.id,
+        })
+      }
+
+      // Track logout event
+      if (event === 'SIGNED_OUT') {
+        sendGTMEvent('logout', {
+          method: 'manual',
+        })
+      }
+
       setSession(session)
       setLoading(true)
 
@@ -176,8 +192,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      // Se o usuário foi criado, também criar entrada na tabela users
+      // Track signup event
       if (data.user) {
+        sendGTMEvent('sign_up', {
+          method: 'email',
+          user_id: data.user.id,
+        })
+
+        // Se o usuário foi criado, também criar entrada na tabela users
         const { error: insertError } = await supabase
           .from('users')
           .insert([
@@ -220,7 +242,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setLoading(true)
-    
+
+    // Track logout before clearing session
+    sendGTMEvent('logout', {
+      method: 'manual',
+      user_id: user?.id,
+    })
+
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('Erro ao fazer logout:', error)

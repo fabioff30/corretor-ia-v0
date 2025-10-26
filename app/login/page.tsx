@@ -18,6 +18,7 @@ import { FcGoogle } from 'react-icons/fc'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useUser } from '@/hooks/use-user'
+import { sendGTMEvent } from '@/utils/gtm-helper'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -53,6 +54,12 @@ export default function LoginPage() {
 
       if (error) throw error
 
+      // Track login success
+      sendGTMEvent('login', {
+        method: 'email',
+        user_id: data.user?.id,
+      })
+
       toast({
         title: 'Login realizado com sucesso!',
         description: 'Redirecionando para o dashboard...',
@@ -72,6 +79,11 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
 
     try {
+      // Track Google login attempt
+      sendGTMEvent('login_attempt', {
+        method: 'google',
+      })
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
