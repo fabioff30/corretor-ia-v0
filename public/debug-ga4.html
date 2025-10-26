@@ -4,6 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Debug GA4 - CorretorIA</title>
+
+  <!-- Google Analytics 4 - gtag.js -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR7B5DMLER"></script>
+
+  <!-- Google Analytics 4 - Configuration -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    // Sempre inicializar o GA4
+    gtag('config', 'G-ZR7B5DMLER', {
+      page_path: window.location.pathname,
+      send_page_view: true
+    });
+
+    console.log('[GA4] Google Analytics 4 inicializado - ID: G-ZR7B5DMLER');
+  </script>
+
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -196,11 +215,12 @@
       log('=== Debug GA4 - CorretorIA ===');
       log('Measurement ID: G-ZR7B5DMLER');
       log('');
-      checkConsent();
 
+      // Wait for GA4 script to load (async)
       setTimeout(() => {
+        checkConsent();
         checkGtag();
-      }, 1000);
+      }, 2000);
     });
   </script>
 </body>
