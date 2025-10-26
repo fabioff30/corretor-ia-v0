@@ -57,6 +57,15 @@ export function GoogleOneTap() {
       return
     }
 
+    // Detectar se é mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+    // Desabilitar One Tap em mobile (tem problemas de UX)
+    if (isMobile) {
+      console.log('[One Tap] Desabilitado em mobile - use o botão "Continuar com Google"')
+      return
+    }
+
     // Não inicializar se já foi inicializado
     if (initialized.current) {
       return
@@ -66,7 +75,7 @@ export function GoogleOneTap() {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
     if (!clientId) {
-      console.warn('NEXT_PUBLIC_GOOGLE_CLIENT_ID não configurado. Google One Tap desabilitado.')
+      console.warn('[One Tap] NEXT_PUBLIC_GOOGLE_CLIENT_ID não configurado. Google One Tap desabilitado.')
       return
     }
 
@@ -92,6 +101,9 @@ export function GoogleOneTap() {
             method: 'google_one_tap',
             error: error.message,
           })
+
+          // Redirecionar para login se houver erro
+          window.location.href = '/login'
           return
         }
 
@@ -103,10 +115,17 @@ export function GoogleOneTap() {
           user_id: data.user?.id,
         })
 
-        // O auth context vai detectar automaticamente a mudança de sessão
-        // e redirecionar o usuário conforme necessário
+        // Redirecionar para dashboard após login bem-sucedido
+        window.location.href = '/dashboard'
       } catch (err) {
         console.error('[One Tap] Erro inesperado:', err)
+        sendGTMEvent('login_error', {
+          method: 'google_one_tap',
+          error: 'unexpected_error',
+        })
+
+        // Redirecionar para login em caso de erro
+        window.location.href = '/login'
       }
     }
 
