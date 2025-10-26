@@ -13,6 +13,7 @@ import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
 import { AdSenseLoader } from "@/components/adsense-loader"
+import { GoogleOneTap } from "@/components/google-one-tap"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
 
@@ -222,6 +223,7 @@ export default async function RootLayout({
             <Toaster />
             <CookieConsent />
             <JulinhoAssistant />
+            <GoogleOneTap />
           </ThemeProvider>
         </UserProvider>
       </body>
