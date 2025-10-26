@@ -737,13 +737,18 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       // localStorage.setItem("show-ad-banner", "true")
       // window.dispatchEvent(new Event("storage"))
 
-      // Enviar evento para o GTM
-      sendGTMEvent(operationMode === "correct" ? "text_corrected" : "text_rewritten", {
-        textLength: originalText.length,
-        correctionScore: processedData.evaluation.score || 0,
-        mode: operationMode,
-        ...(operationMode === "correct" ? { tone: selectedTone } : { rewriteStyle: selectedRewriteStyle }),
-      })
+      // Enviar evento para o Google Analytics 4
+      if (operationMode === "correct") {
+        sendGTMEvent("text_corrected", {
+          textLength: originalText.length,
+          correctionScore: processedData.evaluation.score || 0,
+        })
+      } else {
+        sendGTMEvent("rewrite_text", {
+          textLength: originalText.length,
+          rewriteStyle: selectedRewriteStyle,
+        })
+      }
 
       // Rastrear evento de correção no Meta Pixel
       trackPixelCustomEvent(operationMode === "correct" ? "TextCorrected" : "TextRewritten", {

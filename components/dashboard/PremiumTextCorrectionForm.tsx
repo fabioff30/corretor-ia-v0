@@ -241,9 +241,9 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         setCorrectionId("")
       }
 
-      // Enviar evento de sucesso
+      // Enviar evento de sucesso para Google Analytics 4
       sendGTMEvent("premium_correction_completed", {
-        char_count: textToSend.length,
+        charCount: textToSend.length,
         score: data.evaluation?.score || 0,
       })
       trackPixelCustomEvent("PremiumCorrectionCompleted", {

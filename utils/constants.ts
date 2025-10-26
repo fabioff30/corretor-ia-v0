@@ -20,6 +20,7 @@ export const POPUP_CONTENT_Z_INDEX = 10000
 // Google Analytics and AdSense
 export const GOOGLE_ADSENSE_CLIENT = "ca-pub-9690140831352761"
 export const GTM_ID = "GTM-5ZNJ85CP"
+export const GA4_MEASUREMENT_ID = "G-ZR7B5DMLER"
 
 // API endpoints - Workers API
 const WORKERS_API_BASE = "https://workers-api.fabiofariasf.workers.dev"

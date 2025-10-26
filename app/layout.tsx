@@ -114,12 +114,39 @@ export default async function RootLayout({
         `}
         </Script>
 
-        {/* Add the gtag function definition */}
-        <Script id="gtag-definition" strategy="beforeInteractive">
+        {/* Google Analytics 4 - gtag.js */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-ZR7B5DMLER"
+          strategy="afterInteractive"
+        />
+
+        {/* Google Analytics 4 - Configuration */}
+        <Script id="ga4-config" strategy="afterInteractive">
           {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
+
+          // Verificar consentimento de cookies antes de inicializar
+          var ga4Consent = localStorage.getItem('cookie-consent');
+          if (ga4Consent === 'accepted') {
+            gtag('config', 'G-ZR7B5DMLER', {
+              page_path: window.location.pathname,
+              send_page_view: true
+            });
+          }
+
+          // Escutar mudanças no consentimento
+          window.addEventListener('storage', function() {
+            var consent = localStorage.getItem('cookie-consent');
+            if (consent === 'accepted' && !window.ga4Initialized) {
+              gtag('config', 'G-ZR7B5DMLER', {
+                page_path: window.location.pathname,
+                send_page_view: true
+              });
+              window.ga4Initialized = true;
+            }
+          });
         `}
         </Script>
 

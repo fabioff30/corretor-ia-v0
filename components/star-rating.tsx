@@ -31,8 +31,8 @@ export function StarRating({ onRatingSubmit, correctionId, textLength }: StarRat
       try {
         setIsSubmitting(true)
 
-        // Enviar evento para o GTM
-        sendGTMEvent("correction_rating_submitted", {
+        // Enviar evento para o Google Analytics 4
+        sendGTMEvent("correction_rating", {
           rating: rating,
           feedback: feedback.trim() || "No feedback provided",
         })

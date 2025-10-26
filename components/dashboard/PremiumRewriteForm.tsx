@@ -215,9 +215,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
       const controller = new AbortController()
       const timeoutSignal = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT)
 
-      // Enviar evento de início
+      // Enviar evento de início para Google Analytics 4
       sendGTMEvent("premium_rewrite_started", {
-        char_count: textToSend.length,
+        charCount: textToSend.length,
         style: selectedStyle,
       })
       trackPixelCustomEvent("PremiumRewriteStarted", {
@@ -270,9 +270,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         setCorrectionId("")
       }
 
-      // Enviar evento de sucesso
+      // Enviar evento de sucesso para Google Analytics 4
       sendGTMEvent("premium_rewrite_completed", {
-        char_count: textToSend.length,
+        charCount: textToSend.length,
         style: selectedStyle,
       })
       trackPixelCustomEvent("PremiumRewriteCompleted", {
