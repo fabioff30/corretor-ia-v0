@@ -12,8 +12,9 @@ import { getPublicConfig } from '@/utils/env-config'
 export const maxDuration = 60
 
 interface CreateCheckoutRequest {
-  userId: string
-  userEmail: string
+  userId?: string // Optional for guest checkouts
+  userEmail?: string // Optional for authenticated users
+  guestEmail?: string // Required for guest checkouts
   planType: 'monthly' | 'annual'
   returnUrl?: string
 }
@@ -21,15 +22,42 @@ interface CreateCheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CreateCheckoutRequest = await request.json()
-    const { userId, userEmail, planType, returnUrl } = body
+    const { userId, userEmail, guestEmail, planType, returnUrl } = body
 
-    // Validate input
-    if (!userId || !userEmail || !planType) {
+    // Determine if this is a guest checkout
+    const isGuestCheckout = !userId
+
+    // Validate: must have userId OR guestEmail
+    if (!userId && !guestEmail) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId, userEmail, planType' },
+        { error: 'Either userId or guestEmail is required' },
         { status: 400 }
       )
     }
+
+    // Validate plan type
+    if (!planType || !['monthly', 'annual'].includes(planType)) {
+      return NextResponse.json(
+        { error: 'Invalid plan type. Must be "monthly" or "annual"' },
+        { status: 400 }
+      )
+    }
+
+    // Validate email format for guest checkouts
+    if (isGuestCheckout && guestEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(guestEmail)) {
+        return NextResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Determine final email
+    const finalEmail = isGuestCheckout ? guestEmail! : (userEmail || '')
+
+    console.log('[Stripe Checkout]', isGuestCheckout ? 'Guest' : 'Authenticated', 'checkout for:', finalEmail)
 
     // Get price ID based on plan type
     const priceId = planType === 'monthly' ? STRIPE_PRICES.MONTHLY : STRIPE_PRICES.ANNUAL
@@ -37,16 +65,22 @@ export async function POST(request: NextRequest) {
     // Determine URLs - use request origin for correct environment
     const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/') || getPublicConfig().APP_URL
     const baseUrl = origin.endsWith('/') ? origin.slice(0, -1) : origin // Remove trailing slash
-    const successUrl = returnUrl || `${baseUrl}/dashboard/subscription?success=true`
+
+    // For guest checkouts, redirect to login/register page after success
+    const successUrl = isGuestCheckout
+      ? `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}`
+      : (returnUrl || `${baseUrl}/dashboard/subscription?success=true`)
+
     const cancelUrl = `${baseUrl}/premium?canceled=true`
 
     // Create checkout session
     const session = await createCheckoutSession(
-      userId,
-      userEmail,
+      userId || null, // null for guest checkouts
+      finalEmail,
       priceId,
       successUrl,
-      cancelUrl
+      cancelUrl,
+      isGuestCheckout // Pass flag to mark as guest in metadata
     )
 
     return NextResponse.json(

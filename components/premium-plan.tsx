@@ -26,6 +26,7 @@ export function PremiumPlan() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [guestEmail, setGuestEmail] = useState('')
   const [pendingPlanType, setPendingPlanType] = useState<PlanType | null>(null)
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'card' | null>(null)
   const router = useRouter()
   const { user, profile } = useUser()
   const { createSubscription, isActive, isPro } = useSubscription()
@@ -45,19 +46,8 @@ export function PremiumPlan() {
   ]
 
   const handleSubscribe = async (planType: PlanType) => {
-    // Check if user is logged in
-    if (!user) {
-      toast({
-        title: "Login necessário",
-        description: "Você precisa estar logado para assinar o plano premium.",
-        variant: "destructive",
-      })
-      router.push('/login?redirect=/premium')
-      return
-    }
-
-    // Check if already subscribed
-    if (isPro || isActive) {
+    // Check if already subscribed (only if logged in)
+    if (user && (isPro || isActive)) {
       toast({
         title: "Você já é Premium!",
         description: "Você já possui uma assinatura ativa.",
@@ -66,6 +56,15 @@ export function PremiumPlan() {
       return
     }
 
+    // If not logged in, ask for email first
+    if (!user) {
+      setPendingPlanType(planType)
+      setPendingPaymentMethod('card')
+      setIsEmailDialogOpen(true)
+      return
+    }
+
+    // Logged in user - create subscription directly
     try {
       setIsLoading(planType)
 
@@ -159,6 +158,7 @@ export function PremiumPlan() {
     // If not logged in, ask for email first
     if (!user) {
       setPendingPlanType(planType)
+      setPendingPaymentMethod('pix')
       setIsEmailDialogOpen(true)
       return
     }
@@ -185,8 +185,8 @@ export function PremiumPlan() {
     }
   }
 
-  const handleGuestPixPayment = async () => {
-    if (!guestEmail || !pendingPlanType) {
+  const handleGuestPayment = async () => {
+    if (!guestEmail || !pendingPlanType || !pendingPaymentMethod) {
       toast({
         title: "Email necessário",
         description: "Por favor, insira seu email para continuar.",
@@ -207,35 +207,56 @@ export function PremiumPlan() {
     }
 
     try {
-      setPixLoadingPlan(pendingPlanType)
       setIsEmailDialogOpen(false)
 
-      // Create guest PIX payment
-      const payment = await createPixPayment(
-        pendingPlanType,
-        undefined, // no userId
-        undefined, // no userEmail
-        guestEmail // guestEmail
-      )
+      if (pendingPaymentMethod === 'pix') {
+        // Guest PIX payment
+        setPixLoadingPlan(pendingPlanType)
 
-      if (payment) {
-        setIsPixModalOpen(true)
-        toast({
-          title: "Pagamento gerado!",
-          description: "Após o pagamento, crie sua conta com este email para ativar o premium.",
-        })
+        const payment = await createPixPayment(
+          pendingPlanType,
+          undefined, // no userId
+          undefined, // no userEmail
+          guestEmail // guestEmail
+        )
+
+        if (payment) {
+          setIsPixModalOpen(true)
+          toast({
+            title: "PIX gerado!",
+            description: "Após o pagamento, faça login com este email para ativar o premium.",
+          })
+        }
+        setPixLoadingPlan(null)
+      } else {
+        // Guest card payment (Stripe)
+        setIsLoading(pendingPlanType)
+
+        const result = await createSubscription(pendingPlanType, guestEmail)
+
+        if (result) {
+          toast({
+            title: "Redirecionando...",
+            description: "Após o pagamento, faça login com este email para ativar o premium.",
+          })
+          // Redirect to Stripe checkout
+          window.location.href = result.checkoutUrl
+        }
+        setIsLoading(null)
       }
     } catch (error) {
-      console.error('Error creating guest PIX payment:', error)
+      console.error('Error creating guest payment:', error)
       toast({
-        title: "Erro ao gerar PIX",
-        description: "Não foi possível gerar o pagamento PIX. Tente novamente.",
+        title: "Erro ao processar pagamento",
+        description: "Não foi possível processar o pagamento. Tente novamente.",
         variant: "destructive",
       })
-    } finally {
       setPixLoadingPlan(null)
+      setIsLoading(null)
+    } finally {
       setGuestEmail('')
       setPendingPlanType(null)
+      setPendingPaymentMethod(null)
     }
   }
 
@@ -597,12 +618,12 @@ export function PremiumPlan() {
                 onChange={(e) => setGuestEmail(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleGuestPixPayment()
+                    handleGuestPayment()
                   }
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                Use um email válido para receber as instruções e vincular sua conta.
+                Após o pagamento, crie sua conta ou faça login com este email para ativar o premium.
               </p>
             </div>
           </div>
@@ -613,23 +634,24 @@ export function PremiumPlan() {
                 setIsEmailDialogOpen(false)
                 setGuestEmail('')
                 setPendingPlanType(null)
+                setPendingPaymentMethod(null)
               }}
             >
               Cancelar
             </Button>
             <Button
-              onClick={handleGuestPixPayment}
-              disabled={!guestEmail || pixLoadingPlan !== null}
+              onClick={handleGuestPayment}
+              disabled={!guestEmail || pixLoadingPlan !== null || isLoading !== null}
             >
-              {pixLoadingPlan ? (
+              {pixLoadingPlan !== null || isLoading !== null ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando PIX...
+                  {pendingPaymentMethod === 'pix' ? 'Gerando PIX...' : 'Processando...'}
                 </>
               ) : (
                 <>
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Gerar PIX
+                  {pendingPaymentMethod === 'pix' ? <QrCode className="mr-2 h-4 w-4" /> : <Zap className="mr-2 h-4 w-4" />}
+                  Continuar
                 </>
               )}
             </Button>

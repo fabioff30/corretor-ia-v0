@@ -18,11 +18,13 @@ export async function handleCheckoutCompleted(
 
   const supabase = createServiceRoleClient()
   const userId = session.metadata?.userId
+  const guestEmail = session.metadata?.guestEmail
+  const isGuestCheckout = session.metadata?.isGuestCheckout === 'true'
   const customerId = session.customer as string
   const subscriptionId = session.subscription as string
 
-  if (!userId || !subscriptionId) {
-    console.error('[Stripe Webhook] Missing userId or subscriptionId')
+  if (!subscriptionId) {
+    console.error('[Stripe Webhook] Missing subscriptionId')
     return
   }
 
@@ -39,6 +41,42 @@ export async function handleCheckoutCompleted(
 
   if (existingSubscription) {
     console.log('[Stripe Webhook] Subscription already exists, skipping insert')
+    return
+  }
+
+  // If this is a guest checkout, save to pending_stripe_subscriptions table
+  if (isGuestCheckout && guestEmail && !userId) {
+    console.log('[Stripe Webhook] Guest checkout detected, saving to pending table:', guestEmail)
+
+    const { error: insertError } = await supabase
+      .from('pending_stripe_subscriptions')
+      .insert({
+        email: guestEmail,
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: customerId,
+        stripe_price_id: subscription.items.data[0].price.id,
+        status: subscription.status === 'active' ? 'authorized' : 'pending',
+        start_date: new Date(subscription.created * 1000).toISOString(),
+        next_payment_date: subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000).toISOString()
+          : null,
+        amount: (subscription.items.data[0].price.unit_amount || 0) / 100,
+        currency: subscription.currency.toUpperCase(),
+        payment_status: session.payment_status,
+      })
+
+    if (insertError) {
+      console.error('[Stripe Webhook] Error inserting pending subscription:', insertError)
+      // Continue anyway - subscription is in Stripe
+    }
+
+    console.log('[Stripe Webhook] Guest subscription saved. Will be linked when user logs in.')
+    return
+  }
+
+  // Authenticated user checkout - proceed normally
+  if (!userId) {
+    console.error('[Stripe Webhook] Missing userId for authenticated checkout')
     return
   }
 

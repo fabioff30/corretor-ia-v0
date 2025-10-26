@@ -55,9 +55,14 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
   }
 
   // Create new subscription
-  const createSubscription = async (planType: 'monthly' | 'annual' = 'monthly'): Promise<{ checkoutUrl: string } | null> => {
-    if (!user?.id || !user?.email) {
-      setError('User not authenticated')
+  const createSubscription = async (
+    planType: 'monthly' | 'annual' = 'monthly',
+    guestEmail?: string
+  ): Promise<{ checkoutUrl: string } | null> => {
+    // Guest checkout: requires email
+    // Authenticated checkout: requires user
+    if (!user && !guestEmail) {
+      setError('Email is required for guest checkout')
       return null
     }
 
@@ -70,11 +75,18 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          userEmail: user.email,
-          planType,
-        }),
+        body: JSON.stringify(
+          user
+            ? {
+                userId: user.id,
+                userEmail: user.email,
+                planType,
+              }
+            : {
+                guestEmail,
+                planType,
+              }
+        ),
       })
 
       if (!response.ok) {
@@ -87,8 +99,10 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
 
       const data = await response.json()
 
-      // Refresh subscription data
-      await fetchSubscription()
+      // Refresh subscription data (only for authenticated users)
+      if (user) {
+        await fetchSubscription()
+      }
 
       return {
         checkoutUrl: data.checkoutUrl,

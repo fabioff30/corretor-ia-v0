@@ -119,18 +119,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await fetchUserWithSubscription(session.user)
         setUser(userData)
 
-        // After successful login/signup, try to link any pending guest payments
+        // After successful login/signup, try to link any pending guest payments (PIX + Stripe)
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           try {
-            const response = await fetch('/api/mercadopago/link-guest-payment', {
+            const response = await fetch('/api/link-guest-payments', {
               method: 'POST',
             })
 
             if (response.ok) {
               const data = await response.json()
 
-              if (data.linked && data.payments?.length > 0) {
-                console.log('[Auth] Guest payment(s) linked successfully:', data.payments)
+              if (data.linked && data.items?.length > 0) {
+                console.log('[Auth] Guest payment(s) linked successfully:', data.items)
 
                 // Refresh user data to get updated subscription status
                 const updatedUserData = await fetchUserWithSubscription(session.user)
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (error) {
-            console.error('[Auth] Error linking guest payment:', error)
+            console.error('[Auth] Error linking guest payments:', error)
             // Don't block login if linking fails
           }
         }

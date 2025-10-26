@@ -23,38 +23,40 @@ export const STRIPE_PRICES = {
  * Get or create a Stripe customer for a user
  */
 export async function getOrCreateStripeCustomer(
-  userId: string,
+  userId: string | null,
   email: string
 ): Promise<string> {
   const supabase = createServiceRoleClient()
 
-  // Check if customer already exists in our database
-  const { data: existingCustomer } = await supabase
-    .from('stripe_customers')
-    .select('stripe_customer_id')
-    .eq('user_id', userId)
-    .single()
+  // For authenticated users, check if customer already exists
+  if (userId) {
+    const { data: existingCustomer } = await supabase
+      .from('stripe_customers')
+      .select('stripe_customer_id')
+      .eq('user_id', userId)
+      .single()
 
-  if (existingCustomer?.stripe_customer_id) {
-    return existingCustomer.stripe_customer_id
+    if (existingCustomer?.stripe_customer_id) {
+      return existingCustomer.stripe_customer_id
+    }
   }
 
   // Create new Stripe customer
   const customer = await stripe.customers.create({
     email,
-    metadata: {
-      userId,
-    },
+    metadata: userId ? { userId } : { guestEmail: email },
   })
 
-  // Save to database
-  await supabase
-    .from('stripe_customers')
-    .insert({
-      user_id: userId,
-      stripe_customer_id: customer.id,
-      email,
-    })
+  // Save to database only if userId exists
+  if (userId) {
+    await supabase
+      .from('stripe_customers')
+      .insert({
+        user_id: userId,
+        stripe_customer_id: customer.id,
+        email,
+      })
+  }
 
   return customer.id
 }
@@ -63,14 +65,20 @@ export async function getOrCreateStripeCustomer(
  * Create a Checkout Session for subscription
  */
 export async function createCheckoutSession(
-  userId: string,
+  userId: string | null,
   email: string,
   priceId: string,
   successUrl: string,
-  cancelUrl: string
+  cancelUrl: string,
+  isGuestCheckout: boolean = false
 ): Promise<Stripe.Checkout.Session> {
   // Get or create customer
   const customerId = await getOrCreateStripeCustomer(userId, email)
+
+  // Prepare metadata
+  const metadata = userId
+    ? { userId }
+    : { guestEmail: email, isGuestCheckout: 'true' }
 
   // Create checkout session
   const session = await stripe.checkout.sessions.create({
@@ -85,16 +93,19 @@ export async function createCheckoutSession(
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    metadata: {
-      userId,
-    },
+    customer_email: email, // Ensure email is pre-filled
+    metadata,
     subscription_data: {
-      metadata: {
-        userId,
-      },
+      metadata,
     },
     allow_promotion_codes: true,
-    billing_address_collection: 'auto', // Changed from 'required' to 'auto'
+    billing_address_collection: 'auto',
+  })
+
+  console.log('[Stripe] Checkout session created:', {
+    sessionId: session.id,
+    isGuest: isGuestCheckout,
+    email,
   })
 
   return session
