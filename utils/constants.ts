@@ -37,5 +37,8 @@ export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOK
 // Julinho status
 export const JULINHO_DISABLED = false // Reativando o Julinho
 
+// Advertisement control (temporarily disabled)
+export const DISABLE_ADS = true // Set to true to disable all ads
+
 // Use env-config.ts for environment configuration
 // Import { getPublicConfig, getServerConfig } from './env-config' where needed

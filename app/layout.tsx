@@ -179,11 +179,11 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* AdSense Loader - Conditional rendering based on user plan */}
-        <AdSenseLoader initialProfile={initialProfile} />
+        {/* AdSense Loader - TEMPORARILY DISABLED */}
+        {/* <AdSenseLoader initialProfile={initialProfile} /> */}
 
-        {/* CleverWebServer Script */}
-        <Script id="clever-webserver" strategy="afterInteractive">
+        {/* CleverWebServer Script - TEMPORARILY DISABLED */}
+        {/* <Script id="clever-webserver" strategy="afterInteractive">
           {`
             (function (document, window) {
               var a, c = document.createElement("script"), f = window.frameElement;
@@ -202,7 +202,7 @@ export default async function RootLayout({
               a.parentNode.insertBefore(c, a);
             })(document, window);
           `}
-        </Script>
+        </Script> */}
       </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {/* Meta Pixel Code - noscript */}

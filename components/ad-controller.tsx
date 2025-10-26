@@ -4,8 +4,14 @@ import { useEffect, useState } from "react"
 import { AdBanner } from "@/components/ad-banner"
 import { usePathname } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
+import { DISABLE_ADS } from "@/utils/constants"
 
 export function AdController() {
+  // Temporarily disable all ads
+  if (DISABLE_ADS) {
+    return null
+  }
+
   const [shouldShowAd, setShouldShowAd] = useState(false)
   const pathname = usePathname()
   const { profile } = useUser()

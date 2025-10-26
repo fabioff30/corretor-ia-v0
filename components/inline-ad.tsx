@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import Image from "next/image"
-import { GOOGLE_ADSENSE_CLIENT } from "@/utils/constants"
+import { GOOGLE_ADSENSE_CLIENT, DISABLE_ADS } from "@/utils/constants"
 import { useFeatureAccess } from "@/hooks/use-subscription"
 
 interface InlineAdProps {
@@ -15,6 +15,10 @@ interface InlineAdProps {
 }
 
 export function InlineAd({ adSlot, className = "", format = "auto", useAdsense = false }: InlineAdProps) {
+  // Temporarily disable all ads
+  if (DISABLE_ADS) {
+    return null
+  }
   const [hasConsent, setHasConsent] = useState(false)
   const adRef = useRef<HTMLModElement>(null)
   const initRef = useRef(false)

@@ -2,6 +2,7 @@
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import Image from "next/image"
+import { DISABLE_ADS } from "@/utils/constants"
 
 interface AdPopupProps {
   isOpen: boolean
@@ -9,6 +10,11 @@ interface AdPopupProps {
 }
 
 export function AdPopup({ isOpen, onClose }: AdPopupProps) {
+  // Temporarily disable all ads
+  if (DISABLE_ADS) {
+    return null
+  }
+
   // If the popup is open, track the view and display the banner
   if (isOpen) {
     // Register event for popup view
