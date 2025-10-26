@@ -19,7 +19,12 @@ import { PremiumPixModal } from "@/components/premium-pix-modal"
 
 type PlanType = 'monthly' | 'annual'
 
-export function PremiumPlan() {
+interface PremiumPlanProps {
+  couponCode?: string
+  showDiscount?: boolean
+}
+
+export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanProps = {}) {
   const [isLoading, setIsLoading] = useState<PlanType | null>(null)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [pixLoadingPlan, setPixLoadingPlan] = useState<PlanType | null>(null)
@@ -32,6 +37,13 @@ export function PremiumPlan() {
   const { createSubscription, isActive, isPro } = useSubscription()
   const { createPixPayment, paymentData, reset: resetPixPayment } = usePixPayment()
   const { toast } = useToast()
+
+  // Pricing with discount
+  const monthlyPrice = 29.90
+  const annualPrice = 299.00
+  const discountPercent = showDiscount && couponCode ? 50 : 0
+  const monthlyPriceWithDiscount = monthlyPrice * (1 - discountPercent / 100)
+  const annualPriceWithDiscount = annualPrice * (1 - discountPercent / 100)
 
   const features = [
     { name: "Correções ilimitadas", included: true },
@@ -96,8 +108,8 @@ export function PremiumPlan() {
         ],
       })
 
-      // Create subscription
-      const result = await createSubscription(planType)
+      // Create subscription with coupon if available
+      const result = await createSubscription(planType, undefined, couponCode)
 
       if (!result) {
         throw new Error('Failed to create subscription')
@@ -167,8 +179,8 @@ export function PremiumPlan() {
     try {
       setPixLoadingPlan(planType)
 
-      // Create PIX payment
-      const payment = await createPixPayment(planType, user.id, user.email!)
+      // Create PIX payment with coupon if available
+      const payment = await createPixPayment(planType, user.id, user.email!, undefined, couponCode)
 
       if (payment) {
         setIsPixModalOpen(true)
@@ -217,7 +229,8 @@ export function PremiumPlan() {
           pendingPlanType,
           undefined, // no userId
           undefined, // no userEmail
-          guestEmail // guestEmail
+          guestEmail, // guestEmail
+          couponCode // coupon code if available
         )
 
         if (payment) {
@@ -232,7 +245,7 @@ export function PremiumPlan() {
         // Guest card payment (Stripe)
         setIsLoading(pendingPlanType)
 
-        const result = await createSubscription(pendingPlanType, guestEmail)
+        const result = await createSubscription(pendingPlanType, guestEmail, couponCode)
 
         if (result) {
           toast({
@@ -303,8 +316,21 @@ export function PremiumPlan() {
                 Flexibilidade mensal
               </CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold">R$29,90</span>
-                <span className="text-white/90 ml-1">/mês</span>
+                {showDiscount && couponCode ? (
+                  <>
+                    <div className="text-sm text-white/70 line-through">R${monthlyPrice.toFixed(2)}</div>
+                    <div>
+                      <span className="text-4xl font-bold">R${monthlyPriceWithDiscount.toFixed(2)}</span>
+                      <span className="text-white/90 ml-1">/primeiro mês</span>
+                    </div>
+                    <div className="text-xs text-white/80 mt-1">Depois R${monthlyPrice.toFixed(2)}/mês</div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold">R${monthlyPrice.toFixed(2)}</span>
+                    <span className="text-white/90 ml-1">/mês</span>
+                  </>
+                )}
               </div>
             </CardHeader>
 
@@ -413,12 +439,25 @@ export function PremiumPlan() {
                 Melhor custo-benefício
               </CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold">R$299</span>
-                <span className="text-white/90 ml-1">/ano</span>
-              </div>
-              <div className="text-sm mt-1 text-white/90">
-                <span className="line-through opacity-70">R$358,80</span>
-                <span className="ml-2 font-semibold">Economize R$59,80</span>
+                {showDiscount && couponCode ? (
+                  <>
+                    <div className="text-sm text-white/70 line-through">R${annualPrice.toFixed(2)}</div>
+                    <div>
+                      <span className="text-4xl font-bold">R${annualPriceWithDiscount.toFixed(2)}</span>
+                      <span className="text-white/90 ml-1">/primeiro ano</span>
+                    </div>
+                    <div className="text-xs text-white/80 mt-1">Depois R${annualPrice.toFixed(2)}/ano</div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold">R${annualPrice.toFixed(2)}</span>
+                    <span className="text-white/90 ml-1">/ano</span>
+                    <div className="text-sm mt-1 text-white/90">
+                      <span className="line-through opacity-70">R$358,80</span>
+                      <span className="ml-2 font-semibold">Economize R$59,80</span>
+                    </div>
+                  </>
+                )}
               </div>
             </CardHeader>
 

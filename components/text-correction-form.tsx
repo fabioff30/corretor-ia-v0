@@ -389,20 +389,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       if (usage.count >= correctionsDailyLimit) {
         const description =
           correctionsDailyLimit === 1
-            ? "Você já realizou a correção gratuita de hoje. Assine o Premium para continuar agora ou aguarde 24 horas."
-            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Assine o Premium para continuar agora ou aguarde 24 horas para renovar o limite.`
+            ? "Você já realizou a correção gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
+            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
 
         toast({
-          title: "Limite diário atingido",
+          title: "Oferta Especial - 50% OFF!",
           description,
           variant: "destructive",
           action: (
             <Link
-              href="/premium"
+              href="/oferta-especial"
               className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
-              onClick={() => sendGTMEvent("premium_cta_click", { location: "daily_limit_toast" })}
+              onClick={() => sendGTMEvent("special_offer_cta_click", { location: "correction_limit_toast", trigger: "correction_limit" })}
             >
-              Assinar Premium
+              Ver Oferta →
             </Link>
           ),
         })
@@ -411,6 +411,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           limit: correctionsDailyLimit,
           usage: usage.count,
         })
+
+        // Redirect to special offer page after 2 seconds
+        setTimeout(() => {
+          window.location.href = "/oferta-especial"
+        }, 2000)
+
         return
       }
     }

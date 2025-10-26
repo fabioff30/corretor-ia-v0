@@ -17,13 +17,14 @@ interface CreatePixPaymentRequest {
   userId?: string
   userEmail?: string
   guestEmail?: string // Email for guest (non-logged) users
+  couponCode?: string // Optional coupon code for discounts
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, userEmail, guestEmail } = body
+    const { planType, userId, userEmail, guestEmail, couponCode } = body
 
     if (!planType || !['monthly', 'annual', 'test'].includes(planType)) {
       return NextResponse.json(
@@ -82,6 +83,10 @@ export async function POST(request: NextRequest) {
 
     const plan = pricing[planType as 'monthly' | 'annual' | 'test']
 
+    // Apply discount if coupon code is provided (ZhX6Oy78 = 50% off)
+    const discountPercent = couponCode === 'ZhX6Oy78' ? 50 : 0
+    const finalAmount = plan.amount * (1 - discountPercent / 100)
+
     // Initialize clients
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
     const externalReference = finalUserId || `guest_${finalUserEmail}`
 
     const payment = await mpClient.createPixPayment(
-      plan.amount,
+      finalAmount,
       finalUserEmail,
       externalReference,
       plan.description,
@@ -148,7 +153,7 @@ export async function POST(request: NextRequest) {
         user_id: finalUserId, // NULL for guest payments
         email: isGuestPayment ? finalUserEmail : null, // Store email for guest payments
         payment_intent_id: payment.id.toString(),
-        amount: plan.amount,
+        amount: finalAmount,
         plan_type: planType,
         qr_code: payment.point_of_interaction?.transaction_data?.qr_code_base64,
         pix_code: payment.point_of_interaction?.transaction_data?.qr_code,
@@ -168,7 +173,7 @@ export async function POST(request: NextRequest) {
       qrCode: payment.point_of_interaction?.transaction_data?.qr_code_base64,
       qrCodeText: payment.point_of_interaction?.transaction_data?.qr_code,
       expiresAt: payment.date_of_expiration,
-      amount: plan.amount,
+      amount: finalAmount,
     })
   } catch (error) {
     console.error('[MP PIX] Error creating payment:', error)

@@ -17,12 +17,13 @@ interface CreateCheckoutRequest {
   guestEmail?: string // Required for guest checkouts
   planType: 'monthly' | 'annual'
   returnUrl?: string
+  couponCode?: string // Optional coupon code for discounts
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CreateCheckoutRequest = await request.json()
-    const { userId, userEmail, guestEmail, planType, returnUrl } = body
+    const { userId, userEmail, guestEmail, planType, returnUrl, couponCode } = body
 
     // Determine if this is a guest checkout
     const isGuestCheckout = !userId
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
       priceId,
       successUrl,
       cancelUrl,
-      isGuestCheckout // Pass flag to mark as guest in metadata
+      isGuestCheckout, // Pass flag to mark as guest in metadata
+      couponCode // Optional coupon code
     )
 
     return NextResponse.json(

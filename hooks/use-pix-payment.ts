@@ -25,7 +25,8 @@ interface UsePixPaymentReturn {
     planType: 'monthly' | 'annual',
     userId?: string,
     userEmail?: string,
-    guestEmail?: string
+    guestEmail?: string,
+    couponCode?: string
   ) => Promise<PixPaymentData | null>
   checkPaymentStatus: (paymentId: string) => Promise<boolean>
   reset: () => void
@@ -41,7 +42,8 @@ export function usePixPayment(): UsePixPaymentReturn {
     planType: 'monthly' | 'annual',
     userId?: string,
     userEmail?: string,
-    guestEmail?: string
+    guestEmail?: string,
+    couponCode?: string
   ): Promise<PixPaymentData | null> => {
     setIsLoading(true)
     setError(null)
@@ -74,6 +76,7 @@ export function usePixPayment(): UsePixPaymentReturn {
           userId,
           userEmail,
           guestEmail,
+          ...(couponCode && { couponCode }),
         }),
       })
 

@@ -70,7 +70,8 @@ export async function createCheckoutSession(
   priceId: string,
   successUrl: string,
   cancelUrl: string,
-  isGuestCheckout: boolean = false
+  isGuestCheckout: boolean = false,
+  couponCode?: string
 ): Promise<Stripe.Checkout.Session> {
   // Get or create customer
   const customerId = await getOrCreateStripeCustomer(userId, email)
@@ -81,7 +82,7 @@ export async function createCheckoutSession(
     : { guestEmail: email, isGuestCheckout: 'true' }
 
   // Create checkout session
-  const session = await stripe.checkout.sessions.create({
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: 'subscription',
     payment_method_types: ['card'],
@@ -98,9 +99,18 @@ export async function createCheckoutSession(
     subscription_data: {
       metadata,
     },
-    allow_promotion_codes: true,
+    allow_promotion_codes: !couponCode, // Disable if coupon is provided directly
     billing_address_collection: 'auto',
-  })
+  }
+
+  // Add coupon if provided
+  if (couponCode) {
+    sessionConfig.discounts = [{
+      coupon: couponCode,
+    }]
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionConfig)
 
   console.log('[Stripe] Checkout session created:', {
     sessionId: session.id,

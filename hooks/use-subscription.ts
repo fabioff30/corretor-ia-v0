@@ -20,7 +20,7 @@ interface SubscriptionData {
 }
 
 interface SubscriptionActions {
-  createSubscription: (planType?: 'monthly' | 'annual') => Promise<{ checkoutUrl: string } | null>
+  createSubscription: (planType?: 'monthly' | 'annual', guestEmail?: string, couponCode?: string) => Promise<{ checkoutUrl: string } | null>
   cancelSubscription: () => Promise<boolean>
   refreshSubscription: () => Promise<void>
 }
@@ -57,7 +57,8 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
   // Create new subscription
   const createSubscription = async (
     planType: 'monthly' | 'annual' = 'monthly',
-    guestEmail?: string
+    guestEmail?: string,
+    couponCode?: string
   ): Promise<{ checkoutUrl: string } | null> => {
     // Guest checkout: requires email
     // Authenticated checkout: requires user
@@ -81,10 +82,12 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
                 userId: user.id,
                 userEmail: user.email,
                 planType,
+                ...(couponCode && { couponCode }),
               }
             : {
                 guestEmail,
                 planType,
+                ...(couponCode && { couponCode }),
               }
         ),
       })
