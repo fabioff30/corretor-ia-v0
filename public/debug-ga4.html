@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug GA4 - CorretorIA</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid;
+    }
+    .success {
+      background: #d4edda;
+      border-color: #28a745;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      border-color: #dc3545;
+      color: #721c24;
+    }
+    .warning {
+      background: #fff3cd;
+      border-color: #ffc107;
+      color: #856404;
+    }
+    .info {
+      background: #d1ecf1;
+      border-color: #17a2b8;
+      color: #0c5460;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Debug Google Analytics 4</h1>
+
+    <div id="status-container">
+      <p>Verificando configurações...</p>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <button onclick="checkConsent()">1️⃣ Verificar Consentimento</button>
+      <button onclick="acceptConsent()">2️⃣ Aceitar Cookies</button>
+      <button onclick="checkGtag()">3️⃣ Verificar gtag</button>
+      <button onclick="sendTestEvent()">4️⃣ Enviar Evento Teste</button>
+      <button onclick="location.reload()">🔄 Recarregar</button>
+    </div>
+
+    <div id="console-output" style="margin-top: 30px;">
+      <h3>📋 Console Log:</h3>
+      <pre id="log"><code></code></pre>
+    </div>
+  </div>
+
+  <script>
+    const logElement = document.getElementById('log').querySelector('code');
+    const statusContainer = document.getElementById('status-container');
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString('pt-BR');
+      logElement.textContent += `[${timestamp}] ${message}\n`;
+      console.log(message);
+    }
+
+    function showStatus(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.textContent = message;
+      statusContainer.appendChild(div);
+    }
+
+    function checkConsent() {
+      statusContainer.innerHTML = '';
+      const consent = localStorage.getItem('cookie-consent');
+
+      log(`Cookie Consent: ${consent || 'NÃO DEFINIDO'}`);
+
+      if (consent === 'accepted') {
+        showStatus('✅ Consentimento ACEITO - GA4 deve estar ativo', 'success');
+      } else if (consent === 'declined') {
+        showStatus('❌ Consentimento RECUSADO - GA4 está bloqueado', 'error');
+      } else {
+        showStatus('⚠️ Consentimento NÃO DEFINIDO - GA4 não vai inicializar', 'warning');
+      }
+
+      // Check if script is loaded
+      const gaScript = document.querySelector('script[src*="googletagmanager.com/gtag"]');
+      if (gaScript) {
+        showStatus('✅ Script do GA4 encontrado na página', 'success');
+      } else {
+        showStatus('❌ Script do GA4 NÃO encontrado', 'error');
+      }
+    }
+
+    function acceptConsent() {
+      localStorage.setItem('cookie-consent', 'accepted');
+      log('✅ Consentimento de cookies definido como "accepted"');
+      showStatus('✅ Cookies aceitos! Recarregue a página para aplicar.', 'success');
+
+      // Trigger storage event
+      window.dispatchEvent(new Event('storage'));
+    }
+
+    function checkGtag() {
+      statusContainer.innerHTML = '';
+
+      if (typeof window.gtag === 'function') {
+        showStatus('✅ Função gtag() está disponível', 'success');
+        log('gtag() está funcionando');
+      } else {
+        showStatus('❌ Função gtag() NÃO está disponível', 'error');
+        log('ERRO: gtag() não está definido');
+      }
+
+      if (window.dataLayer) {
+        showStatus(`✅ dataLayer existe com ${window.dataLayer.length} itens`, 'success');
+        log(`dataLayer: ${JSON.stringify(window.dataLayer, null, 2)}`);
+      } else {
+        showStatus('❌ dataLayer NÃO existe', 'error');
+        log('ERRO: dataLayer não está definido');
+      }
+    }
+
+    function sendTestEvent() {
+      statusContainer.innerHTML = '';
+
+      if (typeof window.gtag !== 'function') {
+        showStatus('❌ gtag() não disponível - aceite os cookies primeiro', 'error');
+        return;
+      }
+
+      try {
+        window.gtag('event', 'test_event_debug', {
+          test_parameter: 'debug_value',
+          timestamp: new Date().toISOString()
+        });
+
+        showStatus('✅ Evento de teste enviado! Verifique no GA4 Realtime', 'success');
+        log('Evento "test_event_debug" enviado para GA4');
+        log('Parâmetros: { test_parameter: "debug_value", timestamp: "' + new Date().toISOString() + '" }');
+        log('');
+        log('➡️ Acesse: https://analytics.google.com/');
+        log('➡️ Vá em: Relatórios > Tempo real > Visão geral de eventos');
+        log('➡️ Procure por: test_event_debug');
+      } catch (error) {
+        showStatus('❌ Erro ao enviar evento: ' + error.message, 'error');
+        log('ERRO: ' + error.message);
+      }
+    }
+
+    // Auto-check on load
+    window.addEventListener('load', function() {
+      log('=== Debug GA4 - CorretorIA ===');
+      log('Measurement ID: G-ZR7B5DMLER');
+      log('');
+      checkConsent();
+
+      setTimeout(() => {
+        checkGtag();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

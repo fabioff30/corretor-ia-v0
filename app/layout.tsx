@@ -127,26 +127,23 @@ export default async function RootLayout({
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
 
-          // Verificar consentimento de cookies antes de inicializar
+          // Sempre inicializar o GA4 (necessário para gtag funcionar)
+          gtag('config', 'G-ZR7B5DMLER', {
+            page_path: window.location.pathname,
+            send_page_view: true
+          });
+
+          console.log('[GA4] Google Analytics 4 inicializado - ID: G-ZR7B5DMLER');
+
+          // Verificar consentimento para logging
           var ga4Consent = localStorage.getItem('cookie-consent');
           if (ga4Consent === 'accepted') {
-            gtag('config', 'G-ZR7B5DMLER', {
-              page_path: window.location.pathname,
-              send_page_view: true
-            });
+            console.log('[GA4] Cookie consent: ACCEPTED - enviando eventos');
+          } else if (ga4Consent === 'declined') {
+            console.log('[GA4] Cookie consent: DECLINED - eventos não serão enviados');
+          } else {
+            console.log('[GA4] Cookie consent: NOT SET - eventos serão enviados');
           }
-
-          // Escutar mudanças no consentimento
-          window.addEventListener('storage', function() {
-            var consent = localStorage.getItem('cookie-consent');
-            if (consent === 'accepted' && !window.ga4Initialized) {
-              gtag('config', 'G-ZR7B5DMLER', {
-                page_path: window.location.pathname,
-                send_page_view: true
-              });
-              window.ga4Initialized = true;
-            }
-          });
         `}
         </Script>
 
