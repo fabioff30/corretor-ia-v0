@@ -20,7 +20,7 @@ export default async function PixSuccessPage({ searchParams }: PixSuccessPagePro
   const params = await searchParams
   const { paymentId, email, plan, amount, guest } = params
 
-  const normalizedPlan = plan === "annual" || plan === "test" ? plan : "monthly"
+  const normalizedPlan = plan === "annual" ? "annual" : "monthly"
   const parsedAmount = amount ? Number.parseFloat(amount) : undefined
   const normalizedAmount = parsedAmount !== undefined && !Number.isNaN(parsedAmount) ? parsedAmount : undefined
   const isGuest = guest === "1"

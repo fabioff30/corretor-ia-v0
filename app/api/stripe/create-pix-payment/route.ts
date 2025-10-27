@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Save payment intent to database for tracking
     const supabase = createServiceRoleClient()
-    await supabase.from('pix_payments').insert({
+    const { error: insertError } = await supabase.from('pix_payments').insert({
       user_id: userId,
       payment_intent_id: paymentIntent.id,
       amount: amount / 100, // Convert to reais
@@ -74,6 +74,23 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
     })
+
+    if (insertError) {
+      console.error('[Create PIX Payment] Failed to persist payment intent:', insertError)
+      try {
+        await stripe.paymentIntents.cancel(paymentIntent.id)
+      } catch (cancelError) {
+        console.error('[Create PIX Payment] Failed to cancel orphaned payment intent:', cancelError)
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Erro ao registrar pagamento PIX',
+          message: 'Não foi possível salvar o PIX no banco. Tente novamente.',
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       {

@@ -15,7 +15,7 @@ import { sendGA4Event } from "@/utils/gtm-helper"
 import { obfuscateIdentifier } from "@/utils/analytics"
 import { useUserContext } from "@/components/providers/user-provider"
 
-type PlanType = "monthly" | "annual" | "test"
+type PlanType = "monthly" | "annual"
 
 const planCopy: Record<PlanType, { title: string; description: string }> = {
   monthly: {
@@ -25,10 +25,6 @@ const planCopy: Record<PlanType, { title: string; description: string }> = {
   annual: {
     title: "Plano Premium Anual",
     description: "12 meses com desconto especial",
-  },
-  test: {
-    title: "Plano de Teste",
-    description: "Acesso temporário para validação interna",
   },
 }
 

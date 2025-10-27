@@ -88,23 +88,16 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Link payment to user
-      const { error: updateError } = await supabase
-        .from('pix_payments')
-        .update({
-          user_id: user.id,
-          linked_to_user_at: new Date().toISOString(),
-        })
-        .eq('id', payment.id)
-
-      if (updateError) {
-        console.error('[Link Guest Payment] Error linking payment:', updateError)
+      const planTypeRaw = payment.plan_type
+      if (planTypeRaw !== 'monthly' && planTypeRaw !== 'annual') {
+        console.error('[Link Guest Payment] Unsupported plan type:', planTypeRaw)
         continue
       }
 
-      // Create subscription for the user
-      const planType = payment.plan_type as 'monthly' | 'annual' | 'test'
+      const paidAtIso = payment.paid_at || new Date().toISOString()
+      const { startDateIso, expiresAtIso } = calculateSubscriptionWindow(planTypeRaw, paidAtIso)
 
+      // Create subscription for the user
       const { data: newSubscription, error: insertError } = await supabase
         .from('subscriptions')
         .insert({
@@ -112,10 +105,8 @@ export async function POST(request: NextRequest) {
           mp_subscription_id: `pix_${payment.payment_intent_id}`,
           mp_payer_id: null, // Guest payments don't have payer_id yet
           status: 'authorized',
-          start_date: payment.paid_at || new Date().toISOString(),
-          next_payment_date: planType === 'monthly'
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          start_date: startDateIso,
+          next_payment_date: expiresAtIso,
           amount: payment.amount,
           currency: 'BRL',
           payment_method_id: 'pix',
@@ -140,20 +131,38 @@ export async function POST(request: NextRequest) {
       }
 
       // Update user profile to pro
-      await supabase
+      const { error: profileUpdateError } = await supabase
         .from('profiles')
         .update({
           plan_type: 'pro',
           subscription_status: 'active',
+          subscription_expires_at: expiresAtIso,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id)
 
+      if (profileUpdateError) {
+        console.error('[Link Guest Payment] Error updating profile:', profileUpdateError)
+      }
+
+      const { error: linkError } = await supabase
+        .from('pix_payments')
+        .update({
+          user_id: user.id,
+          linked_to_user_at: new Date().toISOString(),
+        })
+        .eq('id', payment.id)
+
+      if (linkError) {
+        console.error('[Link Guest Payment] Error linking payment to user:', linkError)
+      }
+
       linkedPayments.push({
         paymentId: payment.payment_intent_id,
         amount: payment.amount,
-        planType: payment.plan_type,
+        planType: planTypeRaw,
         paidAt: payment.paid_at,
+        expiresAt: expiresAtIso,
       })
 
       console.log('[Link Guest Payment] Successfully linked payment and activated subscription:', {
@@ -245,5 +254,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       hasPendingPayments: false,
     })
+  }
+}
+
+function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: string) {
+  const paidAt = new Date(paidAtIso)
+  const baseTime = Number.isNaN(paidAt.getTime()) ? Date.now() : paidAt.getTime()
+  const startDate = new Date(baseTime)
+  const expiresAt = new Date(baseTime)
+
+  if (planType === 'monthly') {
+    expiresAt.setMonth(expiresAt.getMonth() + 1)
+  } else {
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+  }
+
+  return {
+    startDateIso: startDate.toISOString(),
+    expiresAtIso: expiresAt.toISOString(),
   }
 }

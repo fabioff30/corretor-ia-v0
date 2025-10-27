@@ -13,7 +13,7 @@ import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 export const maxDuration = 60
 
 interface CreatePixPaymentRequest {
-  planType: 'monthly' | 'annual' | 'test'
+  planType: 'monthly' | 'annual'
   userId?: string
   userEmail?: string
   guestEmail?: string // Email for guest (non-logged) users
@@ -28,17 +28,10 @@ export async function POST(request: NextRequest) {
     const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : undefined
     const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : undefined
 
-    if (!planType || !['monthly', 'annual', 'test'].includes(planType)) {
+    if (!planType || !['monthly', 'annual'].includes(planType)) {
       return NextResponse.json(
         { error: 'Tipo de plano inválido' },
         { status: 400 }
-      )
-    }
-
-    if (planType === 'test' && process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'PIX de teste indisponível em produção' },
-        { status: 403 }
       )
     }
 
@@ -76,14 +69,10 @@ export async function POST(request: NextRequest) {
       annual: {
         amount: 299.00,
         description: 'Plano Premium Anual - CorretorIA'
-      },
-      test: {
-        amount: 5.00,
-        description: '🧪 TESTE - Pagamento PIX R$ 5,00 - CorretorIA'
       }
     }
 
-    const plan = pricing[planType as 'monthly' | 'annual' | 'test']
+    const plan = pricing[planType]
 
     // Apply discount if coupon code is provided (ZhX6Oy78 = 50% off)
     const discountPercent = couponCode === 'ZhX6Oy78' ? 50 : 0
@@ -184,7 +173,13 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('[MP PIX] Error saving payment:', insertError)
-      // Continue anyway - payment was created successfully
+      return NextResponse.json(
+        {
+          error: 'Erro ao registrar pagamento PIX',
+          message: 'PIX criado, mas não foi possível salvar no banco. Tente novamente em instantes.',
+        },
+        { status: 500 }
+      )
     }
 
     // Return payment details

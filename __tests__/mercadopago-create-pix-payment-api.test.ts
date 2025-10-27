@@ -186,9 +186,7 @@ describe('Mercado Pago create PIX payment API', () => {
     expect(data.paymentId).toBe('payment-123')
   })
 
-  it('blocks test plan in production', async () => {
-    process.env.NODE_ENV = 'production'
-
+  it('rejects invalid plan types', async () => {
     getCurrentUserWithProfile.mockResolvedValue({
       user: { id: 'user-1' },
       profile: { id: 'user-1' },
@@ -203,7 +201,9 @@ describe('Mercado Pago create PIX payment API', () => {
     })
 
     const response = await POST(request)
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(400)
+    const payload = await response.json()
+    expect(payload.error).toBe('Tipo de plano inválido')
   })
 
   it('rejects unauthenticated GET requests', async () => {

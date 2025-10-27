@@ -205,7 +205,7 @@ export default function ResetSubscriptionPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          planType: 'test',
+          planType: 'monthly',
           userId: user.id,
           userEmail: user.email,
         }),
@@ -224,7 +224,7 @@ export default function ResetSubscriptionPage() {
         qrCode: data.qrCode,
         qrCodeText: data.qrCodeText,
         amount: data.amount,
-        planType: 'test',
+        planType: 'monthly',
         expiresAt: data.expiresAt,
       })
 

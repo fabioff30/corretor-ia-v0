@@ -226,7 +226,14 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       }
 
       // Determine plan type from database record
-      const planType = pixPayment.plan_type as 'monthly' | 'annual' | 'test'
+      const planTypeRaw = pixPayment.plan_type
+      if (planTypeRaw !== 'monthly' && planTypeRaw !== 'annual') {
+        console.error(`[MP Webhook Payment] Unsupported PIX plan type: ${planTypeRaw}`)
+        return
+      }
+      const planType = planTypeRaw
+      const paidAtIso = payment.date_approved || pixPayment.paid_at || new Date().toISOString()
+      const { startDateIso, expiresAtIso } = calculateSubscriptionWindow(planType, paidAtIso)
 
       // Create subscription record
       const { data: newSubscription, error: insertError } = await supabase
@@ -236,10 +243,8 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
           mp_subscription_id: `pix_${payment.id}`, // PIX payments don't have subscription IDs
           mp_payer_id: payment.payer.id,
           status: 'authorized',
-          start_date: new Date().toISOString(),
-          next_payment_date: planType === 'monthly'
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          start_date: startDateIso,
+          next_payment_date: expiresAtIso,
           amount: payment.transaction_amount,
           currency: payment.currency_id,
           payment_method_id: 'pix',
@@ -415,6 +420,24 @@ async function handleSubscriptionEvent(subscriptionId: string, webhookBody: any)
   } catch (error) {
     console.error('Error handling subscription event:', error)
     throw error
+  }
+}
+
+function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: string) {
+  const paidAt = new Date(paidAtIso)
+  const baseTime = Number.isNaN(paidAt.getTime()) ? Date.now() : paidAt.getTime()
+  const startDate = new Date(baseTime)
+  const expiresAt = new Date(baseTime)
+
+  if (planType === 'monthly') {
+    expiresAt.setMonth(expiresAt.getMonth() + 1)
+  } else {
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+  }
+
+  return {
+    startDateIso: startDate.toISOString(),
+    expiresAtIso: expiresAt.toISOString(),
   }
 }
 

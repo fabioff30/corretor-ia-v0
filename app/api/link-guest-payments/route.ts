@@ -126,81 +126,88 @@ export async function POST(request: NextRequest) {
         planType: pixPayment.plan_type
       })
 
-      // Link payment to user
-      await supabase
-        .from('pix_payments')
-        .update({
-          user_id: user.id,
-          linked_to_user_at: new Date().toISOString(),
-        })
-        .eq('id', pixPayment.id)
+      const planTypeRaw = pixPayment.plan_type
+      if (planTypeRaw !== 'monthly' && planTypeRaw !== 'annual') {
+        console.error('[Link Payments] Unsupported PIX plan type:', planTypeRaw)
+      } else {
+        const paidAtIso = pixPayment.paid_at || new Date().toISOString()
+        const { startDateIso, expiresAtIso } = calculateSubscriptionWindow(planTypeRaw, paidAtIso)
 
-      // Create subscription
-      const planType = pixPayment.plan_type as 'monthly' | 'annual' | 'test'
-
-      const { data: newSubscription, error: insertError } = await supabase
-        .from('subscriptions')
-        .insert({
-          user_id: user.id,
-          mp_subscription_id: `pix_${pixPayment.payment_intent_id}`,
-          mp_payer_id: null,
-          status: 'authorized',
-          start_date: pixPayment.paid_at || new Date().toISOString(),
-          next_payment_date: planType === 'monthly'
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: pixPayment.amount,
-          currency: 'BRL',
-          payment_method_id: 'pix',
-        })
-        .select()
-        .single()
-
-      if (!insertError && newSubscription) {
-        console.log('[Link Payments] Subscription created, activating...', { subscriptionId: newSubscription.id })
-
-        // Activate subscription
-        const { error: activateError } = await supabase.rpc('activate_subscription', {
-          p_user_id: user.id,
-          p_subscription_id: newSubscription.id,
-        })
-
-        if (activateError) {
-          console.error('[Link Payments] Error activating subscription:', activateError)
-        } else {
-          console.log('[Link Payments] Subscription activated successfully')
-        }
-
-        // Update user profile
-        const { error: profileUpdateError } = await supabase
-          .from('profiles')
-          .update({
-            plan_type: 'pro',
-            subscription_status: 'active',
-            updated_at: new Date().toISOString(),
+        const { data: newSubscription, error: insertError } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            mp_subscription_id: `pix_${pixPayment.payment_intent_id}`,
+            mp_payer_id: null,
+            status: 'authorized',
+            start_date: startDateIso,
+            next_payment_date: expiresAtIso,
+            amount: pixPayment.amount,
+            currency: 'BRL',
+            payment_method_id: 'pix',
           })
-          .eq('id', user.id)
+          .select()
+          .single()
 
-        if (profileUpdateError) {
-          console.error('[Link Payments] Error updating profile:', profileUpdateError)
+        if (insertError || !newSubscription) {
+          console.error('[Link Payments] Error creating subscription:', insertError)
         } else {
-          console.log('[Link Payments] Profile updated to premium')
+          console.log('[Link Payments] Subscription created, activating...', { subscriptionId: newSubscription.id })
+
+          const { error: activateError } = await supabase.rpc('activate_subscription', {
+            p_user_id: user.id,
+            p_subscription_id: newSubscription.id,
+          })
+
+          if (activateError) {
+            console.error('[Link Payments] Error activating subscription:', activateError)
+          } else {
+            console.log('[Link Payments] Subscription activated successfully')
+          }
+
+          const { error: profileUpdateError } = await supabase
+            .from('profiles')
+            .update({
+              plan_type: 'pro',
+              subscription_status: 'active',
+              subscription_expires_at: expiresAtIso,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id)
+
+          if (profileUpdateError) {
+            console.error('[Link Payments] Error updating profile:', profileUpdateError)
+          } else {
+            console.log('[Link Payments] Profile updated to premium')
+          }
+
+          const { error: linkError } = await supabase
+            .from('pix_payments')
+            .update({
+              user_id: user.id,
+              linked_to_user_at: new Date().toISOString(),
+            })
+            .eq('id', pixPayment.id)
+
+          if (linkError) {
+            console.error('[Link Payments] Error linking PIX payment to user:', linkError)
+          }
+
+          linkedItems.push({
+            type: 'pix',
+            paymentId: pixPayment.payment_intent_id,
+            amount: pixPayment.amount,
+            planType: planTypeRaw,
+            expiresAt: expiresAtIso,
+          })
+
+          console.log('[Link Payments] PIX payment linked and subscription activated', {
+            userId: user.id,
+            subscriptionId: newSubscription.id,
+            plan: pixPayment.plan_type,
+            expiresAt: expiresAtIso,
+          })
         }
-
-        linkedItems.push({
-          type: 'pix',
-          paymentId: pixPayment.payment_intent_id,
-          amount: pixPayment.amount,
-          planType: pixPayment.plan_type,
-        })
-
-        console.log('[Link Payments] PIX payment linked and subscription activated', {
-          userId: user.id,
-          subscriptionId: newSubscription.id,
-          plan: pixPayment.plan_type
-        })
-      } else if (insertError) {
-        console.error('[Link Payments] Error creating subscription:', insertError)
       }
     } else {
       console.log('[Link Payments] No guest PIX payments found for', userEmail)
@@ -373,5 +380,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       hasPendingPayments: false,
     })
+  }
+}
+
+function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: string) {
+  const paidAt = new Date(paidAtIso)
+  const baseTime = Number.isNaN(paidAt.getTime()) ? Date.now() : paidAt.getTime()
+  const startDate = new Date(baseTime)
+  const expiresAt = new Date(baseTime)
+
+  if (planType === 'monthly') {
+    expiresAt.setMonth(expiresAt.getMonth() + 1)
+  } else {
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+  }
+
+  return {
+    startDateIso: startDate.toISOString(),
+    expiresAtIso: expiresAt.toISOString(),
   }
 }

@@ -1,23 +1,37 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core logic lives in `app/`, which hosts App Router pages, layouts, and API routes. Shared primitives sit under `components/ui/`, while feature-level components belong in `components/`. Reuse hooks through `hooks/`, utilities through `utils/`, and shared types via `types/`. Store static assets in `public/`, with styling centralized in `app/globals.css` and `tailwind.config.ts`. Place workflows or scripts in `actions/` and `scripts/`, and keep transactional email templates in `emails/`. Organize new modules by matching these directories and using the `@/` alias for imports.
+- `app/` hosts App Router pages, layouts, and route handlers; import shared code with the `@/` alias.
+- Primitive building blocks stay in `components/ui/`; feature assemblies (dashboards, payment flows) belong in `components/`.
+- Share logic through `hooks/`, `utils/`, `lib/`, `contexts/`, and type definitions in `types/`.
+- Automations and maintenance jobs live in `actions/` and `scripts/`; transactional emails sit in `emails/`; static assets belong in `public/`.
+- Guard authentication and caching centrally via `middleware.ts` and `utils/cache-config.ts`.
 
 ## Build, Test, and Development Commands
-- `npm run dev` launches the local Next.js server with hot reload.
-- `npm run build` compiles the production bundle and runs type checks.
-- `npm run start` serves the optimized build for smoke testing.
-- `npm run lint` enforces ESLint and Next.js rules; run before PRs.
-- `npm test` executes Jest with React Testing Library. Wire new suites here.
+- `npm run dev` boots the Next.js dev server on `http://localhost:3000`.
+- `npm run build` compiles the production bundle and performs type checking.
+- `npm run start` serves the prebuilt `.next/` output for smoke testing.
+- `npm run lint` enforces ESLint and Prettier rules; use `npm run lint -- --fix` to autofix.
+- `npm test` runs Jest with the Happy DOM environment and React Testing Library.
 
 ## Coding Style & Naming Conventions
-Write strict TypeScript with double quotes, two-space indentation, and no semicolons. Keep imports ordered: external packages first, then `@/` paths. Components export PascalCase symbols and live in kebab-case files (e.g., `text-correction-form.tsx`). Hooks start with `use-`, utilities prefer verb-noun naming, and default to server components; add `"use client"` only when browser APIs are required. Format edits with the repo’s Prettier and ESLint settings before committing.
+- Write strict TypeScript with double quotes, two-space indentation, and no semicolons.
+- Order imports: external packages, then `@/` aliases, then relatives.
+- Export PascalCase components from kebab-case files (e.g., `components/text-correction-form.tsx`); prefix hooks with `use-`; prefer verb-noun names for utilities.
+- Default to server components—add `"use client"` only when browser APIs or interactivity require it.
 
 ## Testing Guidelines
-Use Jest plus React Testing Library; place specs in `__tests__/` or alongside source files as `*.test.ts(x)`. Target behavior-critical paths such as sanitization helpers, caching logic, and rating workflows. Keep tests deterministic, mock external services, and ensure any new command integrates with `npm test`. Failing tests block merges.
+- Jest is configured through `jest.config.js` and `jest.setup.ts`; specs live in `__tests__/` or alongside sources as `*.test.ts(x)`.
+- Focus coverage on sanitization helpers, Supabase adapters, caching logic, and payment flows.
+- Mock external services (OpenAI, Upstash, Stripe) and keep tests deterministic.
+- Run `npm test` before every PR and extend suites when touching logic in `lib/`, API routes, or shared hooks.
 
 ## Commit & Pull Request Guidelines
-Commits follow Conventional Commits (`feat:`, `fix:`, `chore:`) in present tense. Group related changes; avoid bundling unrelated refactors. PRs must summarize intent, list implementation notes, and link issues. Include screenshots or GIFs for UI updates, call out migrations or config changes, and confirm `npm run lint` plus `npm run build` before requesting review.
+- Use Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`) in present tense and keep scopes narrow.
+- Confirm `npm run lint` and `npm run build` succeed locally, then link the relevant issue and document manual verification steps.
+- Provide screenshots or clips for UI changes and call out schema, env, or infrastructure updates.
 
 ## Security & Configuration Tips
-Duplicate `.env.example` into `.env.local` for new environments, keeping secrets out of version control. Rotate `AUTH_TOKEN`, `REVALIDATION_TOKEN`, `WEBHOOK_SECRET`, `OPENAI_API_KEY`, and other keys with `openssl rand -hex 32`. Never expose credentials in client components, and review `middleware.ts` and `utils/cache-config.ts` when adjusting authentication or rate limiting.
+- Duplicate `.env.example` to `.env.local`, never commit secrets, and rotate tokens (`AUTH_TOKEN`, `REVALIDATION_TOKEN`, `WEBHOOK_SECRET`, `OPENAI_API_KEY`) with `openssl rand -hex 32`.
+- Review changes to `middleware.ts` and `utils/cache-config.ts` for auth implications, and avoid exposing Supabase or Stripe secrets in client components.
+- Revalidate webhook URLs whenever scripts in `actions/` alter integration behavior.
