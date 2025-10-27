@@ -108,10 +108,12 @@ const ALLOWED_TONES = [
 ]
 
 // Base text validation schema
+// Note: Max length increased to 200000 to support premium users
+// Actual limits are enforced at the API route level based on user plan
 const baseTextValidation = z
   .string()
   .min(1, "O texto não pode estar vazio")
-  .max(5000, "O texto não pode exceder 5000 caracteres")
+  .max(200000, "O texto não pode exceder 200000 caracteres")
   .refine((text) => {
     // Check for dangerous content using the HTML sanitizer utility
     return !containsDangerousContent(text)

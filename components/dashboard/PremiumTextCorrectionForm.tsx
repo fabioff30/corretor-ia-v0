@@ -1,7 +1,7 @@
 /**
  * Premium Text Correction Form
  * Formulário de correção de texto para usuários Premium (Pro/Admin)
- * - Sem limite de caracteres
+ * - Até 200.000 caracteres (limite técnico do middleware)
  * - Sem anúncios
  * - Usa webhook premium
  */
@@ -94,7 +94,7 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    // Sem limite para usuários premium
+    // Limite de 200k caracteres para usuários premium (validado no middleware)
     setOriginalText(newText)
   }
 
