@@ -53,6 +53,7 @@ export function PixPostPayment(props: PixPostPaymentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   const formattedAmount = useMemo(() => {
     if (typeof amount !== "number") return null
@@ -230,12 +231,51 @@ export function PixPostPayment(props: PixPostPaymentProps) {
         return
       }
 
+      // Enviar email de boas-vindas via Brevo após signup bem-sucedido
+      if (email) {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+
+        try {
+          const emailResponse = await fetch('/api/emails/welcome', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email,
+              name,
+            }),
+            signal: controller.signal,
+          })
+
+          if (emailResponse.ok) {
+            setEmailSent(true)
+          } else {
+            setEmailError("O email de confirmação pode demorar alguns minutos para chegar. Verifique sua caixa de spam.")
+          }
+        } catch (welcomeError) {
+          console.error('Erro ao enviar email de boas-vindas:', welcomeError)
+          setEmailError("O email de confirmação pode demorar alguns minutos para chegar. Verifique sua caixa de spam.")
+        } finally {
+          clearTimeout(timeout)
+        }
+      }
+
       setSuccess(true)
+
+      const successMessage = emailSent
+        ? "Email de confirmação enviado! Você será redirecionado em instantes."
+        : "Conta criada com sucesso! Verifique seu email para confirmar."
+
       toast({
-        title: "Senha criada com sucesso!",
-        description: "Estamos preparando seu acesso Premium. Você será redirecionado em instantes.",
+        title: "✅ Senha criada com sucesso!",
+        description: successMessage,
       })
-      sendGA4Event("pix_post_payment_create_password_success", { ...basePayload })
+      sendGA4Event("pix_post_payment_create_password_success", {
+        ...basePayload,
+        emailSent
+      })
 
       setTimeout(() => {
         router.push("/dashboard")
@@ -265,11 +305,18 @@ export function PixPostPayment(props: PixPostPaymentProps) {
           <CardContent className="pt-10">
             <div className="flex flex-col items-center gap-4 text-center">
               <CheckCircle className="h-16 w-16 text-green-500" />
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h2 className="text-2xl font-bold text-green-600">Tudo certo!</h2>
                 <p className="text-muted-foreground">
                   Seu acesso Premium está sendo ativado. Redirecionaremos você automaticamente.
                 </p>
+                {email && (
+                  <p className="text-sm text-muted-foreground bg-green-50 p-3 rounded-lg">
+                    📧 Enviamos um email de confirmação para <strong className="text-green-700">{email}</strong>
+                    <br />
+                    <span className="text-xs">Verifique sua caixa de entrada ou spam.</span>
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -300,8 +347,10 @@ export function PixPostPayment(props: PixPostPaymentProps) {
             </div>
           </div>
           {emailError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertDescription>{emailError}</AlertDescription>
+            <Alert className="mt-4 border-yellow-200 bg-yellow-50">
+              <AlertDescription className="text-sm text-yellow-800">
+                <strong>⚠️ Aviso:</strong> {emailError}
+              </AlertDescription>
             </Alert>
           )}
         </CardHeader>

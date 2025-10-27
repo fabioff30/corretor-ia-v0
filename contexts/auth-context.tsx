@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name?: string) => {
     try {
       setLoading(true)
-      
+
       // Registrar usuário no Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -187,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             name: name || '',
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
