@@ -227,7 +227,7 @@ export default async function RootLayout({
 
         <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
           <AuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <div className="flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-1">{children}</main>

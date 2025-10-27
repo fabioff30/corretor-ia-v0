@@ -5,6 +5,18 @@ import { createClient } from '@/lib/supabase/client'
 import { sendGTMEvent } from '@/utils/gtm-helper'
 import { useUser } from '@/hooks/use-user'
 
+/**
+ * Google One Tap - Componente de autenticação rápida
+ *
+ * FedCM Migration (2024-2025):
+ * - Migrado para FedCM (Federated Credential Management) API
+ * - use_fedcm_for_prompt: true ativa o novo fluxo de autenticação
+ * - FedCM oferece melhor privacidade (não requer third-party cookies)
+ * - Migração obrigatória iniciada em outubro de 2024
+ *
+ * Docs: https://developers.google.com/identity/gsi/web/guides/fedcm-migration
+ */
+
 // Tipos para o Google Identity Services
 declare global {
   interface Window {
@@ -27,6 +39,7 @@ interface GoogleOneTapConfig {
   cancel_on_tap_outside?: boolean
   context?: 'signin' | 'signup' | 'use'
   prompt_parent_id?: string
+  use_fedcm_for_prompt?: boolean
 }
 
 interface CredentialResponse {
@@ -144,6 +157,7 @@ export function GoogleOneTap() {
           auto_select: false, // Não selecionar automaticamente
           cancel_on_tap_outside: true, // Fechar ao clicar fora
           context: 'signin', // Contexto: signin, signup ou use
+          use_fedcm_for_prompt: true, // Ativa FedCM para melhor privacidade (sem third-party cookies)
         })
 
         // Exibe o prompt do One Tap
