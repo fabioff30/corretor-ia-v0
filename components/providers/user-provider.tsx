@@ -37,27 +37,64 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
   const fetchProfile = useCallback(
     async (userId: string) => {
-      const { data, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single()
+      try {
+        const { data, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle()
 
-      if (profileError) {
-        console.error("Erro ao buscar perfil:", profileError)
-        setError(profileError.message)
+        if (profileError && profileError.code !== "PGRST116") {
+          console.error("Erro ao buscar perfil:", profileError)
+          setError(profileError.message)
+          return null
+        }
+
+        const profileData = data
+
+        if (!profileData) {
+          const response = await fetch("/api/profiles/sync", {
+            method: "POST",
+            cache: "no-store",
+          })
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => null)
+            const message = payload?.error || "Não foi possível criar o perfil"
+            setError(message)
+            return null
+          }
+
+          const payload = (await response.json()) as { profile: Profile }
+          const createdProfile = payload.profile
+          setProfile(createdProfile)
+          setError(null)
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem(
+              "user-plan-type",
+              createdProfile?.plan_type ?? "free"
+            )
+          }
+
+          return createdProfile
+        }
+
+        setProfile(profileData)
+        setError(null)
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user-plan-type", profileData.plan_type ?? "free")
+        }
+
+        return profileData
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Erro ao buscar perfil"
+        console.error("Erro ao buscar perfil:", err)
+        setError(message)
         return null
       }
-
-      setProfile(data)
-      setError(null)
-
-      // Armazenar plan-type no localStorage para scripts acessarem (ex: AdSense)
-      if (typeof window !== 'undefined' && data?.plan_type) {
-        localStorage.setItem('user-plan-type', data.plan_type)
-      }
-
-      return data
     },
     [supabase]
   )
