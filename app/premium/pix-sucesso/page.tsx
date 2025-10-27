@@ -7,17 +7,18 @@ export const metadata: Metadata = {
 }
 
 type PixSuccessPageProps = {
-  searchParams: {
+  searchParams: Promise<{
     paymentId?: string
     email?: string
     plan?: string
     amount?: string
     guest?: string
-  }
+  }>
 }
 
-export default function PixSuccessPage({ searchParams }: PixSuccessPageProps) {
-  const { paymentId, email, plan, amount, guest } = searchParams
+export default async function PixSuccessPage({ searchParams }: PixSuccessPageProps) {
+  const params = await searchParams
+  const { paymentId, email, plan, amount, guest } = params
 
   const normalizedPlan = plan === "annual" || plan === "test" ? plan : "monthly"
   const parsedAmount = amount ? Number.parseFloat(amount) : undefined
