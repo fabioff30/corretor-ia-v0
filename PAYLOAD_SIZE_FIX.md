@@ -32,31 +32,21 @@ O Next.js tem um **limite padrão de 4MB** para o body das requisições de API.
 
 ## ✅ Solução
 
-Aumentar o limite de payload para **50MB** em ambas as configurações:
+Aumentar o limite de payload no Next.js através do `next.config.mjs`:
 
-### 1. `vercel.json` - Rotas de API
+### 1. Limites do Vercel (Não Configuráveis)
 
-```json
-{
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 120,
-      "maxRequestBodySize": "50mb"  // ✅ NOVO
-    }
-  }
-}
-```
+O Vercel tem limites fixos baseados no plano:
+- **Plano Hobby/Free**: 4.5MB máximo
+- **Plano Pro**: 100MB máximo
 
-**Antes:**
-- Limite: 4MB (padrão do Next.js)
-- Textos > 2 milhões de caracteres: ❌ 404 Error
+⚠️ **Importante**: Não é possível alterar esses limites via `vercel.json`. Eles são definidos pelo seu plano.
 
-**Depois:**
-- Limite: 50MB
-- Textos até ~25 milhões de caracteres: ✅ OK
+**Status Atual do Projeto:**
+- Se está no plano Hobby: limite real é **4.5MB** (~2.2 milhões de caracteres)
+- Se está no plano Pro: limite real é **100MB** (~50 milhões de caracteres)
 
-### 2. `next.config.mjs` - Server Actions
+### 2. `next.config.mjs` - Server Actions e API Routes
 
 ```javascript
 experimental: {
@@ -66,14 +56,31 @@ experimental: {
 },
 ```
 
-## 📊 Capacidade com 50MB
+**O que isso faz:**
+- Permite que o Next.js processe payloads até 50MB
+- Mas o limite REAL será o do seu plano Vercel
 
+**Resultado Prático:**
+- **Plano Hobby**: limite efetivo é **4.5MB** (Vercel limita)
+- **Plano Pro**: limite efetivo é **50MB** (next.config limita)
+
+## 📊 Capacidade Real por Plano
+
+### Plano Hobby/Free (4.5MB):
+| Tipo de Conteúdo | Tamanho Aproximado |
+|------------------|-------------------|
+| **Texto puro** | ~2.250.000 caracteres |
+| **Palavras** | ~375.000 palavras |
+| **Páginas A4** | ~1.125 páginas |
+| **Livros** | ~4-5 livros de 250 páginas |
+
+### Plano Pro (50MB - limitado por next.config):
 | Tipo de Conteúdo | Tamanho Aproximado |
 |------------------|-------------------|
 | **Texto puro** | ~25.000.000 caracteres |
 | **Palavras** | ~4.200.000 palavras |
 | **Páginas A4** | ~12.500 páginas |
-| **Livros** | ~100 livros de 250 páginas |
+| **Livros** | ~50 livros de 250 páginas |
 
 ## 🎯 Rotas Afetadas (Agora Corrigidas)
 
@@ -149,15 +156,45 @@ fetch('/api/correct', {
 
 ## 🔧 Arquivos Modificados
 
-1. **vercel.json**:
-   - Adicionado: `maxRequestBodySize: "50mb"`
-
-2. **next.config.mjs**:
+1. **next.config.mjs**:
    - Atualizado: `bodySizeLimit: '50mb'` (era 2mb)
+   - Isso permite que o Next.js aceite payloads maiores
+
+2. **vercel.json**:
+   - Nenhuma mudança necessária
+   - O limite é controlado pelo plano do Vercel (Hobby=4.5MB, Pro=100MB)
+
+## 🚀 Como Aumentar o Limite Efetivo
+
+### Opção 1: Upgrade para Vercel Pro (Recomendado)
+```
+Plano Hobby: 4.5MB → Plano Pro: 100MB
+```
+
+**Benefícios:**
+- ✅ Limite de 100MB (22x maior)
+- ✅ Funções serverless mais rápidas
+- ✅ Mais builds por mês
+- ✅ Análises avançadas
+
+**Como fazer:**
+1. Acessar https://vercel.com/dashboard
+2. Ir em Settings → Billing
+3. Fazer upgrade para Pro (~$20/mês)
+
+### Opção 2: Continuar com Hobby (Limitado)
+```
+Limite: 4.5MB (~2.2 milhões de caracteres)
+```
+
+**O que fazer:**
+- Adicionar validação client-side para avisar usuário
+- Mostrar mensagem quando texto > 4MB
+- Sugerir dividir textos muito grandes
 
 ## 📝 Próximos Passos (Opcional)
 
-### 1. Adicionar validação client-side:
+### 1. Adicionar validação client-side para plano Hobby:
 ```typescript
 // Em PremiumTextCorrectionForm.tsx
 const MAX_SIZE_MB = 10 // Avisar se > 10MB
@@ -189,14 +226,26 @@ const compressed = pako.gzip(text)
 
 ## 🎉 Resultado Final
 
-✅ **Usuários premium podem enviar textos de qualquer tamanho** (até 50MB)
-✅ **Sem mais erro 404** em textos grandes
-✅ **Correção e reescrita funcionam perfeitamente**
+### Se Plano Hobby (4.5MB):
+✅ **Usuários premium podem enviar textos até 4.5MB** (~2.2 milhões de caracteres)
+✅ **Sem erro 404** para textos dentro do limite
+✅ **Correção e reescrita funcionam** para textos até ~1.125 páginas
+⚠️ **Considere upgrade para Pro** para textos maiores
+
+### Se Plano Pro (50MB):
+✅ **Usuários premium podem enviar textos até 50MB** (~25 milhões de caracteres)
+✅ **Sem erro 404** em textos grandes
+✅ **Correção e reescrita funcionam perfeitamente** para textos até ~12.500 páginas
 ✅ **Performance mantida** (timeout de 120s)
+
+### Resumo:
+- **next.config.mjs**: Configurado para 50MB ✅
+- **Limite real**: Depende do plano Vercel (Hobby=4.5MB, Pro=100MB)
+- **Recomendação**: Upgrade para Pro se precisar de textos > 4.5MB
 
 ---
 
-**Commit**: `fix: aumentar limite de payload para 50MB em rotas de API premium`
+**Commit**: `fix: aumentar limite de payload no next.config para 50MB`
 **Data**: 2025-01-27
 **Issue**: Erro 404 com textos grandes em rotas premium
-**Plano**: Hobby (considera upgrade para Pro se necessário)
+**Limite Real**: Depende do plano Vercel atual
