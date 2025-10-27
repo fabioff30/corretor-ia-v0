@@ -266,7 +266,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signInWithOAuth({
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -274,10 +275,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             access_type: 'offline',
             prompt: 'consent',
           },
+          skipBrowserRedirect: false,
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('[Auth] Google sign-in error:', error)
+        throw error
+      }
+
+      console.log('[Auth] Google sign-in initiated', {
+        url: data.url,
+        provider: data.provider,
+      })
 
       // Track Google sign-in initiation
       sendGTMEvent('login_initiated', {
@@ -286,9 +296,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null }
     } catch (error) {
+      console.error('[Auth] signInWithGoogle failed:', error)
       return { error: error as Error }
     } finally {
-      setLoading(false)
+      // Note: Don't set loading to false if redirect is successful
+      // The page will redirect before this runs
     }
   }
 
