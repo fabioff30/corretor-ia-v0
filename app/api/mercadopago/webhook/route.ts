@@ -14,6 +14,8 @@ import {
 } from '@/lib/mercadopago/webhook-validator'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { sendPaymentApprovedEmail } from '@/lib/email/send'
+import { getPublicConfig } from '@/utils/env-config'
 
 export const maxDuration = 60
 
@@ -337,6 +339,45 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       if (!updatedProfile) {
         console.error('[MP Webhook Payment] Profile not found after update for user:', userId)
         return
+      }
+
+      // Get user email and name for sending confirmation email
+      console.log(`[MP Webhook Payment] Fetching user details to send payment confirmation email...`)
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('profiles')
+        .select('email, name')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (userProfileError) {
+        console.error('[MP Webhook Payment] Error fetching user profile for email:', userProfileError)
+        // Continue anyway - email is not critical for activation
+      } else if (userProfile && userProfile.email) {
+        // Send payment approved email
+        try {
+          const appUrl = getPublicConfig().APP_URL
+          const dashboardLink = `${appUrl}/dashboard`
+
+          console.log(`[MP Webhook Payment] Sending payment approved email to: ${userProfile.email}`)
+
+          await sendPaymentApprovedEmail({
+            to: {
+              email: userProfile.email,
+              name: userProfile.name || 'Usuário',
+            },
+            name: userProfile.name || 'Usuário',
+            amount: payment.transaction_amount,
+            planType: planType,
+            activationLink: dashboardLink,
+          })
+
+          console.log(`[MP Webhook Payment] ✉️ Payment approved email sent successfully to ${userProfile.email}`)
+        } catch (emailError) {
+          console.error('[MP Webhook Payment] Error sending payment approved email:', emailError)
+          // Don't fail the webhook if email fails - activation is already complete
+        }
+      } else {
+        console.warn('[MP Webhook Payment] User profile has no email - skipping payment confirmation email')
       }
 
       // Mark payment as consumed (benefit applied)

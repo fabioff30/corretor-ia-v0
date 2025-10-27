@@ -406,7 +406,7 @@ export function paymentApprovedEmailTemplate({
     currency: 'BRL',
   })
   const planName = planType === 'monthly' ? 'Mensal' : 'Anual'
-  const subject = '✅ Pagamento aprovado! Ative sua assinatura Premium'
+  const subject = '✅ Pagamento aprovado! Sua assinatura está ativa'
 
   const htmlContent = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html dir="ltr" lang="pt-BR">
@@ -447,23 +447,23 @@ export function paymentApprovedEmailTemplate({
               </tbody>
             </table>
 
-            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:24px">Próximo passo: Ative sua assinatura</h2>
+            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:24px">Sua assinatura está ativa! ✓</h2>
 
-            <p style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:16px;margin-top:0px">Para começar a usar todos os recursos Premium, clique no botão abaixo para ativar sua assinatura agora mesmo:</p>
+            <p style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:16px;margin-top:0px">Sua assinatura Premium já está ativa! Clique no botão abaixo para acessar seu dashboard e começar a usar todos os recursos:</p>
 
             <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:24px;margin-top:24px">
               <tbody>
                 <tr>
                   <td>
                     <a href="${activationLink}" style="background-color:#534BD1;color:rgb(255,255,255);padding:16px 32px;border-radius:6px;font-size:18px;font-weight:600;text-decoration:none;box-sizing:border-box;display:inline-block;line-height:100%;max-width:100%;mso-padding-alt:0px" target="_blank" rel="noopener noreferrer">
-                      <span style="display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:12px">🚀 Ativar Assinatura Premium</span>
+                      <span style="display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:12px">🚀 Acessar Dashboard Premium</span>
                     </a>
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:32px">O que você vai ter acesso:</h2>
+            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:32px">O que você já tem acesso agora:</h2>
 
             <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px">
               <tbody>
@@ -517,13 +517,13 @@ ${displayName ? `Olá ${displayName},` : 'Olá,'}
 - Plano: Premium ${planName}
 - Status: ✓ Aprovado
 
-Próximo passo: Ative sua assinatura
+Sua assinatura está ativa! ✓
 
-Para começar a usar todos os recursos Premium, clique no link abaixo para ativar sua assinatura:
+Sua assinatura Premium já está ativa! Clique no link abaixo para acessar seu dashboard e começar a usar todos os recursos:
 
 ${activationLink}
 
-O que você vai ter acesso:
+O que você já tem acesso agora:
 ✨ Correções ilimitadas - Use quantas vezes precisar
 🔄 Reescritas ilimitadas - Melhore seus textos sem limites
 🤖 Análises de IA ilimitadas - Detecte IA sem restrições
