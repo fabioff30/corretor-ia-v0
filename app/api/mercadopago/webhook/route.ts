@@ -144,6 +144,11 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
 
+    if (!supabase) {
+      console.error('[MP Webhook Payment] Failed to create Supabase client')
+      return
+    }
+
     // Get payment details from MP
     console.log(`[MP Webhook Payment] Fetching payment details from Mercado Pago...`)
     const payment = await mpClient.getPayment(paymentId)
@@ -178,9 +183,14 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         .from('pix_payments')
         .select('user_id, email, plan_type')
         .eq('payment_intent_id', payment.id.toString())
-        .single()
+        .maybeSingle()
 
-      if (pixCheckError || !pixPaymentCheck) {
+      if (pixCheckError) {
+        console.error(`[MP Webhook Payment] Error querying PIX payment:`, pixCheckError)
+        return
+      }
+
+      if (!pixPaymentCheck) {
         console.error(`[MP Webhook Payment] PIX payment record not found for payment ID: ${payment.id}`)
         return
       }
@@ -199,7 +209,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         })
         .eq('payment_intent_id', payment.id.toString())
         .select('user_id, email, plan_type')
-        .single()
+        .maybeSingle()
 
       if (pixUpdateError) {
         console.error(`[MP Webhook Payment] Error updating PIX payment record:`, pixUpdateError)
@@ -207,7 +217,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       }
 
       if (!pixPayment) {
-        console.error(`[MP Webhook Payment] PIX payment record not found for payment ID: ${payment.id}`)
+        console.error(`[MP Webhook Payment] PIX payment record not found after update for payment ID: ${payment.id}`)
         return
       }
 
@@ -234,15 +244,20 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       const userId = pixPayment.user_id
 
       // Check if user already has an active subscription
-      const { data: existingSubscription } = await supabase
+      const { data: existingSubscription, error: existingSubError } = await supabase
         .from('subscriptions')
         .select('id')
         .eq('user_id', userId)
         .in('status', ['authorized', 'active'])
-        .single()
+        .maybeSingle()
+
+      if (existingSubError) {
+        console.error('[MP Webhook Payment] Error checking existing subscription:', existingSubError)
+        return
+      }
 
       if (existingSubscription) {
-        console.log('User already has an active subscription')
+        console.log('[MP Webhook Payment] User already has an active subscription')
         return
       }
 
@@ -302,10 +317,15 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         })
         .eq('id', userId)
         .select('plan_type, subscription_status, subscription_expires_at')
-        .single()
+        .maybeSingle()
 
       if (profileUpdateError) {
         console.error('[MP Webhook Payment] Error updating profile after PIX payment:', profileUpdateError)
+        return
+      }
+
+      if (!updatedProfile) {
+        console.error('[MP Webhook Payment] Profile not found after update for user:', userId)
         return
       }
 
@@ -338,14 +358,19 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
 
     // Handle regular subscription payments (non-PIX)
     // Find subscription by payer email or external reference
-    const { data: subscription } = await supabase
+    const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
       .select('id, user_id, mp_subscription_id')
       .eq('mp_payer_id', payment.payer.id)
-      .single()
+      .maybeSingle()
+
+    if (subscriptionError) {
+      console.error('[MP Webhook Payment] Error finding subscription:', subscriptionError)
+      return
+    }
 
     if (!subscription) {
-      console.warn(`No subscription found for payer ${payment.payer.id}`)
+      console.warn(`[MP Webhook Payment] No subscription found for payer ${payment.payer.id}`)
       return
     }
 
@@ -407,8 +432,14 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       // Could send email notification here
     }
   } catch (error) {
-    console.error('Error handling payment event:', error)
-    throw error
+    console.error('[MP Webhook Payment] ❌ Error handling payment event:', {
+      paymentId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: Date.now() - startTime
+    })
+    // Don't throw - let main handler catch and return 200
   }
 }
 
@@ -429,14 +460,19 @@ async function handleSubscriptionEvent(subscriptionId: string, webhookBody: any)
     })
 
     // Find subscription in database
-    const { data: subscription } = await supabase
+    const { data: subscription, error: subFindError } = await supabase
       .from('subscriptions')
       .select('id, user_id')
       .eq('mp_subscription_id', subscriptionId)
-      .single()
+      .maybeSingle()
+
+    if (subFindError) {
+      console.error('[MP Webhook Subscription] Error finding subscription:', subFindError)
+      return
+    }
 
     if (!subscription) {
-      console.warn(`Subscription not found in database: ${subscriptionId}`)
+      console.warn(`[MP Webhook Subscription] Subscription not found in database: ${subscriptionId}`)
       return
     }
 
@@ -458,15 +494,20 @@ async function handleSubscriptionEvent(subscriptionId: string, webhookBody: any)
       })
 
       if (cancelError) {
-        console.error('Error canceling subscription:', cancelError)
-        throw cancelError
+        console.error('[MP Webhook Subscription] Error canceling subscription:', cancelError)
+        return
       }
 
-      console.log('Subscription cancelled for user:', subscription.user_id)
+      console.log('[MP Webhook Subscription] Subscription cancelled for user:', subscription.user_id)
     }
   } catch (error) {
-    console.error('Error handling subscription event:', error)
-    throw error
+    console.error('[MP Webhook Subscription] ❌ Error handling subscription event:', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    })
+    // Don't throw - let main handler catch and return 200
   }
 }
 
