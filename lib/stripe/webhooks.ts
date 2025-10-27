@@ -413,8 +413,8 @@ export async function handlePixPaymentSucceeded(
     await supabase
       .from('profiles')
       .update({
-        is_pro: true,
-        plan_type: 'premium',
+        plan_type: 'pro',
+        subscription_status: 'active',
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)

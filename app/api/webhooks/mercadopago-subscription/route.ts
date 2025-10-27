@@ -95,7 +95,7 @@ async function handlePaymentNotification(paymentId: string) {
       const { data: subscriptionId, error: subscriptionError } = await supabaseAdmin
         .rpc('create_subscription', {
           user_uuid: user.id,
-          plan_type: 'premium',
+          plan_type: 'pro',
           period_start: new Date().toISOString(),
           period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           mp_subscription_id: external_reference || paymentId

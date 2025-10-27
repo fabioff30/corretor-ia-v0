@@ -97,4 +97,30 @@ Todos os usuários devem ter profile (sem NULL).
 ---
 
 **Data:** 2025-10-27
-**Status:** ⚠️ PENDENTE - Hook ainda não configurado
+**Status:** ✅ CONCLUÍDO - Trigger ativo no banco de dados
+
+---
+
+## ✅ STATUS ATUAL
+
+O trigger `on_auth_user_created` foi criado com sucesso via MCP do Supabase e está **ATIVO**.
+
+### Verificação:
+```sql
+SELECT tgname, tgenabled, pg_get_triggerdef(oid)
+FROM pg_trigger
+WHERE tgrelid = 'auth.users'::regclass
+  AND tgname = 'on_auth_user_created';
+```
+
+**Resultado:**
+- Trigger: `on_auth_user_created`
+- Status: `O` (enabled)
+- Definição: `CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user()`
+
+### Sincronização:
+- 26 auth.users
+- 26 profiles
+- 0 missing profiles ✅
+
+**Conclusão:** Não é necessário configurar nada no dashboard. O trigger está funcionando via PostgreSQL diretamente.

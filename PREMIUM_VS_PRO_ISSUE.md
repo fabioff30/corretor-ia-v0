@@ -45,40 +45,25 @@ plan_type TEXT DEFAULT 'free' CHECK (plan_type IN ('free', 'premium', 'pro'))  /
 
 ---
 
-## ✅ Correções Já Feitas
+## ✅ Todas as Correções Aplicadas (2025-10-27)
 
 1. ✅ `app/api/link-guest-payments/route.ts` - Corrigido para usar 'pro'
-2. ✅ `supabase/migrations/20251027_fix_profiles_trigger_v2.sql` - Versão correta da migration
+2. ✅ `lib/stripe/webhooks.ts:416` - Corrigido para usar 'pro' e removido is_pro
+3. ✅ `app/api/webhooks/mercadopago-subscription/route.ts:98` - Corrigido para usar 'pro'
+4. ✅ `app/api/mercadopago/webhook/route.ts:253` - Corrigido para usar 'pro' e removido is_pro
+5. ✅ `app/api/mercadopago/link-guest-payment/route.ts:146` - Corrigido para usar 'pro' e removido is_pro
+6. ✅ `supabase/migrations/20251027_fix_profiles_final.sql` - Migration correta aplicada
 
 ---
 
-## 🚨 Correções URGENTES Necessárias
+## ✅ Status Final
 
-Execute estas mudanças **ANTES** de processar pagamentos reais:
+Todas as referências a `plan_type: 'premium'` e `is_pro: true` foram removidas do código. O sistema agora usa exclusivamente:
+- `plan_type: 'pro'` para planos pagos
+- `plan_type: 'free'` para planos gratuitos
+- `plan_type: 'admin'` para administradores
 
-### Correção 1: Stripe Webhooks
-```typescript
-// lib/stripe/webhooks.ts:417
-plan_type: 'pro',  // ✅ CORRETO
-```
-
-### Correção 2: Mercado Pago Subscription Webhook
-```typescript
-// app/api/webhooks/mercadopago-subscription/route.ts:98
-plan_type: 'pro',  // ✅ CORRETO
-```
-
-### Correção 3: Mercado Pago Link Guest Payment
-```typescript
-// app/api/mercadopago/link-guest-payment/route.ts:147
-plan_type: 'pro',  // ✅ CORRETO
-```
-
-### Correção 4: Mercado Pago Webhook
-```typescript
-// app/api/mercadopago/webhook/route.ts:254
-plan_type: 'pro',  // ✅ CORRETO
-```
+Nenhum campo `is_pro` é mais utilizado.
 
 ---
 
@@ -129,4 +114,4 @@ WHERE conrelid = 'public.profiles'::regclass
 ---
 
 **Data do documento:** 2025-10-27
-**Status:** 🔴 URGENTE - Aguardando correção
+**Status:** ✅ RESOLVIDO - Todas as correções aplicadas
