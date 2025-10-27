@@ -1,6 +1,6 @@
 /**
  * Rewrite Styles Configuration
- * Centralized definitions for all 13 rewrite styles (6 free + 7 premium)
+ * Centralized definitions for all 13 rewrite styles (5 free + 8 premium)
  */
 
 import {
@@ -20,8 +20,8 @@ import {
   LucideIcon,
 } from "lucide-react"
 
-export type FreeRewriteStyle = "FORMAL" | "HUMANIZADO" | "ACADÊMICO" | "CRIATIVO" | "COMO_UMA_CRIANCA" | "JURÍDICO"
-export type PremiumRewriteStyle = "TÉCNICO" | "JORNALÍSTICO" | "PUBLICITÁRIO" | "BLOG_POST" | "ROTEIRO_REELS" | "ROTEIRO_YOUTUBE" | "PALESTRA_APRESENTACAO"
+export type FreeRewriteStyle = "FORMAL" | "HUMANIZADO" | "ACADÊMICO" | "CRIATIVO" | "COMO_UMA_CRIANCA"
+export type PremiumRewriteStyle = "TÉCNICO" | "JORNALÍSTICO" | "PUBLICITÁRIO" | "BLOG_POST" | "ROTEIRO_REELS" | "ROTEIRO_YOUTUBE" | "PALESTRA_APRESENTACAO" | "JURÍDICO"
 export type RewriteStyle = FreeRewriteStyle | PremiumRewriteStyle
 
 // Internal representation (lowercase with underscores for API compatibility)
@@ -165,23 +165,6 @@ export const FREE_REWRITE_STYLES: RewriteStyleDefinition[] = [
     benefits: ["Vocabulário simples", "Frases curtas", "Linguagem lúdica"],
     examples: ["Material educativo", "Explicações simples", "Conteúdo infantil"],
   },
-  {
-    id: "legal",
-    displayName: "JURÍDICO",
-    label: "Jurídico",
-    description: "Linguagem técnica do direito, formal e precisa",
-    icon: Scale,
-    color: "bg-teal-50 border-teal-200 dark:bg-teal-950 dark:border-teal-800",
-    iconColor: "text-teal-600 dark:text-teal-400",
-    badgeColor: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
-    tier: "free",
-    usage: "Petições, pareceres jurídicos, contratos, documentos legais",
-    tone: "Técnico-jurídico, impessoal, fundamentado",
-    length: "Longo",
-    example: '"Requer-se, portanto, a procedência do pedido, nos termos da fundamentação..."',
-    benefits: ["Terminologia jurídica", "Estrutura processual", "Fundamentação técnica"],
-    examples: ["Petições", "Pareceres jurídicos", "Contratos"],
-  },
 ]
 
 export const PREMIUM_REWRITE_STYLES: RewriteStyleDefinition[] = [
@@ -303,6 +286,23 @@ export const PREMIUM_REWRITE_STYLES: RewriteStyleDefinition[] = [
     example: '"• Ponto-chave 1: Importância\n• Ponto-chave 2: Como aplicar\n• CTA: Próximos passos"',
     benefits: ["Formato para slides", "Pontos-chave claros", "Didático"],
     examples: ["Apresentações", "Palestras", "Conferências"],
+  },
+  {
+    id: "legal",
+    displayName: "JURÍDICO",
+    label: "Jurídico",
+    description: "Linguagem técnica do direito, formal e precisa",
+    icon: Scale,
+    color: "bg-teal-50 border-teal-200 dark:bg-teal-950 dark:border-teal-800",
+    iconColor: "text-teal-600 dark:text-teal-400",
+    badgeColor: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
+    tier: "premium",
+    usage: "Petições, pareceres jurídicos, contratos, documentos legais",
+    tone: "Técnico-jurídico, impessoal, fundamentado",
+    length: "Longo",
+    example: '"Requer-se, portanto, a procedência do pedido, nos termos da fundamentação..."',
+    benefits: ["Terminologia jurídica", "Estrutura processual", "Fundamentação técnica"],
+    examples: ["Petições", "Pareceres jurídicos", "Contratos"],
   },
 ]
 

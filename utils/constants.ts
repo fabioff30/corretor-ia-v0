@@ -1,6 +1,6 @@
 // Character limits
 export const FREE_CHARACTER_LIMIT = 1500
-export const PREMIUM_CHARACTER_LIMIT = 200000 // 200k characters for premium users
+export const PREMIUM_CHARACTER_LIMIT = 300000 // 300k characters for premium users
 export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit)
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 
@@ -9,11 +9,11 @@ export const AI_DETECTOR_DAILY_LIMIT = 2
 
 // API timeouts - Increased for better handling of long AI processing
 export const API_REQUEST_TIMEOUT = 90000 // 90 seconds for standard AI processing
-export const PREMIUM_API_TIMEOUT = 120000 // 120 seconds for premium endpoints (ultrathink mode)
+export const PREMIUM_API_TIMEOUT = 300000 // 300 seconds (5 min) for premium endpoints - Vercel Pro max
 export const MIN_REQUEST_INTERVAL = 5000 // 5 seconds
 export const FETCH_TIMEOUT = 85000 // 85 seconds (slightly less than API timeout)
-export const PREMIUM_FETCH_TIMEOUT = 115000 // 115 seconds for premium endpoints
-export const AI_DETECTOR_TIMEOUT = 120000 // 120 seconds for AI detector webhook (ultrathink processing)
+export const PREMIUM_FETCH_TIMEOUT = 295000 // 295 seconds for premium endpoints (slightly less than max)
+export const AI_DETECTOR_TIMEOUT = 300000 // 300 seconds for AI detector webhook (ultrathink processing)
 
 // Z-index values
 export const POPUP_OVERLAY_Z_INDEX = 9999

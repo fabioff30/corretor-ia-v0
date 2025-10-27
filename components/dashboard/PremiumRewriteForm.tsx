@@ -1,7 +1,7 @@
 /**
  * Premium Rewrite Form
  * Formulário de reescrita de texto para usuários Premium (Pro/Admin)
- * - Até 200.000 caracteres (limite técnico do middleware)
+ * - Até 300.000 caracteres (limite técnico do middleware)
  * - Sem anúncios
  * - Usa webhook premium
  */
@@ -112,7 +112,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    // Limite de 200k caracteres para usuários premium (validado no middleware)
+    // Limite de 300k caracteres para usuários premium (validado no middleware)
     setOriginalText(newText)
   }
 
