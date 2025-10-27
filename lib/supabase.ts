@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/types/supabase'
 
 // Configuração do Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -9,11 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Cliente Supabase para uso no lado do cliente
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// IMPORTANTE: Usando PKCE flow para OAuth (Google, etc)
+export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
+    flowType: 'pkce', // ✅ Força PKCE flow (code exchange) ao invés de implicit flow (tokens no hash)
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
   }
 })
 
