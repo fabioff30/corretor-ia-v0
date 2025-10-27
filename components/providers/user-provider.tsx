@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/supabase"
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 
 interface UserContextValue {
   user: User | null
@@ -29,7 +29,7 @@ interface UserProviderProps {
 }
 
 export function UserProvider({ children, initialUser = null, initialProfile = null }: UserProviderProps) {
-  const supabase = useMemo(() => createClient(), [])
+  // Use singleton Supabase client to prevent multiple refresh token attempts
   const [user, setUser] = useState<User | null>(initialUser)
   const [profile, setProfile] = useState<Profile | null>(initialProfile)
   const initialUserProvided = initialUser !== null
@@ -97,7 +97,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         return null
       }
     },
-    [supabase]
+    [] // supabase is now a singleton, no dependencies needed
   )
 
   useEffect(() => {
@@ -165,7 +165,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile, initialUserProvided, supabase])
+  }, [fetchProfile, initialUserProvided]) // supabase is singleton, no dependency needed
 
   const updateProfile = useCallback(
     async (updates: Partial<Profile>) => {
@@ -213,7 +213,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         return { data: null, error: message }
       }
     },
-    [supabase, user]
+    [user] // supabase is singleton
   )
 
   const uploadAvatar = useCallback(
@@ -253,7 +253,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         return { data: null, error: message }
       }
     },
-    [supabase, user]
+    [user] // supabase is singleton
   )
 
   const signOut = useCallback(async () => {
@@ -303,7 +303,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       setError(null)
       return { error: null }
     }
-  }, [fetchProfile, supabase])
+  }, [fetchProfile]) // supabase is singleton
 
   const refreshProfile = useCallback(async () => {
     if (!user) {
