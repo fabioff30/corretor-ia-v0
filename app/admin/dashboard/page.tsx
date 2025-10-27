@@ -8,6 +8,7 @@ import {
   Activity,
   ArrowUpRight,
   Crown,
+  Mail,
   RefreshCw,
   Repeat,
   Sparkles,
@@ -205,6 +206,12 @@ export default function AdminDashboardPage() {
             <Button variant="secondary" className="gap-2">
               Criar Cupom
               <Crown className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/admin/debug/emails">
+            <Button variant="outline" className="gap-2">
+              Debug Emails
+              <Mail className="h-4 w-4" />
             </Button>
           </Link>
         </div>
