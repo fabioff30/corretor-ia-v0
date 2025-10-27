@@ -136,7 +136,6 @@ export async function POST(request: NextRequest) {
         .update({
           plan_type: 'pro',
           subscription_status: 'active',
-          is_pro: true,
           subscription_expires_at: expiresAtIso,
           updated_at: new Date().toISOString(),
         })

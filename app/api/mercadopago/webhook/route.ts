@@ -277,7 +277,6 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
           plan_type: 'pro',
           subscription_status: 'active',
           subscription_expires_at: expiresAtIso,
-          is_pro: true,
           updated_at: nowIso,
         })
         .eq('id', userId)
