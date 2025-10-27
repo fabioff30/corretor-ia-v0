@@ -11,9 +11,9 @@ export async function middleware(request: NextRequest) {
   }
   
   // Apply security headers
-  const securityResponse = process.env.NODE_ENV === 'development' 
-    ? await developmentCSP(request) 
-    : await securityHeadersMiddleware(request)
+  const securityResponse = process.env.NODE_ENV === 'development'
+    ? developmentCSP(request)
+    : securityHeadersMiddleware(request)
   
   // Apply canonical URL middleware
   return canonicalMiddleware(request)

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getCanonicalUrl } from "@/utils/canonical-url"
+import { getCanonicalUrl, CANONICAL_DOMAIN } from "@/utils/canonical-url"
 
 export function canonicalMiddleware(request: NextRequest) {
   const url = request.nextUrl.clone()
