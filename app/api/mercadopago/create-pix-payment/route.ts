@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, userEmail, guestEmail, couponCode } = body
+    const { planType, userId, couponCode } = body
+    const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : undefined
+    const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : undefined
 
     if (!planType || !['monthly', 'annual', 'test'].includes(planType)) {
       return NextResponse.json(
@@ -91,6 +93,23 @@ export async function POST(request: NextRequest) {
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
 
+    if (!supabase) {
+      const { user } = await getCurrentUserWithProfile()
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      console.error('[MP PIX] Service role client not available')
+      return NextResponse.json(
+        { error: 'Erro ao verificar status do pagamento' },
+        { status: 500 }
+      )
+    }
+
     // Determine user ID and email
     let finalUserId: string | null = null
     let finalUserEmail: string
@@ -122,13 +141,15 @@ export async function POST(request: NextRequest) {
           .eq('id', finalUserId)
           .single()
 
-        if (!profile?.email) {
+        const profileEmail = profile?.email?.trim() || user?.email?.trim() || null
+
+        if (!profileEmail) {
           return NextResponse.json(
             { error: 'Email do usuário não encontrado' },
             { status: 404 }
           )
         }
-        finalUserEmail = profile.email
+        finalUserEmail = profileEmail
       }
     }
 
@@ -206,6 +227,24 @@ export async function GET(request: NextRequest) {
 
     // Get payment record first to check if it's a guest payment
     const supabase = createServiceRoleClient()
+
+    if (!supabase) {
+      const { user } = await getCurrentUserWithProfile()
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      console.error('[MP PIX] Service role client not available for status check')
+      return NextResponse.json(
+        { error: 'Erro ao verificar status do pagamento' },
+        { status: 500 }
+      )
+    }
+
     const { data: paymentRecord, error: paymentLookupError } = await supabase
       .from('pix_payments')
       .select('user_id, email')
