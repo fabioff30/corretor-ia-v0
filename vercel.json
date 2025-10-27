@@ -2,7 +2,8 @@
   "installCommand": "pnpm install --no-frozen-lockfile",
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 120
+      "maxDuration": 120,
+      "maxRequestBodySize": "50mb"
     }
   }
 }

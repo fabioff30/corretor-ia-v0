@@ -10,7 +10,7 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '50mb',
     },
   },
   webpack: (config, { dev }) => {
