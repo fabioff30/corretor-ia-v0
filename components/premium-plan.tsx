@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug, QrCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
+import { RegisterForPixDialog } from "@/components/premium/register-for-pix-dialog"
 
 type PlanType = 'monthly' | 'annual'
 
@@ -29,6 +30,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [pixLoadingPlan, setPixLoadingPlan] = useState<PlanType | null>(null)
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false)
   const [guestEmail, setGuestEmail] = useState('')
   const [pendingPlanType, setPendingPlanType] = useState<PlanType | null>(null)
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'card' | null>(null)
@@ -167,11 +169,12 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       return
     }
 
-    // If not logged in, ask for email first
+    // If not logged in, open register dialog to create account BEFORE generating PIX
     if (!user) {
       setPendingPlanType(planType)
-      setPendingPaymentMethod('pix')
-      setIsEmailDialogOpen(true)
+      setIsRegisterDialogOpen(true)
+      // Persist intent in localStorage so after registration+reload, we can auto-generate PIX
+      localStorage.setItem('pendingPixPlan', planType)
       return
     }
 
@@ -203,6 +206,31 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       setPixLoadingPlan(null)
     }
   }
+
+  // Called after successful registration - reload page to initialize auth properly
+  // The useEffect below will detect pending plan and auto-generate PIX
+  const handlePixAfterRegister = async () => {
+    // Wait for registration to finalize
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Reload page - the useEffect will handle PIX generation
+    window.location.reload()
+  }
+
+  // Auto-generate PIX after registration + reload
+  useEffect(() => {
+    if (!user || pixLoadingPlan !== null) return
+
+    const pendingPlan = localStorage.getItem('pendingPixPlan') as PlanType | null
+    if (pendingPlan) {
+      // Clear from storage
+      localStorage.removeItem('pendingPixPlan')
+
+      // Auto-trigger PIX generation with the pending plan
+      console.log('[Premium] Auto-generating PIX for plan:', pendingPlan)
+      handlePixPayment(pendingPlan)
+    }
+  }, [user, pixLoadingPlan])
 
   const handleGuestPayment = async () => {
     if (!guestEmail || !pendingPlanType || !pendingPaymentMethod) {
@@ -646,7 +674,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         </Tabs>
       </div>
 
-      {/* Email Dialog for Guest PIX Payment */}
+      {/* Email Dialog for Guest Card Payment (Stripe) */}
       <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -706,6 +734,15 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Register Dialog for PIX Payment (Forces account creation) */}
+      <RegisterForPixDialog
+        isOpen={isRegisterDialogOpen}
+        onClose={() => setIsRegisterDialogOpen(false)}
+        onSuccess={handlePixAfterRegister}
+        planType={pendingPlanType || 'monthly'}
+        planPrice={pendingPlanType === 'monthly' ? monthlyPriceWithDiscount : annualPriceWithDiscount}
+      />
 
       {/* PIX Payment Modal */}
       <PremiumPixModal
