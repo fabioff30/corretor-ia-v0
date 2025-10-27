@@ -194,15 +194,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await getCurrentUserWithProfile()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const url = new URL(request.url)
     const paymentId = url.searchParams.get('paymentId')
 
@@ -213,10 +204,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get payment record first to check if it's a guest payment
     const supabase = createServiceRoleClient()
     const { data: paymentRecord, error: paymentLookupError } = await supabase
       .from('pix_payments')
-      .select('user_id')
+      .select('user_id, email')
       .eq('payment_intent_id', paymentId)
       .maybeSingle()
 
@@ -235,12 +227,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (paymentRecord.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      )
+    // Security validation
+    // If payment has a user_id (authenticated payment), verify the user
+    if (paymentRecord.user_id !== null) {
+      const { user } = await getCurrentUserWithProfile()
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      if (paymentRecord.user_id !== user.id) {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
+        )
+      }
     }
+    // If user_id is null, it's a guest payment - allow access to anyone with the payment ID
+    console.log('[MP PIX] Checking status for', paymentRecord.user_id ? 'authenticated' : 'guest', 'payment:', paymentId)
 
     const mpClient = getMercadoPagoClient()
     const status = await mpClient.getPixPaymentStatus(paymentId)
