@@ -1,4 +1,4 @@
--- Migration: Fix Profiles - FINAL VERSION (No auth.users trigger needed)
+-- Migration: Fix Profiles - FINAL VERSION (Auth trigger ensured)
 -- Created: 2025-10-27
 -- Description: Updates get_user_with_subscription and creates profiles for existing users
 -- NOTE: Profile auto-creation will be handled by Supabase Auth hooks in dashboard
@@ -27,6 +27,8 @@ BEGIN
     updated_at = NOW();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+ALTER FUNCTION public.create_profile_for_user(UUID) SET search_path = public;
 
 COMMENT ON FUNCTION public.create_profile_for_user IS 'Creates or updates profile for a specific user';
 
@@ -131,7 +133,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+ALTER FUNCTION public.handle_new_user() SET search_path = public;
+
 COMMENT ON FUNCTION public.handle_new_user IS 'Trigger function to auto-create profile (use with Supabase Auth Hook)';
+
+-- Ensure trigger exists (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+COMMENT ON TRIGGER on_auth_user_created ON auth.users IS 'Trigger to auto-create profile on user signup';
 
 -- ============================================================================
 -- 5. VERIFICATION
