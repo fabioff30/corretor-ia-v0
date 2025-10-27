@@ -13,13 +13,17 @@ import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 export const maxDuration = 60
 
 interface ActivatePixPaymentRequest {
-  paymentId: string
+  paymentId: string | number
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ActivatePixPaymentRequest = await request.json()
-    const paymentId = body.paymentId?.trim()
+
+    // Convert paymentId to string (may be sent as number or string)
+    const paymentId = typeof body.paymentId === 'string'
+      ? body.paymentId.trim()
+      : body.paymentId?.toString() || ''
 
     if (!paymentId) {
       return NextResponse.json(

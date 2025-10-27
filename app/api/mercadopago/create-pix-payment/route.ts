@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
 
     // Return payment details
     return NextResponse.json({
-      paymentId: payment.id,
+      paymentId: payment.id.toString(), // Convert to string for consistency
       status: payment.status,
       qrCode: payment.point_of_interaction?.transaction_data?.qr_code_base64,
       qrCodeText: payment.point_of_interaction?.transaction_data?.qr_code,
