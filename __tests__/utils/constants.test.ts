@@ -14,18 +14,18 @@ import {
 } from '@/utils/constants'
 
 describe('Timeout Configuration', () => {
-  describe('API Timeouts (60s requirement)', () => {
-    it('should have API_REQUEST_TIMEOUT set to 60 seconds', () => {
-      expect(API_REQUEST_TIMEOUT).toBe(60000) // 60 seconds in ms
+  describe('API Timeouts (extended limits)', () => {
+    it('should have API_REQUEST_TIMEOUT set to 90 seconds', () => {
+      expect(API_REQUEST_TIMEOUT).toBe(90000) // 90 seconds in ms
     })
 
     it('should have FETCH_TIMEOUT slightly less than API timeout', () => {
-      expect(FETCH_TIMEOUT).toBe(55000) // 55 seconds
+      expect(FETCH_TIMEOUT).toBe(85000) // 85 seconds
       expect(FETCH_TIMEOUT).toBeLessThan(API_REQUEST_TIMEOUT)
     })
 
-    it('should have AI_DETECTOR_TIMEOUT set to 60 seconds', () => {
-      expect(AI_DETECTOR_TIMEOUT).toBe(60000) // 60 seconds
+    it('should have AI_DETECTOR_TIMEOUT set to 120 seconds', () => {
+      expect(AI_DETECTOR_TIMEOUT).toBe(120000) // 120 seconds
     })
 
     it('should have timeouts in milliseconds', () => {
@@ -42,8 +42,8 @@ describe('Timeout Configuration', () => {
     })
 
     it('should have reasonable timeout values for Gemini 2.5 thinking mode', () => {
-      // Per frontend-api.md: "60s timeout sugerido para evitar abortos prematuros"
-      const minRecommendedTimeout = 60000 // 60 seconds
+      // Per updated frontend requirements: allow up to 2 minutes for larger texts
+      const minRecommendedTimeout = 90000 // 90 seconds
 
       expect(API_REQUEST_TIMEOUT).toBeGreaterThanOrEqual(minRecommendedTimeout)
       expect(AI_DETECTOR_TIMEOUT).toBeGreaterThanOrEqual(minRecommendedTimeout)
@@ -92,11 +92,13 @@ describe('Character Limits', () => {
 })
 
 describe('Configuration Compliance', () => {
-  it('should match frontend-api.md specifications', () => {
-    // Timeout: 60s (line 10 of frontend-api.md)
-    expect(API_REQUEST_TIMEOUT).toBe(60000)
+  it('should match frontend-api timeout and limit specifications', () => {
+    // Updated timeout policy: allow long-running requests (90s API, 85s fetch, 120s detector)
+    expect(API_REQUEST_TIMEOUT).toBe(90000)
+    expect(FETCH_TIMEOUT).toBe(85000)
+    expect(AI_DETECTOR_TIMEOUT).toBe(120000)
 
-    // Character limits (implicit from spec)
+    // Character limits
     expect(FREE_CHARACTER_LIMIT).toBe(1500)
     expect(PREMIUM_CHARACTER_LIMIT).toBe(5000)
     expect(AI_DETECTOR_CHARACTER_LIMIT).toBe(10000)

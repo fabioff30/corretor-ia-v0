@@ -265,18 +265,29 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       })
 
       if (activateError) {
-        console.error(`[MP Webhook Payment] Error activating subscription (${Date.now() - startTime}ms):`, activateError)
-        return
+        console.error(`[MP Webhook Payment] Error activating subscription via RPC (${Date.now() - startTime}ms):`, activateError)
+      } else {
+        console.log(`[MP Webhook Payment] Subscription activated via RPC (${Date.now() - startTime}ms)`)
       }
 
-      console.log(`[MP Webhook Payment] Subscription activated successfully (${Date.now() - startTime}ms)`)
-
-      // Verify profile was updated
-      const { data: updatedProfile } = await supabase
+      const nowIso = new Date().toISOString()
+      const { data: updatedProfile, error: profileUpdateError } = await supabase
         .from('profiles')
-        .select('plan_type, subscription_status')
+        .update({
+          plan_type: 'pro',
+          subscription_status: 'active',
+          subscription_expires_at: expiresAtIso,
+          is_pro: true,
+          updated_at: nowIso,
+        })
         .eq('id', userId)
+        .select('plan_type, subscription_status, subscription_expires_at')
         .single()
+
+      if (profileUpdateError) {
+        console.error('[MP Webhook Payment] Error updating profile after PIX payment:', profileUpdateError)
+        return
+      }
 
       const duration = Date.now() - startTime
       console.log(`[MP Webhook Payment] ✅ PIX payment processed successfully in ${duration}ms:`, {
@@ -284,6 +295,8 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         paymentId: payment.id,
         plan_type: updatedProfile?.plan_type,
         subscription_status: updatedProfile?.subscription_status,
+        subscription_expires_at: updatedProfile?.subscription_expires_at,
+        rpcActivated: !activateError,
         processing_time_ms: duration,
       })
       return

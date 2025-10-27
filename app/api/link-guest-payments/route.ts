@@ -167,12 +167,13 @@ export async function POST(request: NextRequest) {
 
           const { error: profileUpdateError } = await supabase
             .from('profiles')
-            .update({
-              plan_type: 'pro',
-              subscription_status: 'active',
-              subscription_expires_at: expiresAtIso,
-              updated_at: new Date().toISOString(),
-            })
+          .update({
+            plan_type: 'pro',
+            subscription_status: 'active',
+            subscription_expires_at: expiresAtIso,
+            is_pro: true,
+            updated_at: new Date().toISOString(),
+          })
             .eq('id', user.id)
 
           if (profileUpdateError) {
