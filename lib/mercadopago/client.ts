@@ -103,6 +103,16 @@ export class MercadoPagoClient {
   }
 
   /**
+   * Get webhook URL without double slashes
+   */
+  private getWebhookUrl(): string {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://corretordetextoonline.com.br'
+    // Remove trailing slash from base URL if present
+    const cleanBaseUrl = baseUrl.replace(/\/+$/, '')
+    return `${cleanBaseUrl}/api/mercadopago/webhook`
+  }
+
+  /**
    * Validate and sanitize identifiers used in Mercado Pago API paths/query params
    */
   private sanitizeIdentifier(value: string, fieldName: string): string {
@@ -322,7 +332,7 @@ export class MercadoPagoClient {
         },
         external_reference: userId,
         date_of_expiration: expirationDate.toISOString(),
-        notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/mercadopago/webhook`
+        notification_url: this.getWebhookUrl()
       }
 
       const response = await fetch(`${this.baseUrl}/v1/payments`, {
