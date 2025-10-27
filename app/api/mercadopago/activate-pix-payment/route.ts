@@ -38,10 +38,26 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient()
-    const mpClient = getMercadoPagoClient()
 
-    // Confirm payment status with Mercado Pago
-    const mpPayment = await mpClient.getPayment(paymentId)
+    if (!supabase) {
+      console.error('[Manual PIX Activation] Service role client unavailable')
+      return NextResponse.json(
+        { error: 'Erro interno ao ativar pagamento' },
+        { status: 500 }
+      )
+    }
+
+    let mpPayment
+
+    try {
+      mpPayment = await getMercadoPagoClient().getPayment(paymentId)
+    } catch (error) {
+      console.error('[Manual PIX Activation] Error fetching Mercado Pago payment:', error)
+      return NextResponse.json(
+        { error: 'Erro ao consultar status do pagamento' },
+        { status: 502 }
+      )
+    }
 
     if (mpPayment.status !== 'approved') {
       return NextResponse.json(
@@ -135,7 +151,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         mp_subscription_id: `pix_${paymentId}`,
-        mp_payer_id: mpPayment.payer.id,
+        mp_payer_id: mpPayment.payer?.id || null,
         status: 'authorized',
         start_date: startDateIso,
         next_payment_date: expiresAtIso,
@@ -152,6 +168,15 @@ export async function POST(request: NextRequest) {
         { error: 'Erro ao criar assinatura' },
         { status: 500 }
       )
+    }
+
+    const { error: activateError } = await supabase.rpc('activate_subscription', {
+      p_user_id: user.id,
+      p_subscription_id: newSubscription.id,
+    })
+
+    if (activateError) {
+      console.error('[Manual PIX Activation] Error running activate_subscription RPC:', activateError)
     }
 
     // Update profile
