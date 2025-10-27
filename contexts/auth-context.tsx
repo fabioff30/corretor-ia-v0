@@ -144,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               const response = await fetch('/api/link-guest-payments', {
                 method: 'POST',
+                credentials: "include",
               })
 
               if (response.ok) {

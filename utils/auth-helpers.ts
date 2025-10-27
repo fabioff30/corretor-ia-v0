@@ -2,6 +2,7 @@
  * Helpers de autenticação e verificação de permissões
  */
 
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { Profile } from '@/types/supabase'
@@ -13,7 +14,13 @@ export interface AuthContext {
 }
 
 export async function getCurrentUserWithProfile(): Promise<AuthContext> {
-  const supabase = await createClient()
+  const cookieStore = cookies()
+  const supabase = await createClient(cookieStore)
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
 
   const {
     data: { user },
@@ -21,6 +28,20 @@ export async function getCurrentUserWithProfile(): Promise<AuthContext> {
   } = await supabase.auth.getUser()
 
   if (error || !user) {
+    const cookieSnapshot = 'getAll' in cookieStore
+      ? cookieStore
+          .getAll()
+          .map((cookie) => ({ name: cookie.name, value: cookie.value }))
+      : []
+
+    console.warn('[Auth][Debug] Supabase getUser returned no user', {
+      getUserError: error?.message ?? null,
+      sessionError: sessionError?.message ?? null,
+      accessToken: session?.access_token ?? null,
+      refreshToken: session?.refresh_token ?? null,
+      cookies: cookieSnapshot,
+    })
+
     return {
       user: null,
       profile: null,

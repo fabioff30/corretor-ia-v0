@@ -58,6 +58,7 @@ export function useUsageLimits() {
       const response = await fetch('/api/dashboard/usage', {
         method: 'GET',
         cache: 'no-store',
+        credentials: "include",
       })
 
       if (!response.ok) {

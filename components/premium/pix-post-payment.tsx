@@ -245,6 +245,7 @@ export function PixPostPayment(props: PixPostPaymentProps) {
               headers: {
                 'Content-Type': 'application/json',
               },
+              credentials: "include",
               body: JSON.stringify({
                 email,
                 name,

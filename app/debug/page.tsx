@@ -24,13 +24,13 @@ export default function ResetSubscriptionPage() {
   // Fetch payment configs on mount
   useEffect(() => {
     // Fetch Mercado Pago config
-    fetch('/api/mercadopago/config')
+    fetch('/api/mercadopago/config', { credentials: "include" })
       .then(res => res.json())
       .then(data => setMpConfig(data))
       .catch(err => console.error('Error fetching MP config:', err))
 
     // Fetch Stripe config
-    fetch('/api/stripe/config')
+    fetch('/api/stripe/config', { credentials: "include" })
       .then(res => res.json())
       .then(data => setStripeConfig(data))
       .catch(err => console.error('Error fetching Stripe config:', err))
@@ -48,7 +48,9 @@ export default function ResetSubscriptionPage() {
 
     try {
       setIsChecking(true)
-      const response = await fetch(`/api/mercadopago/reset-test-subscription?userId=${user.id}`)
+      const response = await fetch(`/api/mercadopago/reset-test-subscription?userId=${user.id}`, {
+        credentials: "include",
+      })
 
       if (!response.ok) {
         throw new Error('Failed to check subscription')
@@ -91,6 +93,7 @@ export default function ResetSubscriptionPage() {
       setIsResetting(true)
       const response = await fetch(`/api/mercadopago/reset-test-subscription?userId=${user.id}`, {
         method: 'DELETE',
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -144,6 +147,7 @@ export default function ResetSubscriptionPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: "include",
         body: JSON.stringify({
           userId: user.id,
           userEmail: user.email,
@@ -199,6 +203,7 @@ export default function ResetSubscriptionPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: "include",
         body: JSON.stringify({
           planType: 'test',
           userId: user.id,

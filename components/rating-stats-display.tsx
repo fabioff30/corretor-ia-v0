@@ -114,7 +114,9 @@ export function RatingStatsDisplay() {
     const fetchStats = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch("/api/rating-stats")
+        const response = await fetch("/api/rating-stats", {
+          credentials: "include",
+        })
 
         if (!response.ok) {
           throw new Error(`Erro ao buscar estatísticas: ${response.status}`)

@@ -100,6 +100,7 @@ export default function CadastroPage() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: "include",
           body: JSON.stringify({
             email: formData.email,
             name: formData.fullName,

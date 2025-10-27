@@ -5,6 +5,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
+import { withNormalizedCookieOptions } from '@/lib/supabase/server'
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -22,10 +23,11 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
+          const normalized = withNormalizedCookieOptions(options)
           request.cookies.set({
             name,
             value,
-            ...options,
+            ...normalized,
           })
           response = NextResponse.next({
             request: {
@@ -35,14 +37,15 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value,
-            ...options,
+            ...normalized,
           })
         },
         remove(name: string, options: CookieOptions) {
+          const normalized = withNormalizedCookieOptions(options)
           request.cookies.set({
             name,
             value: '',
-            ...options,
+            ...normalized,
           })
           response = NextResponse.next({
             request: {
@@ -52,7 +55,7 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({
             name,
             value: '',
-            ...options,
+            ...normalized,
           })
         },
       },

@@ -178,6 +178,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
           const response = await fetch('/api/dashboard/profile', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
+            credentials: "include",
             body: JSON.stringify({ full_name: updates.full_name }),
           })
 

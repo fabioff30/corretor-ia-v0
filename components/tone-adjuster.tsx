@@ -69,6 +69,7 @@ export function ToneAdjuster({ onToneChange, className, disabled = false }: Tone
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ customTone: customToneInput }),
       })
         .then((response) => response.json())

@@ -525,6 +525,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(payload),
         signal,
       })

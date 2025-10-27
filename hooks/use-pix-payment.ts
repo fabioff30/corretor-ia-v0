@@ -73,6 +73,7 @@ export function usePixPayment(): UsePixPaymentReturn {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: "include",
         body: JSON.stringify({
           planType,
           userId,
@@ -152,7 +153,10 @@ export function usePixPayment(): UsePixPaymentReturn {
   const checkPaymentStatus = useCallback(async (paymentId: string): Promise<boolean> => {
     try {
       const response = await fetch(
-        `/api/mercadopago/create-pix-payment?paymentId=${paymentId}`
+        `/api/mercadopago/create-pix-payment?paymentId=${paymentId}`,
+        {
+          credentials: "include",
+        }
       )
 
       if (!response.ok) {
