@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "@/utils/fetch-retry"
-import { FETCH_TIMEOUT, AUTH_TOKEN, AI_DETECTOR_TIMEOUT } from "@/utils/constants"
+import { FETCH_TIMEOUT, PREMIUM_FETCH_TIMEOUT, AUTH_TOKEN, AI_DETECTOR_TIMEOUT } from "@/utils/constants"
 
 interface WebhookOptions {
   url: string
@@ -44,11 +44,16 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
   console.log(`API: Sending request to webhook: ${webhookUrl}`, requestId)
 
   try {
-    // Determine timeout: use provided timeout, or auto-detect for AI detector
+    // Determine timeout: use provided timeout, or auto-detect based on endpoint type
     let effectiveTimeout = timeout || FETCH_TIMEOUT
-    if (!timeout && url.includes("analysis-ai")) {
-      effectiveTimeout = AI_DETECTOR_TIMEOUT
-      console.log(`API: Using extended timeout for AI detector: ${effectiveTimeout}ms`, requestId)
+    if (!timeout) {
+      if (url.includes("analysis-ai")) {
+        effectiveTimeout = AI_DETECTOR_TIMEOUT
+        console.log(`API: Using extended timeout for AI detector: ${effectiveTimeout}ms`, requestId)
+      } else if (url.includes("premium-corrigir") || url.includes("premium-reescrever")) {
+        effectiveTimeout = PREMIUM_FETCH_TIMEOUT
+        console.log(`API: Using extended timeout for premium endpoint: ${effectiveTimeout}ms`, requestId)
+      }
     }
 
     const response = await fetchWithRetry(
@@ -93,11 +98,14 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
 async function callFallbackWebhook(fallbackUrl: string, text: string, requestId: string): Promise<Response> {
   console.log(`API: Using fallback webhook: ${fallbackUrl}`, requestId)
 
-  // Determine timeout for fallback
+  // Determine timeout for fallback based on endpoint type
   let effectiveTimeout = FETCH_TIMEOUT
   if (fallbackUrl.includes("analysis-ai")) {
     effectiveTimeout = AI_DETECTOR_TIMEOUT
     console.log(`API: Using extended timeout for fallback AI detector: ${effectiveTimeout}ms`, requestId)
+  } else if (fallbackUrl.includes("premium-corrigir") || fallbackUrl.includes("premium-reescrever")) {
+    effectiveTimeout = PREMIUM_FETCH_TIMEOUT
+    console.log(`API: Using extended timeout for fallback premium endpoint: ${effectiveTimeout}ms`, requestId)
   }
 
   const response = await fetchWithRetry(
