@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { sendGTMEvent } from "@/utils/gtm-helper"
+import { sendGA4Event } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
 import { obfuscateIdentifier } from "@/utils/analytics"
 
@@ -34,6 +34,8 @@ interface PixPaymentData {
   amount: number
   planType: 'monthly' | 'annual'
   expiresAt: string
+  payerEmail?: string
+  isGuest: boolean
 }
 
 interface PremiumPixModalProps {
@@ -126,15 +128,19 @@ export function PremiumPixModal({
 
           setStatus('success')
 
-          sendGTMEvent('pix_payment_confirmed', {
-            payment: anonymizedPayment,
-            plan: paymentData.planType,
-            value: paymentData.amount,
-          })
+      sendGA4Event('pix_payment_confirmed', {
+        payment: anonymizedPayment,
+        plan: paymentData.planType,
+        value: paymentData.amount,
+      })
+
+          const successMessage = paymentData.isGuest
+            ? "Pagamento confirmado! Vamos criar sua senha para ativar o Premium."
+            : "Seu plano Premium foi ativado com sucesso."
 
           toast({
             title: "✅ Pagamento confirmado!",
-            description: "Seu plano Premium foi ativado com sucesso.",
+            description: successMessage,
           })
 
           if (redirectTimeoutRef.current) {
@@ -143,7 +149,21 @@ export function PremiumPixModal({
 
           redirectTimeoutRef.current = window.setTimeout(() => {
             onSuccess?.()
-            router.push('/dashboard/subscription')
+            const query = new URLSearchParams({
+              paymentId: paymentData.paymentId,
+              plan: paymentData.planType,
+              amount: paymentData.amount.toString(),
+            })
+
+            if (paymentData.payerEmail) {
+              query.set('email', paymentData.payerEmail)
+            }
+
+            if (paymentData.isGuest) {
+              query.set('guest', '1')
+            }
+
+            router.push(`/premium/pix-sucesso?${query.toString()}`)
           }, 2000)
 
           if (intervalId) {
@@ -187,7 +207,7 @@ export function PremiumPixModal({
         return
       }
 
-      sendGTMEvent('pix_qr_displayed', {
+      sendGA4Event('pix_qr_displayed', {
         payment: anonymizedPayment,
         plan: paymentData.planType,
         value: paymentData.amount,
@@ -214,7 +234,7 @@ export function PremiumPixModal({
 
     const logCancellation = async () => {
       const anonymizedPayment = await obfuscateIdentifier(paymentData?.paymentId, 'pid')
-      sendGTMEvent('pix_payment_canceled', {
+      sendGA4Event('pix_payment_canceled', {
         payment: anonymizedPayment,
         plan: paymentData?.planType,
       })

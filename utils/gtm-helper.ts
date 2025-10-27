@@ -1,31 +1,31 @@
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void
+  }
+}
+
 /**
- * Envia um evento para o Google Analytics 4 via gtag
- * @param eventName Nome do evento
- * @param eventData Dados adicionais do evento
+ * Emite um evento diretamente para o Google Analytics 4 via gtag
  */
-export function sendGTMEvent(eventName: string, eventData: Record<string, any> = {}) {
-  // Verificar se está no navegador
+function emitGA4Event(eventName: string, eventData: Record<string, any> = {}) {
   if (typeof window === "undefined") {
     return
   }
 
-  // Enviar para o dataLayer (GTM - será desabilitado depois)
-  if (window.dataLayer) {
-    window.dataLayer.push({
-      event: eventName,
-      ...eventData,
-    })
-  }
-
-  // Enviar diretamente para o GA4 via gtag
   if (typeof window.gtag === "function") {
     window.gtag("event", eventName, eventData)
   }
 
-  // Log apenas em desenvolvimento
   if (process.env.NODE_ENV === "development") {
     console.log(`[GA4] ${eventName}`, eventData)
   }
+}
+
+/**
+ * @deprecated Utilize `sendGA4Event`. Mantido por compatibilidade.
+ */
+export function sendGTMEvent(eventName: string, eventData: Record<string, any> = {}) {
+  emitGA4Event(eventName, eventData)
 }
 
 /**
@@ -33,5 +33,5 @@ export function sendGTMEvent(eventName: string, eventData: Record<string, any> =
  * Usa nomenclatura e parâmetros padronizados do GA4
  */
 export function sendGA4Event(eventName: string, eventParams: Record<string, any> = {}) {
-  sendGTMEvent(eventName, eventParams)
+  emitGA4Event(eventName, eventParams)
 }

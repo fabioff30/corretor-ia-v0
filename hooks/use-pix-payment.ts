@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react'
 import { useToast } from './use-toast'
-import { sendGTMEvent } from '@/utils/gtm-helper'
+import { sendGA4Event } from '@/utils/gtm-helper'
 import { obfuscateIdentifier } from '@/utils/analytics'
 
 interface PixPaymentData {
@@ -15,6 +15,8 @@ interface PixPaymentData {
   amount: number
   planType: 'monthly' | 'annual'
   expiresAt: string
+  payerEmail?: string
+  isGuest: boolean
 }
 
 interface UsePixPaymentReturn {
@@ -54,13 +56,13 @@ export function usePixPayment(): UsePixPaymentReturn {
       // Track initiation
       if (userId) {
         const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
-        sendGTMEvent('pix_payment_initiated', {
+        sendGA4Event('pix_payment_initiated', {
           plan: planType,
           user: anonymizedUser,
         })
       } else {
         // Guest payment tracking (no user ID)
-        sendGTMEvent('pix_payment_initiated', {
+        sendGA4Event('pix_payment_initiated', {
           plan: planType,
           guest: true,
         })
@@ -98,6 +100,8 @@ export function usePixPayment(): UsePixPaymentReturn {
         amount: data.amount,
         planType,
         expiresAt: data.expiresAt,
+        payerEmail: data.payerEmail || (isGuestPayment ? guestEmail : userEmail),
+        isGuest: data.isGuest ?? isGuestPayment,
       }
 
       setPaymentData(payment)
@@ -105,7 +109,7 @@ export function usePixPayment(): UsePixPaymentReturn {
       const anonymizedPayment = await obfuscateIdentifier(payment.paymentId, 'pid')
 
       // Track success with anonymised identifiers
-      sendGTMEvent('pix_payment_created', {
+      sendGA4Event('pix_payment_created', {
         payment: anonymizedPayment,
         plan: planType,
         amount: payment.amount,
@@ -120,13 +124,13 @@ export function usePixPayment(): UsePixPaymentReturn {
       // Track error
       if (userId) {
         const anonymizedUser = await obfuscateIdentifier(userId, 'uid')
-        sendGTMEvent('pix_payment_error', {
+        sendGA4Event('pix_payment_error', {
           error: message,
           plan: planType,
           user: anonymizedUser,
         })
       } else {
-        sendGTMEvent('pix_payment_error', {
+        sendGA4Event('pix_payment_error', {
           error: message,
           plan: planType,
           guest: true,

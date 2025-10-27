@@ -1,0 +1,446 @@
+"use client"
+
+import { useEffect, useMemo, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Mail, Lock, User, Loader2, CheckCircle, ShieldCheck } from "lucide-react"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { sendGA4Event } from "@/utils/gtm-helper"
+import { obfuscateIdentifier } from "@/utils/analytics"
+
+type PlanType = "monthly" | "annual" | "test"
+
+const planCopy: Record<PlanType, { title: string; description: string }> = {
+  monthly: {
+    title: "Plano Premium Mensal",
+    description: "Acesso ilimitado renovado mês a mês",
+  },
+  annual: {
+    title: "Plano Premium Anual",
+    description: "12 meses com desconto especial",
+  },
+  test: {
+    title: "Plano de Teste",
+    description: "Acesso temporário para validação interna",
+  },
+}
+
+interface PixPostPaymentProps {
+  paymentId?: string
+  email?: string
+  plan?: PlanType
+  amount?: number
+  isGuest?: boolean
+}
+
+export function PixPostPayment(props: PixPostPaymentProps) {
+  const { paymentId, email, plan = "monthly", amount, isGuest = false } = props
+  const { user, loading, signUp } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+
+  const [name, setName] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  const formattedAmount = useMemo(() => {
+    if (typeof amount !== "number") return null
+    return amount.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+    })
+  }, [amount])
+
+  const planDetails = useMemo(() => planCopy[plan] ?? planCopy.monthly, [plan])
+
+  const buildTrackingPayload = useCallback(
+    async (extra?: Record<string, unknown>) => {
+      const payload: Record<string, unknown> = {
+        plan,
+        isGuest,
+        loggedIn: !!user,
+      }
+
+      if (typeof amount === "number") {
+        payload.amount = amount
+      }
+
+      if (paymentId) {
+        payload.payment = await obfuscateIdentifier(paymentId, "pid")
+      }
+
+      if (email) {
+        payload.email = await obfuscateIdentifier(email, "email")
+      }
+
+      return {
+        ...payload,
+        ...(extra ?? {}),
+      }
+    },
+    [plan, isGuest, user, amount, paymentId, email]
+  )
+
+  useEffect(() => {
+    const trackView = async () => {
+      const payload = await buildTrackingPayload()
+      sendGA4Event("pix_post_payment_view", payload)
+    }
+
+    void trackView()
+  }, [buildTrackingPayload])
+
+  const handleLoggedCta = useCallback(
+    async (destination: "dashboard" | "subscription") => {
+      const payload = await buildTrackingPayload({ destination })
+      sendGA4Event("pix_post_payment_logged_cta_click", payload)
+
+      router.push(destination === "dashboard" ? "/dashboard" : "/dashboard/subscription")
+    },
+    [buildTrackingPayload, router]
+  )
+
+  if (!loading && user) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle className="text-2xl font-bold text-green-600">
+              Pagamento confirmado!
+            </CardTitle>
+            <CardDescription className="text-base">
+              Sua conta já está ativa. Acesse o painel para aproveitar os recursos Premium.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+              <p>
+                Se você pagou utilizando outro email, basta finalizar o login com ele para
+                vincular automaticamente o plano ao seu perfil.
+              </p>
+            </div>
+            <div className="grid gap-2 text-sm text-muted-foreground">
+              <div>
+                <span className="font-medium text-foreground">Plano:</span> {planDetails.title}
+              </div>
+              {formattedAmount && (
+                <div>
+                  <span className="font-medium text-foreground">Valor pago:</span> {formattedAmount}
+                </div>
+              )}
+              {paymentId && (
+                <div>
+                  <span className="font-medium text-foreground">Código do pagamento:</span>{" "}
+                  <span className="font-mono">{paymentId}</span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-3 rounded-lg border border-primary/10 bg-primary/5 p-4 text-left text-sm leading-relaxed text-muted-foreground">
+              <p className="text-foreground font-medium">Próximos passos recomendados:</p>
+              <ul className="list-disc space-y-2 pl-5">
+                <li>Acesse o painel para testar as ferramentas ilimitadas liberadas pelo plano Premium.</li>
+                <li>Revise sua assinatura em <Link href="/dashboard/subscription" className="text-primary underline">Configurações &gt; Assinatura</Link> para confirmar dados de cobrança.</li>
+                <li>Adicione o CorretorIA aos favoritos e acompanhe as novidades pelo email cadastrado.</li>
+              </ul>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button className="w-full" onClick={() => void handleLoggedCta("dashboard")}>
+              Ir para o painel
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void handleLoggedCta("subscription")}
+            >
+              Gerenciar assinatura
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    if (!email) {
+      setError("Não foi possível identificar o email do pagamento. Tente fazer login com o email usado no PIX.")
+      return
+    }
+
+    if (!name.trim()) {
+      setError("Informe seu nome completo")
+      return
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("As senhas não conferem")
+      return
+    }
+
+    if (!acceptTerms) {
+      setError("Você precisa aceitar os Termos de Uso para continuar")
+      return
+    }
+
+    const basePayload = await buildTrackingPayload({
+      step: "create_password",
+      nameProvided: !!name.trim(),
+      acceptTerms,
+    })
+
+    sendGA4Event("pix_post_payment_create_password_submit", { ...basePayload })
+
+    setIsSubmitting(true)
+
+    try {
+      const { error: signUpError } = await signUp(email, password, name)
+
+      if (signUpError) {
+        setError(signUpError.message)
+        toast({
+          title: "Erro ao criar senha",
+          description: signUpError.message,
+          variant: "destructive",
+        })
+        sendGA4Event("pix_post_payment_create_password_error", {
+          ...basePayload,
+          error: signUpError.message,
+          stage: "signUpError",
+        })
+        return
+      }
+
+      setSuccess(true)
+      toast({
+        title: "Senha criada com sucesso!",
+        description: "Estamos preparando seu acesso Premium. Você será redirecionado em instantes.",
+      })
+      sendGA4Event("pix_post_payment_create_password_success", { ...basePayload })
+
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 2000)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro inesperado ao salvar sua senha"
+      setError(message)
+      toast({
+        title: "Erro ao criar senha",
+        description: message,
+        variant: "destructive",
+      })
+      sendGA4Event("pix_post_payment_create_password_error", {
+        ...basePayload,
+        error: message,
+        stage: "unexpected",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="pt-10">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <CheckCircle className="h-16 w-16 text-green-500" />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-green-600">Tudo certo!</h2>
+                <p className="text-muted-foreground">
+                  Seu acesso Premium está sendo ativado. Redirecionaremos você automaticamente.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[80vh] bg-muted/30 p-4">
+      <Card className="w-full max-w-3xl border-2 border-primary/10 bg-white shadow-lg">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-2 text-center md:text-left">
+            <CardTitle className="text-3xl font-bold">
+              Pagamento PIX confirmado!
+            </CardTitle>
+            <CardDescription className="text-base">
+              {isGuest
+                ? "Último passo: crie sua senha para ativar o plano Premium no seu email."
+                : "Confirme seus dados para finalizar a ativação do plano Premium."}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-8 md:grid-cols-5 md:gap-10">
+          <div className="md:col-span-2 space-y-4 rounded-xl bg-primary/5 p-6">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              <div>
+                <p className="text-sm uppercase tracking-wide text-primary">Resumo do plano</p>
+                <p className="text-lg font-semibold text-foreground">{planDetails.title}</p>
+              </div>
+            </div>
+
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {planDetails.description}. Assim que sua conta estiver ativa, você poderá acessar todas as ferramentas Premium sem limites.
+            </p>
+
+            <div className="space-y-2 rounded-lg border border-primary/10 bg-white p-4 text-sm">
+              <div className="flex justify-between">
+                <span className="font-medium text-foreground">Email</span>
+                <span className="font-medium text-primary">
+                  {email ?? "Não informado"}
+                </span>
+              </div>
+              {formattedAmount && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valor pago</span>
+                  <span className="font-medium text-foreground">
+                    {formattedAmount}
+                  </span>
+                </div>
+              )}
+              {paymentId && (
+                <div className="flex flex-col gap-1 pt-2 text-xs text-muted-foreground">
+                  <span>Código do pagamento</span>
+                  <span className="font-mono text-foreground">{paymentId}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="text-xs leading-relaxed text-muted-foreground">
+              Caso já possua uma conta com esse email, <Link href="/login" className="text-primary underline">faça login</Link> para liberar o acesso imediatamente.
+            </div>
+          </div>
+
+          <div className="md:col-span-3">
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email do pagamento</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email ?? ""}
+                    disabled
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Digite seu nome"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Crie uma senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirme a senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Repita a senha"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={acceptTerms}
+                  onChange={(event) => setAcceptTerms(event.target.checked)}
+                />
+                <span>
+                  Concordo com os{" "}
+                  <Link href="/termos" className="text-primary underline">
+                    Termos de Uso
+                  </Link>{" "}
+                  e com a{" "}
+                  <Link href="/privacidade" className="text-primary underline">
+                    Política de Privacidade
+                  </Link>.
+                </span>
+              </label>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando senha...
+                  </>
+                ) : (
+                  "Ativar acesso Premium"
+                )}
+              </Button>
+
+              <div className="text-sm text-muted-foreground">
+                Já tem uma conta?{" "}
+                <Link href="/login" className="text-primary underline">
+                  Faça login
+                </Link>
+              </div>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

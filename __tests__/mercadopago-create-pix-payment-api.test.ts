@@ -96,7 +96,7 @@ describe('Mercado Pago create PIX payment API', () => {
     process.env.NODE_ENV = originalNodeEnv
   })
 
-  it('rejects unauthenticated POST requests', async () => {
+  it('requires guest email when user is not authenticated', async () => {
     getCurrentUserWithProfile.mockResolvedValue({ user: null, profile: null })
     const request = new NextRequest('https://example.com/api/mercadopago/create-pix-payment', {
       method: 'POST',
@@ -106,7 +106,9 @@ describe('Mercado Pago create PIX payment API', () => {
     })
 
     const response = await POST(request)
-    expect(response.status).toBe(401)
+    expect(response.status).toBe(400)
+    const payload = await response.json()
+    expect(payload.error).toBe('Email é obrigatório para pagamento sem login')
   })
 
   it('rejects POST when userId does not match authenticated user', async () => {

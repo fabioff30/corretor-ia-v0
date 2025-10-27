@@ -174,6 +174,8 @@ export async function POST(request: NextRequest) {
       qrCodeText: payment.point_of_interaction?.transaction_data?.qr_code,
       expiresAt: payment.date_of_expiration,
       amount: finalAmount,
+      payerEmail: finalUserEmail,
+      isGuest: isGuestPayment,
     })
   } catch (error) {
     console.error('[MP PIX] Error creating payment:', error)
