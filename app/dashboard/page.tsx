@@ -8,11 +8,13 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { UsageLimitCard } from '@/components/dashboard/UsageLimitCard'
 import { UpgradeBanner } from '@/components/dashboard/UpgradeBanner'
+import { PendingPixActivationBanner } from '@/components/dashboard/PendingPixActivationBanner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useUser } from '@/hooks/use-user'
 import { useUsageLimits } from '@/hooks/use-usage-limits'
+import { usePendingPixPayment } from '@/hooks/use-pending-pix-payment'
 import { FileText, Wand2, Sparkles, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function DashboardPage() {
   const { profile } = useUser()
   const { stats, loading, showAds, maxCharacters, error } = useUsageLimits()
+  const { hasPendingPayment, pendingPayment, loading: pendingLoading, refetch } = usePendingPixPayment()
 
   const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
 
@@ -155,8 +158,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Banner de Upgrade - Apenas para Free */}
-        {!isPremium && <UpgradeBanner />}
+        {/* Banner de Ativação PIX Pendente ou Upgrade */}
+        {!isPremium && (
+          <>
+            {hasPendingPayment && pendingPayment ? (
+              <PendingPixActivationBanner
+                paymentId={pendingPayment.paymentId}
+                amount={pendingPayment.amount}
+                planType={pendingPayment.planType}
+                paidAt={pendingPayment.paidAt}
+                onActivated={() => refetch()}
+              />
+            ) : (
+              <UpgradeBanner />
+            )}
+          </>
+        )}
 
         {/* Ações Rápidas */}
         <Card>
