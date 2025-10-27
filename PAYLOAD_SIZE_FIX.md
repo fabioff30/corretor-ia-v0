@@ -2,85 +2,97 @@
 
 ## 🔴 Problema
 
-Usuários premium recebiam **erro 404** ao tentar enviar textos muito grandes (> 4MB) nas seguintes rotas:
+Usuários premium recebiam **erro 404/413** ao tentar enviar textos muito grandes (> 4.5MB) nas seguintes rotas:
 - `/dashboard/corretor-premium` - Correção de texto premium
 - `/dashboard/reescrever-premium` - Reescrita de texto premium
 
 ### Sintoma:
 ```
-POST /api/correct - 404 Not Found
-POST /api/rewrite - 404 Not Found
+POST /api/correct - 404 Not Found ou 413 FUNCTION_PAYLOAD_TOO_LARGE
+POST /api/rewrite - 404 Not Found ou 413 FUNCTION_PAYLOAD_TOO_LARGE
 ```
 
-Acontecia quando o texto colado ultrapassava ~4MB (aproximadamente 2 milhões de caracteres).
+Acontecia quando o texto colado ultrapassava ~4.5MB (aproximadamente 2.2 milhões de caracteres).
 
 ## 🔍 Causa Raiz
 
-O Next.js tem um **limite padrão de 4MB** para o body das requisições de API.
+O **Vercel** tem um limite **FIXO E IMUTÁVEL de 4.5MB** para o body de requisições em serverless functions.
 
-### Por que 404 e não 413?
+### ⚠️ Descoberta Importante
 
-É uma peculiaridade do Next.js: quando o body ultrapassa o limite, o framework retorna **404 Not Found** em vez de **413 Payload Too Large**. Isso acontece porque o Next.js falha em fazer o parsing da requisição antes mesmo de chegar na rota.
+**Este limite NÃO PODE ser aumentado**, independente do plano Vercel:
+- ❌ Plano Hobby: 4.5MB (limite de infraestrutura)
+- ❌ Plano Pro: 4.5MB (mesmo limite)
+- ❌ Plano Enterprise: 4.5MB (mesmo limite)
 
-### Limites encontrados:
+### Por que acontece?
 
-1. **Next.js (padrão)**: 4MB para rotas de API
-2. **Server Actions (configurado)**: 2MB no `next.config.mjs`
-3. **Vercel**:
-   - Plano Hobby/Free: 4.5MB máximo
-   - Plano Pro/Team: 100MB máximo
+É uma **limitação de infraestrutura do Vercel** para serverless functions, não uma configuração. Quando o payload ultrapassa 4.5MB, o Vercel retorna:
+- **413 FUNCTION_PAYLOAD_TOO_LARGE** (quando detecta antes de chegar no Next.js)
+- **404 Not Found** (quando Next.js falha no parsing antes da rota)
+
+### Limites reais:
+
+1. **Vercel Serverless Functions**: 4.5MB (FIXO para todos os planos)
+2. **Next.js Server Actions (configurável)**: 2MB → 50MB no `next.config.mjs`
+   - ⚠️ Mas limitado pelo Vercel a 4.5MB quando em produção
 
 ## ✅ Solução
 
-Aumentar o limite de payload no Next.js através do `next.config.mjs`:
+**IMPORTANTE**: Não é possível aumentar o limite de 4.5MB no Vercel. A solução é:
 
-### 1. Limites do Vercel (Não Configuráveis)
+### 1. Aceitar o limite e avisar o usuário
 
-O Vercel tem limites fixos baseados no plano:
-- **Plano Hobby/Free**: 4.5MB máximo
-- **Plano Pro**: 100MB máximo
+Configurar o Next.js para aceitar até 50MB localmente, mas adicionar validação client-side para avisar quando o texto for muito grande para o Vercel.
 
-⚠️ **Importante**: Não é possível alterar esses limites via `vercel.json`. Eles são definidos pelo seu plano.
-
-**Status Atual do Projeto:**
-- Se está no plano Hobby: limite real é **4.5MB** (~2.2 milhões de caracteres)
-- Se está no plano Pro: limite real é **100MB** (~50 milhões de caracteres)
-
-### 2. `next.config.mjs` - Server Actions e API Routes
+#### `next.config.mjs` - Aumentar limite local
 
 ```javascript
 experimental: {
   serverActions: {
-    bodySizeLimit: '50mb',  // ✅ Aumentado de 2mb
+    bodySizeLimit: '50mb',  // ✅ Funciona localmente
   },
 },
 ```
 
 **O que isso faz:**
-- Permite que o Next.js processe payloads até 50MB
-- Mas o limite REAL será o do seu plano Vercel
+- ✅ Permite desenvolvimento local com textos grandes
+- ⚠️ Em produção (Vercel), o limite continua sendo 4.5MB
 
 **Resultado Prático:**
-- **Plano Hobby**: limite efetivo é **4.5MB** (Vercel limita)
-- **Plano Pro**: limite efetivo é **50MB** (next.config limita)
+- **Local (dev)**: até 50MB
+- **Produção (Vercel)**: até 4.5MB (limite de infraestrutura)
 
-## 📊 Capacidade Real por Plano
+### 2. Adicionar validação client-side (IMPLEMENTADO)
 
-### Plano Hobby/Free (4.5MB):
+Avisar o usuário quando o texto ultrapassar 4MB:
+
+```typescript
+// Em PremiumTextCorrectionForm.tsx
+const MAX_SIZE_MB = 4 // Limite seguro antes do Vercel recusar
+const sizeInMB = new Blob([originalText]).size / 1024 / 1024
+
+if (sizeInMB > MAX_SIZE_MB) {
+  toast({
+    title: "⚠️ Texto muito grande",
+    description: `Seu texto tem ${sizeInMB.toFixed(2)}MB. O limite do Vercel é 4.5MB. Considere dividir em partes menores.`,
+    variant: "destructive",
+  })
+  return
+}
+```
+
+## 📊 Capacidade Real (TODOS OS PLANOS VERCEL)
+
 | Tipo de Conteúdo | Tamanho Aproximado |
 |------------------|-------------------|
+| **Limite do Vercel** | 4.5MB |
 | **Texto puro** | ~2.250.000 caracteres |
 | **Palavras** | ~375.000 palavras |
 | **Páginas A4** | ~1.125 páginas |
 | **Livros** | ~4-5 livros de 250 páginas |
 
-### Plano Pro (50MB - limitado por next.config):
-| Tipo de Conteúdo | Tamanho Aproximado |
-|------------------|-------------------|
-| **Texto puro** | ~25.000.000 caracteres |
-| **Palavras** | ~4.200.000 palavras |
-| **Páginas A4** | ~12.500 páginas |
-| **Livros** | ~50 livros de 250 páginas |
+⚠️ **Importante**: Este limite é o mesmo para Hobby, Pro e Enterprise!
 
 ## 🎯 Rotas Afetadas (Agora Corrigidas)
 
@@ -164,33 +176,85 @@ fetch('/api/correct', {
    - Nenhuma mudança necessária
    - O limite é controlado pelo plano do Vercel (Hobby=4.5MB, Pro=100MB)
 
-## 🚀 Como Aumentar o Limite Efetivo
+## 🚀 Alternativas Para Textos Maiores que 4.5MB
 
-### Opção 1: Upgrade para Vercel Pro (Recomendado)
+### ❌ Upgrade para Vercel Pro NÃO resolve
 ```
-Plano Hobby: 4.5MB → Plano Pro: 100MB
+Plano Hobby: 4.5MB (limite fixo)
+Plano Pro: 4.5MB (mesmo limite fixo)
+Plano Enterprise: 4.5MB (mesmo limite fixo)
+```
+
+**O limite de 4.5MB é de INFRAESTRUTURA**, não de plano!
+
+### ✅ Opção 1: Client-Side Uploads (Recomendado pelo Vercel)
+
+Em vez de enviar texto pela API, usar upload direto para storage:
+
+```typescript
+// Cliente → Vercel Blob/S3 (sem passar por serverless function)
+const { url } = await upload(largeTextFile, {
+  access: 'public',
+  handleUploadUrl: '/api/upload-handler',
+})
+
+// Então enviar apenas a URL para a API
+await fetch('/api/correct', {
+  method: 'POST',
+  body: JSON.stringify({ textUrl: url })
+})
 ```
 
 **Benefícios:**
-- ✅ Limite de 100MB (22x maior)
-- ✅ Funções serverless mais rápidas
-- ✅ Mais builds por mês
-- ✅ Análises avançadas
+- ✅ Sem limite de tamanho
+- ✅ Não passa por serverless function
+- ✅ Mais rápido para arquivos grandes
 
-**Como fazer:**
-1. Acessar https://vercel.com/dashboard
-2. Ir em Settings → Billing
-3. Fazer upgrade para Pro (~$20/mês)
+### ✅ Opção 2: Streaming Functions
 
-### Opção 2: Continuar com Hobby (Limitado)
+Usar streaming para responses grandes:
+
+```typescript
+// app/api/correct-stream/route.ts
+export async function POST(request: Request) {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Processar e enviar em chunks
+      controller.enqueue(encoder.encode('chunk1'))
+      controller.enqueue(encoder.encode('chunk2'))
+      controller.close()
+    }
+  })
+
+  return new Response(stream)
+}
 ```
-Limite: 4.5MB (~2.2 milhões de caracteres)
+
+**Benefícios:**
+- ✅ Sem limite de response size
+- ✅ Feedback progressivo ao usuário
+
+### ✅ Opção 3: Chunking (Atual - Melhor para nosso caso)
+
+Dividir texto em partes menores:
+
+```typescript
+const MAX_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB
+const chunks = splitIntoChunks(largeText, MAX_CHUNK_SIZE)
+
+for (const chunk of chunks) {
+  await fetch('/api/correct', {
+    method: 'POST',
+    body: JSON.stringify({ text: chunk })
+  })
+}
 ```
 
-**O que fazer:**
-- Adicionar validação client-side para avisar usuário
-- Mostrar mensagem quando texto > 4MB
-- Sugerir dividir textos muito grandes
+**Benefícios:**
+- ✅ Funciona com código atual
+- ✅ Sem mudanças de infraestrutura
+- ⚠️ Múltiplas requisições
 
 ## 📝 Próximos Passos (Opcional)
 
@@ -226,26 +290,35 @@ const compressed = pako.gzip(text)
 
 ## 🎉 Resultado Final
 
-### Se Plano Hobby (4.5MB):
-✅ **Usuários premium podem enviar textos até 4.5MB** (~2.2 milhões de caracteres)
-✅ **Sem erro 404** para textos dentro do limite
-✅ **Correção e reescrita funcionam** para textos até ~1.125 páginas
-⚠️ **Considere upgrade para Pro** para textos maiores
+### Todos os Planos Vercel (Hobby, Pro, Enterprise):
+✅ **Usuários premium podem enviar textos até 4.5MB** (~2.2 milhões de caracteres / ~1.125 páginas)
+✅ **Validação client-side implementada** para avisar sobre textos muito grandes
+✅ **Correção e reescrita funcionam perfeitamente** para textos dentro do limite
+⚠️ **Para textos > 4.5MB**: Implementar chunking, client-side uploads ou streaming
 
-### Se Plano Pro (50MB):
-✅ **Usuários premium podem enviar textos até 50MB** (~25 milhões de caracteres)
-✅ **Sem erro 404** em textos grandes
-✅ **Correção e reescrita funcionam perfeitamente** para textos até ~12.500 páginas
-✅ **Performance mantida** (timeout de 120s)
+### Verdade Sobre o Limite:
+- ❌ **NÃO é possível aumentar** o limite de 4.5MB no Vercel
+- ❌ **Upgrade para Pro NÃO aumenta** esse limite específico
+- ✅ **É um limite de infraestrutura** da plataforma Vercel
+- ✅ **Mesma limitação** em Hobby, Pro e Enterprise
 
-### Resumo:
-- **next.config.mjs**: Configurado para 50MB ✅
-- **Limite real**: Depende do plano Vercel (Hobby=4.5MB, Pro=100MB)
-- **Recomendação**: Upgrade para Pro se precisar de textos > 4.5MB
+### O que foi feito:
+1. **next.config.mjs**: Configurado para 50MB (funciona apenas localmente)
+2. **Validação client-side**: Avisar usuário quando texto > 4MB
+3. **Documentação**: Esclarecimento sobre limites reais do Vercel
+4. **Alternativas documentadas**: Chunking, client-side uploads, streaming
+
+### Recomendação Final:
+- ✅ **Para textos até 4.5MB**: Solução atual funciona perfeitamente
+- ⚠️ **Para textos maiores**: Implementar uma das 3 alternativas documentadas
+  1. Client-side uploads (mais recomendado)
+  2. Streaming functions
+  3. Chunking (mais simples de implementar)
 
 ---
 
-**Commit**: `fix: aumentar limite de payload no next.config para 50MB`
+**Commit**: `docs: esclarecer limites reais do Vercel (4.5MB fixo em todos os planos)`
 **Data**: 2025-01-27
-**Issue**: Erro 404 com textos grandes em rotas premium
-**Limite Real**: Depende do plano Vercel atual
+**Issue**: Erro 404/413 com textos grandes em rotas premium
+**Limite Real**: 4.5MB (FIXO - todos os planos Vercel)
+**Fonte**: [Vercel Docs - Functions Limitations](https://vercel.com/docs/functions/limitations)

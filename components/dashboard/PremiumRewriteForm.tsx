@@ -168,6 +168,17 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
       return
     }
 
+    // Verificar tamanho do payload (limite do Vercel: 4.5MB)
+    const sizeInMB = new Blob([originalText]).size / 1024 / 1024
+    if (sizeInMB > 4) {
+      toast({
+        title: "⚠️ Texto muito grande",
+        description: `Seu texto tem ${sizeInMB.toFixed(2)}MB. O limite do Vercel é 4.5MB. Por favor, divida o texto em partes menores.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     if (containsSuspiciousContent(originalText)) {
       toast({
         title: "Conteúdo não permitido",
