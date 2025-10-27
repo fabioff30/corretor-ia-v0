@@ -52,6 +52,8 @@ export function usePixPayment(): UsePixPaymentReturn {
 
     try {
       const isGuestPayment = !userId
+      const normalizedUserEmail = userEmail?.trim() || undefined
+      const normalizedGuestEmail = guestEmail?.trim() || undefined
 
       // Track initiation
       if (userId) {
@@ -76,9 +78,9 @@ export function usePixPayment(): UsePixPaymentReturn {
         credentials: "include",
         body: JSON.stringify({
           planType,
-          userId,
-          userEmail,
-          guestEmail,
+          ...(userId && { userId }),
+          ...(normalizedUserEmail && { userEmail: normalizedUserEmail }),
+          ...(normalizedGuestEmail && { guestEmail: normalizedGuestEmail }),
           ...(couponCode && { couponCode }),
         }),
       })
@@ -101,7 +103,8 @@ export function usePixPayment(): UsePixPaymentReturn {
         amount: data.amount,
         planType,
         expiresAt: data.expiresAt,
-        payerEmail: data.payerEmail || (isGuestPayment ? guestEmail : userEmail),
+        payerEmail:
+          data.payerEmail || (isGuestPayment ? normalizedGuestEmail : normalizedUserEmail),
         isGuest: data.isGuest ?? isGuestPayment,
       }
 

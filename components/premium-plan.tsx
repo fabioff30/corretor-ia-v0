@@ -180,7 +180,14 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       setPixLoadingPlan(planType)
 
       // Create PIX payment with coupon if available
-      const payment = await createPixPayment(planType, user.id, user.email!, undefined, couponCode)
+      const normalizedUserEmail = (profile?.email ?? user.email ?? '').trim()
+      const payment = await createPixPayment(
+        planType,
+        user.id,
+        normalizedUserEmail || undefined,
+        undefined,
+        couponCode
+      )
 
       if (payment) {
         setIsPixModalOpen(true)
@@ -209,7 +216,9 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(guestEmail)) {
+    const trimmedGuestEmail = guestEmail.trim()
+
+    if (!emailRegex.test(trimmedGuestEmail)) {
       toast({
         title: "Email inválido",
         description: "Por favor, insira um email válido.",
@@ -229,7 +238,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
           pendingPlanType,
           undefined, // no userId
           undefined, // no userEmail
-          guestEmail, // guestEmail
+          trimmedGuestEmail, // guestEmail
           couponCode // coupon code if available
         )
 
