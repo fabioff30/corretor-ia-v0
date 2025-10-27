@@ -52,6 +52,7 @@ export function PixPostPayment(props: PixPostPaymentProps) {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
 
   const formattedAmount = useMemo(() => {
     if (typeof amount !== "number") return null
@@ -278,64 +279,87 @@ export function PixPostPayment(props: PixPostPaymentProps) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] bg-muted/30 p-4">
-      <Card className="w-full max-w-3xl border-2 border-primary/10 bg-white shadow-lg">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-col gap-2 text-center md:text-left">
-            <CardTitle className="text-3xl font-bold">
-              Pagamento PIX confirmado!
-            </CardTitle>
-            <CardDescription className="text-base">
-              {isGuest
-                ? "Último passo: crie sua senha para ativar o plano Premium no seu email."
-                : "Confirme seus dados para finalizar a ativação do plano Premium."}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-8 md:grid-cols-5 md:gap-10">
-          <div className="md:col-span-2 space-y-4 rounded-xl bg-primary/5 p-6">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-6 w-6 text-primary" />
-              <div>
-                <p className="text-sm uppercase tracking-wide text-primary">Resumo do plano</p>
-                <p className="text-lg font-semibold text-foreground">{planDetails.title}</p>
+    <div className="flex items-center justify-center min-h-[80vh] bg-gradient-to-b from-green-50/50 to-background p-4">
+      <Card className="w-full max-w-4xl border shadow-xl">
+        <CardHeader className="space-y-4 pb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle className="h-7 w-7 text-green-600" />
               </div>
             </div>
-
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {planDetails.description}. Assim que sua conta estiver ativa, você poderá acessar todas as ferramentas Premium sem limites.
-            </p>
-
-            <div className="space-y-2 rounded-lg border border-primary/10 bg-white p-4 text-sm">
-              <div className="flex justify-between">
-                <span className="font-medium text-foreground">Email</span>
-                <span className="font-medium text-primary">
-                  {email ?? "Não informado"}
-                </span>
+            <div className="flex-1 space-y-2">
+              <CardTitle className="text-2xl font-bold text-green-800">
+                Pagamento PIX confirmado!
+              </CardTitle>
+              <CardDescription className="text-base text-green-700">
+                {isGuest
+                  ? "Último passo: crie sua senha para ativar o plano Premium no seu email."
+                  : "Confirme seus dados para finalizar a ativação do plano Premium."}
+              </CardDescription>
+            </div>
+          </div>
+          {emailError && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{emailError}</AlertDescription>
+            </Alert>
+          )}
+        </CardHeader>
+        <CardContent className="grid gap-8 md:grid-cols-5 md:gap-12 pt-8">
+          <div className="md:col-span-2 space-y-5">
+            <div className="rounded-xl bg-gradient-to-b from-primary/10 to-primary/5 p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="h-6 w-6 text-primary" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Plano Contratado</p>
+                  <p className="text-lg font-bold text-foreground">{planDetails.title}</p>
+                </div>
               </div>
-              {formattedAmount && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor pago</span>
-                  <span className="font-medium text-foreground">
-                    {formattedAmount}
+
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Acesso ilimitado renovado {plan === 'annual' ? 'anualmente' : 'mensalmente'}. Após ativar sua conta, você poderá usar todas as ferramentas Premium sem restrições.
+              </p>
+
+              <div className="space-y-3 rounded-lg bg-white border border-primary/20 p-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Email</span>
+                  <span className="text-sm font-medium text-foreground truncate max-w-[60%]">
+                    {email ?? "Não informado"}
                   </span>
                 </div>
-              )}
-              {paymentId && (
-                <div className="flex flex-col gap-1 pt-2 text-xs text-muted-foreground">
-                  <span>Código do pagamento</span>
-                  <span className="font-mono text-foreground">{paymentId}</span>
-                </div>
-              )}
+                {formattedAmount && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Valor pago</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {formattedAmount}
+                    </span>
+                  </div>
+                )}
+                {paymentId && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">ID do pagamento</p>
+                    <p className="text-xs font-mono bg-muted/50 p-2 rounded break-all">{paymentId}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="text-xs leading-relaxed text-muted-foreground">
-              Caso já possua uma conta com esse email, <Link href="/login" className="text-primary underline">faça login</Link> para liberar o acesso imediatamente.
-            </div>
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertDescription className="text-sm">
+                <strong>Já tem uma conta?</strong> <Link href="/login" className="text-primary underline font-medium">Faça login aqui</Link> para ativar o Premium imediatamente.
+              </AlertDescription>
+            </Alert>
           </div>
 
-          <div className="md:col-span-3">
-            <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="md:col-span-3 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Complete seu cadastro</h3>
+              <p className="text-sm text-muted-foreground">
+                Preencha os dados abaixo para criar sua conta e ativar o plano Premium.
+              </p>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -343,38 +367,48 @@ export function PixPostPayment(props: PixPostPaymentProps) {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email do pagamento</Label>
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email do pagamento
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     value={email ?? ""}
                     disabled
+                    className="pl-10 bg-muted/50"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este email foi usado no pagamento e não pode ser alterado
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Nome completo <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
                     className="pl-10"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Nome completo</Label>
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Crie uma senha <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Digite seu nome"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Crie uma senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
@@ -382,49 +416,76 @@ export function PixPostPayment(props: PixPostPaymentProps) {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
+                    className="pl-10"
                   />
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className={`h-1.5 w-1.5 rounded-full ${password.length >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={password.length >= 6 ? 'text-green-600' : 'text-muted-foreground'}>
+                    Mínimo de 6 caracteres
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirme a senha</Label>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                  Confirme a senha <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Repita a senha"
+                    placeholder="Digite a senha novamente"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     required
+                    className="pl-10"
                   />
                 </div>
+                {confirmPassword && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className={`h-1.5 w-1.5 rounded-full ${password === confirmPassword && password.length > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className={password === confirmPassword && password.length > 0 ? 'text-green-600' : 'text-red-600'}>
+                      {password === confirmPassword && password.length > 0 ? 'As senhas conferem' : 'As senhas não conferem'}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={acceptTerms}
-                  onChange={(event) => setAcceptTerms(event.target.checked)}
-                />
-                <span>
-                  Concordo com os{" "}
-                  <Link href="/termos" className="text-primary underline">
-                    Termos de Uso
-                  </Link>{" "}
-                  e com a{" "}
-                  <Link href="/privacidade" className="text-primary underline">
-                    Política de Privacidade
-                  </Link>.
-                </span>
-              </label>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={acceptTerms}
+                    onChange={(event) => setAcceptTerms(event.target.checked)}
+                    required
+                  />
+                  <span className="text-sm leading-relaxed">
+                    Li e concordo com os{" "}
+                    <Link href="/termos" className="text-primary underline font-medium">
+                      Termos de Uso
+                    </Link>{" "}
+                    e com a{" "}
+                    <Link href="/privacidade" className="text-primary underline font-medium">
+                      Política de Privacidade
+                    </Link>
+                    {" "}do CorretorIA.
+                  </span>
+                </label>
+              </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
+                disabled={isSubmitting || !acceptTerms}
+                size="lg"
+              >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando senha...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Criando sua conta...
                   </>
                 ) : (
                   "Ativar acesso Premium"
