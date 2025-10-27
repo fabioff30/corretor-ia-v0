@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -51,8 +51,10 @@ export function PremiumPixModal({
   paymentData,
   onSuccess,
 }: PremiumPixModalProps) {
-  const [status, setStatus] = useState<'waiting' | 'checking' | 'success' | 'error'>('waiting')
+  const [status, setStatus] = useState<'waiting' | 'checking' | 'success' | 'error' | 'awaitingActivation'>('waiting')
   const [timeLeft, setTimeLeft] = useState<number>(1800) // 30 minutes in seconds
+  const [isActivating, setIsActivating] = useState(false)
+  const [activationError, setActivationError] = useState<string | null>(null)
   const { toast } = useToast()
   const router = useRouter()
   const statusRef = useRef(status)
@@ -70,6 +72,55 @@ export function PremiumPixModal({
       }
     }
   }, [])
+
+  const completeActivation = useCallback(async (options: { manual: boolean }) => {
+    if (!paymentData) {
+      return
+    }
+
+    const anonymizedPayment = await obfuscateIdentifier(paymentData.paymentId, 'pid')
+
+    setStatus('success')
+
+    sendGA4Event('pix_payment_confirmed', {
+      payment: anonymizedPayment,
+      plan: paymentData.planType,
+      value: paymentData.amount,
+      manual: options.manual,
+    })
+
+    const successMessage = paymentData.isGuest
+      ? "Pagamento confirmado! Vamos criar sua senha para ativar o Premium."
+      : "Seu plano Premium foi ativado com sucesso."
+
+    toast({
+      title: "✅ Pagamento confirmado!",
+      description: successMessage,
+    })
+
+    if (redirectTimeoutRef.current) {
+      window.clearTimeout(redirectTimeoutRef.current)
+    }
+
+    redirectTimeoutRef.current = window.setTimeout(() => {
+      onSuccess?.()
+      const query = new URLSearchParams({
+        paymentId: paymentData.paymentId,
+        plan: paymentData.planType,
+        amount: paymentData.amount.toString(),
+      })
+
+      if (paymentData.payerEmail) {
+        query.set('email', paymentData.payerEmail)
+      }
+
+      if (paymentData.isGuest) {
+        query.set('guest', '1')
+      }
+
+      router.push(`/premium/pix-sucesso?${query.toString()}`)
+    }, 2000)
+  }, [onSuccess, paymentData, router, toast])
 
   // Timer countdown
   useEffect(() => {
@@ -94,7 +145,7 @@ export function PremiumPixModal({
       return
     }
 
-    if (statusRef.current === 'success' || statusRef.current === 'error') {
+    if (statusRef.current === 'success' || statusRef.current === 'error' || statusRef.current === 'awaitingActivation') {
       return
     }
 
@@ -156,55 +207,16 @@ export function PremiumPixModal({
 
         // Only proceed if EVERYTHING is ready (payment + profile + subscription)
         if (data.ready) {
-          const anonymizedPayment = await obfuscateIdentifier(paymentData.paymentId, 'pid')
-
-          setStatus('success')
-
-      sendGA4Event('pix_payment_confirmed', {
-        payment: anonymizedPayment,
-        plan: paymentData.planType,
-        value: paymentData.amount,
-      })
-
-          const successMessage = paymentData.isGuest
-            ? "Pagamento confirmado! Vamos criar sua senha para ativar o Premium."
-            : "Seu plano Premium foi ativado com sucesso."
-
-          toast({
-            title: "✅ Pagamento confirmado!",
-            description: successMessage,
-          })
-
-          if (redirectTimeoutRef.current) {
-            window.clearTimeout(redirectTimeoutRef.current)
-          }
-
-          redirectTimeoutRef.current = window.setTimeout(() => {
-            onSuccess?.()
-            const query = new URLSearchParams({
-              paymentId: paymentData.paymentId,
-              plan: paymentData.planType,
-              amount: paymentData.amount.toString(),
-            })
-
-            if (paymentData.payerEmail) {
-              query.set('email', paymentData.payerEmail)
-            }
-
-            if (paymentData.isGuest) {
-              query.set('guest', '1')
-            }
-
-            router.push(`/premium/pix-sucesso?${query.toString()}`)
-          }, 2000)
-
+          await completeActivation({ manual: false })
           if (intervalId) {
             clearInterval(intervalId)
           }
         } else if (data.paymentApproved && !data.profileActivated) {
-          // Payment approved but profile not yet activated (webhook still processing)
           console.log('[PIX Modal] Payment approved, waiting for profile activation...')
-          setStatus('checking')
+          setStatus('awaitingActivation')
+          if (intervalId) {
+            clearInterval(intervalId)
+          }
         } else {
           // Payment not yet approved
           setStatus('waiting')
@@ -228,7 +240,91 @@ export function PremiumPixModal({
         clearInterval(intervalId)
       }
     }
-  }, [isOpen, paymentData, router, toast, onSuccess])
+  }, [isOpen, paymentData, completeActivation])
+
+  const handleManualActivation = useCallback(async () => {
+    if (!paymentData) return
+
+    setIsActivating(true)
+    setActivationError(null)
+
+    try {
+      sendGA4Event('pix_manual_activation_attempt', {
+        plan: paymentData.planType,
+        guest: paymentData.isGuest,
+      })
+
+      const response = await fetch('/api/mercadopago/activate-pix-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          paymentId: paymentData.paymentId,
+        }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        const message = payload?.error || 'Não foi possível ativar o plano. Tente novamente.'
+        setActivationError(message)
+        toast({
+          title: 'Erro ao ativar assinatura',
+          description: message,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      await completeActivation({ manual: true })
+    } catch (error) {
+      console.error('[PIX Modal] Manual activation error:', error)
+      const message = 'Erro inesperado ao ativar. Tente novamente.'
+      setActivationError(message)
+      toast({
+        title: 'Erro ao ativar assinatura',
+        description: message,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsActivating(false)
+    }
+  }, [completeActivation, paymentData, toast])
+
+  const handleRefreshStatus = useCallback(async () => {
+    if (!paymentData) return
+
+    setStatus('checking')
+    setActivationError(null)
+
+    try {
+      const response = await fetch(
+        `/api/verify-pix-activation?paymentId=${paymentData.paymentId}`,
+        {
+          credentials: 'include',
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to recheck payment status')
+      }
+
+      const data = await response.json()
+
+      if (data.ready) {
+        await completeActivation({ manual: false })
+      } else if (data.paymentApproved) {
+        setStatus('awaitingActivation')
+      } else {
+        setStatus('waiting')
+      }
+    } catch (error) {
+      console.error('[PIX Modal] Error refreshing status:', error)
+      setStatus('awaitingActivation')
+      setActivationError('Não foi possível verificar o status agora.')
+    }
+  }, [completeActivation, paymentData])
 
   // Track when QR is displayed
   useEffect(() => {
@@ -287,7 +383,7 @@ export function PremiumPixModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
-        {status !== 'success' && (
+        {status !== 'success' && status !== 'awaitingActivation' && (
           <Button
             variant="ghost"
             size="icon"
@@ -323,6 +419,43 @@ export function PremiumPixModal({
                 </p>
               </div>
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : status === 'awaitingActivation' ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <CheckCircle2 className="h-16 w-16 text-green-600" />
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-green-600">
+                  Pagamento confirmado!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Clique abaixo para ativar sua assinatura Premium. Se o problema persistir, entre em contato com o suporte.
+                </p>
+                {activationError && (
+                  <p className="text-xs text-red-500">{activationError}</p>
+                )}
+              </div>
+              <div className="flex flex-col items-center gap-3 w-full">
+                <Button
+                  className="w-full"
+                  onClick={handleManualActivation}
+                  disabled={isActivating}
+                >
+                  {isActivating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Ativando assinatura...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Ativar assinatura
+                    </>
+                  )}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleRefreshStatus} disabled={isActivating}>
+                  Rechecar status
+                </Button>
+              </div>
             </div>
           ) : status === 'error' ? (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
