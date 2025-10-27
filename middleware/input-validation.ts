@@ -116,21 +116,52 @@ const baseTextValidation = z
   .max(200000, "O texto não pode exceder 200000 caracteres")
   .refine((text) => {
     // Check for dangerous content using the HTML sanitizer utility
+    // More lenient for longer texts (premium users may have technical content)
+    if (text.length > 5000) {
+      // For long texts, only check the most critical XSS patterns
+      const criticalDangerousPatterns = [
+        /<script[^>]*>/i,
+        /javascript:/i,
+        /<iframe[^>]*>/i,
+        /eval\s*\(/i,
+      ]
+      return !criticalDangerousPatterns.some(pattern => pattern.test(text))
+    }
+    // For shorter texts, use full validation
     return !containsDangerousContent(text)
   }, "O texto contém conteúdo potencialmente perigoso")
   .refine((text) => {
     // Additional security pattern check
+    // More lenient for longer texts (premium users may have technical content)
+    // Only check critical security patterns for long texts
+    if (text.length > 5000) {
+      // For long texts, only check the most critical patterns
+      const criticalPatterns = [
+        /<script[^>]*>/i,
+        /<\/script>/i,
+        /javascript:/i,
+        /onerror\s*=/i,
+        /onload\s*=/i,
+        /eval\s*\(/i,
+        /document\.cookie/i,
+        /<iframe[^>]*>/i,
+      ]
+      return !criticalPatterns.some((pattern) => pattern.test(text))
+    }
+    // For shorter texts, check all patterns
     return !SECURITY_PATTERNS.some((pattern) => pattern.test(text))
   }, "O texto contém padrões não permitidos")
   .refine((text) => {
     // Check for excessive repetition (potential spam)
+    // More lenient for longer texts (premium users may have repetitive content)
     const words = text.split(/\s+/)
-    if (words.length > 10) {
+    if (words.length > 10 && words.length < 500) {
+      // Only check repetition for small texts (potential spam)
       const uniqueWords = new Set(words.map(w => w.toLowerCase()))
       const repetitionRatio = uniqueWords.size / words.length
       return repetitionRatio > 0.3 // At least 30% unique words
     }
-    return true
+    return true // Skip check for very short or very long texts
   }, "O texto contém repetição excessiva")
   .refine((text) => {
     // Check for control characters and non-printable characters
@@ -213,15 +244,25 @@ export async function validateInput(req: NextRequest | Request) {
     const result = schema.safeParse(body)
 
     if (!result.success) {
-      // Log validation failure
+      // Log validation failure with detailed error information
+      const errorDetails = result.error.errors.map((e: any) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code
+      }))
+
       logSecurityEvent('Input validation failed', {
         requestId,
         ip,
         userAgent,
         endpoint: pathname,
-        errors: result.error.errors.map((e: any) => e.message)
+        errors: result.error.errors.map((e: any) => e.message),
+        errorDetails
       })
-      
+
+      // Log to console for debugging (remove in production)
+      console.error('Validation failed:', JSON.stringify(errorDetails, null, 2))
+
       return NextResponse.json(
         {
           error: "Erro de validação",
