@@ -175,8 +175,7 @@ export async function POST(request: NextRequest) {
         const { error: profileUpdateError } = await supabase
           .from('profiles')
           .update({
-            is_pro: true,
-            plan_type: 'premium',
+            plan_type: 'pro',
             subscription_status: 'active',
             updated_at: new Date().toISOString(),
           })
@@ -269,8 +268,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('profiles')
           .update({
-            is_pro: true,
-            plan_type: 'premium',
+            plan_type: 'pro',
             subscription_status: 'active',
             updated_at: new Date().toISOString(),
           })
