@@ -257,6 +257,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
   )
 
   const signOut = useCallback(async () => {
+    // Always clear local state first
     setUser(null)
     setProfile(null)
 
@@ -265,26 +266,43 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       localStorage.removeItem('user-plan-type')
     }
 
-    const { error: signOutError } = await supabase.auth.signOut()
+    try {
+      const { error: signOutError } = await supabase.auth.signOut()
 
-    if (signOutError) {
-      setError(signOutError.message)
-
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser()
-
-      if (currentUser) {
-        setUser(currentUser)
-        await fetchProfile(currentUser.id)
-      } else {
-        setProfile(null)
+      // Ignore "session_not_found" errors - session might already be expired/deleted
+      if (signOutError && signOutError.message === 'Session from session_id claim in JWT does not exist') {
+        console.warn('[UserProvider] Session already expired, ignoring error')
+        setError(null)
+        return { error: null }
       }
-    } else {
-      setError(null)
-    }
 
-    return { error: signOutError }
+      if (signOutError) {
+        console.error('[UserProvider] Erro ao fazer logout:', signOutError)
+        setError(signOutError.message)
+
+        // Try to restore user state if logout failed for other reasons
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser()
+
+        if (currentUser) {
+          setUser(currentUser)
+          await fetchProfile(currentUser.id)
+        } else {
+          setProfile(null)
+        }
+
+        return { error: signOutError }
+      }
+
+      setError(null)
+      return { error: null }
+    } catch (error) {
+      // Ignore any errors during logout - local state already cleared
+      console.warn('[UserProvider] Erro ignorado durante logout:', error)
+      setError(null)
+      return { error: null }
+    }
   }, [fetchProfile, supabase])
 
   const refreshProfile = useCallback(async () => {

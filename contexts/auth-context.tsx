@@ -271,13 +271,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user_id: user?.id,
     })
 
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Erro ao fazer logout:', error)
+    try {
+      // Try to sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+
+      // Ignore "session_not_found" errors - session might already be expired/deleted
+      if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
+        console.error('Erro ao fazer logout:', error)
+      }
+    } catch (error) {
+      // Ignore any errors - we'll clear local state anyway
+      console.warn('Erro ignorado durante logout:', error)
     }
+
+    // Always clear local state regardless of API result
     setUser(null)
     setSession(null)
     setLoading(false)
+
+    // Call server-side logout to ensure cookies are cleared
+    try {
+      await fetch('/api/logout', { method: 'POST' })
+    } catch (error) {
+      console.warn('Erro ao limpar cookies do servidor:', error)
+    }
   }
 
   const updateProfile = async (data: Partial<User>) => {
