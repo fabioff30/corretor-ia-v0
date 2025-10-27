@@ -275,14 +275,29 @@ export async function validateInput(req: NextRequest | Request) {
 
     // Additional runtime security checks
     const validatedData = result.data
-    
+
     // Check if text contains potential security threats
     if ('text' in validatedData && typeof validatedData.text === 'string') {
+      // For large texts (> 5000 chars), only check critical security patterns
+      // to avoid false positives in legitimate long-form content
+      const patternsToCheck = validatedData.text.length > 5000
+        ? [
+            /<script[^>]*>/i,
+            /<\/script>/i,
+            /javascript:/i,
+            /onerror\s*=/i,
+            /onload\s*=/i,
+            /eval\s*\(/i,
+            /document\.cookie/i,
+            /<iframe[^>]*>/i,
+          ]
+        : SECURITY_PATTERNS
+
       // Log if suspicious patterns were detected but passed initial validation
-      const suspiciousPatterns = SECURITY_PATTERNS.filter(pattern => 
+      const suspiciousPatterns = patternsToCheck.filter(pattern =>
         pattern.test(validatedData.text)
       )
-      
+
       if (suspiciousPatterns.length > 0) {
         logSecurityEvent('Suspicious content detected', {
           requestId,
@@ -290,9 +305,10 @@ export async function validateInput(req: NextRequest | Request) {
           userAgent,
           endpoint: pathname,
           patterns: suspiciousPatterns.length,
-          textLength: validatedData.text.length
+          textLength: validatedData.text.length,
+          isLargeText: validatedData.text.length > 5000
         })
-        
+
         return NextResponse.json(
           {
             error: "Conteúdo suspeito detectado",
