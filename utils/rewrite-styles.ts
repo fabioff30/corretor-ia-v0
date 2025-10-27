@@ -1,6 +1,6 @@
 /**
  * Rewrite Styles Configuration
- * Centralized definitions for all 12 rewrite styles (5 free + 7 premium)
+ * Centralized definitions for all 13 rewrite styles (6 free + 7 premium)
  */
 
 import {
@@ -16,15 +16,16 @@ import {
   Zap,
   Play,
   Mic,
+  Scale,
   LucideIcon,
 } from "lucide-react"
 
-export type FreeRewriteStyle = "FORMAL" | "HUMANIZADO" | "ACADÊMICO" | "CRIATIVO" | "COMO_UMA_CRIANCA"
+export type FreeRewriteStyle = "FORMAL" | "HUMANIZADO" | "ACADÊMICO" | "CRIATIVO" | "COMO_UMA_CRIANCA" | "JURÍDICO"
 export type PremiumRewriteStyle = "TÉCNICO" | "JORNALÍSTICO" | "PUBLICITÁRIO" | "BLOG_POST" | "ROTEIRO_REELS" | "ROTEIRO_YOUTUBE" | "PALESTRA_APRESENTACAO"
 export type RewriteStyle = FreeRewriteStyle | PremiumRewriteStyle
 
 // Internal representation (lowercase with underscores for API compatibility)
-export type RewriteStyleInternal = "formal" | "humanized" | "academic" | "creative" | "childlike" | "technical" | "journalistic" | "advertising" | "blog_post" | "reels_script" | "youtube_script" | "presentation"
+export type RewriteStyleInternal = "formal" | "humanized" | "academic" | "creative" | "childlike" | "legal" | "technical" | "journalistic" | "advertising" | "blog_post" | "reels_script" | "youtube_script" | "presentation"
 
 export interface RewriteStyleDefinition {
   id: RewriteStyleInternal
@@ -51,6 +52,7 @@ export const STYLE_DISPLAY_TO_INTERNAL: Record<RewriteStyle, RewriteStyleInterna
   ACADÊMICO: "academic",
   CRIATIVO: "creative",
   COMO_UMA_CRIANCA: "childlike",
+  JURÍDICO: "legal",
   TÉCNICO: "technical",
   JORNALÍSTICO: "journalistic",
   PUBLICITÁRIO: "advertising",
@@ -67,6 +69,7 @@ export const STYLE_INTERNAL_TO_DISPLAY: Record<RewriteStyleInternal, RewriteStyl
   academic: "ACADÊMICO",
   creative: "CRIATIVO",
   childlike: "COMO_UMA_CRIANCA",
+  legal: "JURÍDICO",
   technical: "TÉCNICO",
   journalistic: "JORNALÍSTICO",
   advertising: "PUBLICITÁRIO",
@@ -161,6 +164,23 @@ export const FREE_REWRITE_STYLES: RewriteStyleDefinition[] = [
     example: '"A História é como um baú cheio de tesouro!"',
     benefits: ["Vocabulário simples", "Frases curtas", "Linguagem lúdica"],
     examples: ["Material educativo", "Explicações simples", "Conteúdo infantil"],
+  },
+  {
+    id: "legal",
+    displayName: "JURÍDICO",
+    label: "Jurídico",
+    description: "Linguagem técnica do direito, formal e precisa",
+    icon: Scale,
+    color: "bg-teal-50 border-teal-200 dark:bg-teal-950 dark:border-teal-800",
+    iconColor: "text-teal-600 dark:text-teal-400",
+    badgeColor: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
+    tier: "free",
+    usage: "Petições, pareceres jurídicos, contratos, documentos legais",
+    tone: "Técnico-jurídico, impessoal, fundamentado",
+    length: "Longo",
+    example: '"Requer-se, portanto, a procedência do pedido, nos termos da fundamentação..."',
+    benefits: ["Terminologia jurídica", "Estrutura processual", "Fundamentação técnica"],
+    examples: ["Petições", "Pareceres jurídicos", "Contratos"],
   },
 ]
 
