@@ -137,29 +137,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // After successful login/signup, try to link any pending guest payments (PIX + Stripe)
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          try {
-            const response = await fetch('/api/link-guest-payments', {
-              method: 'POST',
-            })
+          // Retry logic with exponential backoff
+          const linkGuestPayments = async (attempt = 1, maxAttempts = 3): Promise<void> => {
+            try {
+              console.log(`[Auth] Attempting to link guest payments (attempt ${attempt}/${maxAttempts})`)
 
-            if (response.ok) {
-              const data = await response.json()
+              const response = await fetch('/api/link-guest-payments', {
+                method: 'POST',
+              })
 
-              if (data.linked && data.items?.length > 0) {
-                console.log('[Auth] Guest payment(s) linked successfully:', data.items)
+              if (response.ok) {
+                const data = await response.json()
 
-                // Refresh user data to get updated subscription status
-                const updatedUserData = await fetchUserWithSubscription(session.user)
-                setUser(updatedUserData)
+                if (data.linked && data.items?.length > 0) {
+                  console.log('[Auth] Guest payment(s) linked successfully:', data.items)
 
-                // Optionally show a toast notification (would need to be passed from provider)
-                console.log('[Auth] Premium subscription activated from guest payment!')
+                  // Refresh user data to get updated subscription status
+                  const updatedUserData = await fetchUserWithSubscription(session.user)
+                  setUser(updatedUserData)
+
+                  console.log('[Auth] Premium subscription activated from guest payment!')
+                  return // Success, exit retry loop
+                } else {
+                  console.log('[Auth] No guest payments to link')
+                  return // No payments to link, exit
+                }
               }
+
+              // If response not ok, check if we should retry
+              if (attempt < maxAttempts) {
+                const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
+                console.warn(`[Auth] Link guest payments failed (status ${response.status}), retrying in ${delay}ms...`)
+                await new Promise(resolve => setTimeout(resolve, delay))
+                return linkGuestPayments(attempt + 1, maxAttempts)
+              } else {
+                console.error('[Auth] Failed to link guest payments after', maxAttempts, 'attempts')
+              }
+            } catch (error) {
+              console.error(`[Auth] Error linking guest payments (attempt ${attempt}/${maxAttempts}):`, error)
+
+              // Retry on network errors
+              if (attempt < maxAttempts) {
+                const delay = Math.pow(2, attempt) * 1000
+                console.warn(`[Auth] Retrying in ${delay}ms...`)
+                await new Promise(resolve => setTimeout(resolve, delay))
+                return linkGuestPayments(attempt + 1, maxAttempts)
+              }
+
+              // Don't block login if linking fails after all retries
+              console.error('[Auth] Failed to link guest payments after all retries, continuing with login')
             }
-          } catch (error) {
-            console.error('[Auth] Error linking guest payments:', error)
-            // Don't block login if linking fails
           }
+
+          // Start linking process (non-blocking)
+          void linkGuestPayments()
         }
       } else {
         setUser(null)
@@ -200,20 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user_id: data.user.id,
         })
 
-        // Se o usuário foi criado, também criar entrada na tabela users
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email!,
-              name: name || '',
-            },
-          ])
-
-        if (insertError && insertError.code !== '23505') { // 23505 = unique constraint violation
-          console.error('Erro ao criar entrada do usuário:', insertError)
-        }
+        // NOTE: Profile is now created automatically via database trigger (on_auth_user_created)
+        // No need to manually insert into users/profiles table
+        console.log('[Auth] User profile will be created automatically via trigger', { userId: data.user.id })
       }
 
       return { error: null }

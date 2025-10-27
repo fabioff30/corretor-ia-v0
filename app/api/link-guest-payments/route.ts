@@ -21,29 +21,64 @@ export async function POST(request: NextRequest) {
     const { user } = await getCurrentUserWithProfile()
 
     if (!user) {
+      console.error('[Link Payments] Unauthorized access attempt')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
+    console.log('[Link Payments] Starting payment link process for user:', user.id)
+
     const supabase = createServiceRoleClient()
 
-    // Get user email
-    const { data: profile } = await supabase
+    // Get user email from profiles
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('email')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.email) {
-      return NextResponse.json(
-        { error: 'User email not found' },
-        { status: 404 }
-      )
+    let userEmail: string | null = profile?.email || null
+
+    // Fallback: If email not in profile, try to get from auth.users
+    if (!userEmail) {
+      console.warn('[Link Payments] Email not found in profile, checking auth.users')
+
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(user.id)
+
+      if (authError || !authUser?.user?.email) {
+        console.error('[Link Payments] Failed to find user email:', {
+          profileError,
+          authError,
+          userId: user.id
+        })
+
+        return NextResponse.json(
+          {
+            error: 'User email not found',
+            message: 'Could not retrieve email from profile or auth system. Please contact support.',
+            details: {
+              profileError: profileError?.message,
+              authError: authError?.message
+            }
+          },
+          { status: 404 }
+        )
+      }
+
+      userEmail = authUser.user.email
+
+      // Update profile with email from auth.users
+      console.log('[Link Payments] Updating profile with email from auth.users')
+      await supabase
+        .from('profiles')
+        .update({ email: userEmail })
+        .eq('id', user.id)
     }
 
-    const userEmail = profile.email
+    console.log('[Link Payments] User email found:', userEmail)
+
     const linkedItems: any[] = []
 
     // Check if user already has an active subscription
@@ -55,15 +90,21 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingSubscription) {
-      console.log('[Link Payments] User already has active subscription:', user.id)
+      console.log('[Link Payments] User already has active subscription:', {
+        userId: user.id,
+        subscriptionId: existingSubscription.id,
+        status: existingSubscription.status
+      })
       return NextResponse.json({
         linked: false,
         message: 'User already has an active subscription',
       })
     }
 
+    console.log('[Link Payments] Checking for guest PIX payments for email:', userEmail)
+
     // 1. Find and link PIX payments
-    const { data: guestPixPayments } = await supabase
+    const { data: guestPixPayments, error: pixError } = await supabase
       .from('pix_payments')
       .select('*')
       .is('user_id', null)
@@ -71,10 +112,19 @@ export async function POST(request: NextRequest) {
       .eq('status', 'paid')
       .order('paid_at', { ascending: false })
 
+    if (pixError) {
+      console.error('[Link Payments] Error fetching PIX payments:', pixError)
+    }
+
     if (guestPixPayments && guestPixPayments.length > 0) {
-      console.log('[Link Payments] Found', guestPixPayments.length, 'guest PIX payment(s)')
+      console.log('[Link Payments] Found', guestPixPayments.length, 'guest PIX payment(s) for', userEmail)
 
       const pixPayment = guestPixPayments[0] // Most recent
+      console.log('[Link Payments] Processing PIX payment:', {
+        paymentId: pixPayment.payment_intent_id,
+        amount: pixPayment.amount,
+        planType: pixPayment.plan_type
+      })
 
       // Link payment to user
       await supabase
@@ -107,14 +157,22 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (!insertError && newSubscription) {
+        console.log('[Link Payments] Subscription created, activating...', { subscriptionId: newSubscription.id })
+
         // Activate subscription
-        await supabase.rpc('activate_subscription', {
+        const { error: activateError } = await supabase.rpc('activate_subscription', {
           p_user_id: user.id,
           p_subscription_id: newSubscription.id,
         })
 
+        if (activateError) {
+          console.error('[Link Payments] Error activating subscription:', activateError)
+        } else {
+          console.log('[Link Payments] Subscription activated successfully')
+        }
+
         // Update user profile
-        await supabase
+        const { error: profileUpdateError } = await supabase
           .from('profiles')
           .update({
             is_pro: true,
@@ -124,6 +182,12 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', user.id)
 
+        if (profileUpdateError) {
+          console.error('[Link Payments] Error updating profile:', profileUpdateError)
+        } else {
+          console.log('[Link Payments] Profile updated to premium')
+        }
+
         linkedItems.push({
           type: 'pix',
           paymentId: pixPayment.payment_intent_id,
@@ -131,8 +195,16 @@ export async function POST(request: NextRequest) {
           planType: pixPayment.plan_type,
         })
 
-        console.log('[Link Payments] PIX payment linked and subscription activated')
+        console.log('[Link Payments] PIX payment linked and subscription activated', {
+          userId: user.id,
+          subscriptionId: newSubscription.id,
+          plan: pixPayment.plan_type
+        })
+      } else if (insertError) {
+        console.error('[Link Payments] Error creating subscription:', insertError)
       }
+    } else {
+      console.log('[Link Payments] No guest PIX payments found for', userEmail)
     }
 
     // 2. Find and link Stripe subscriptions
@@ -215,11 +287,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (linkedItems.length === 0) {
+      console.log('[Link Payments] No pending payments found for user:', user.id)
       return NextResponse.json({
         linked: false,
         message: 'No pending payments found for this email',
       })
     }
+
+    console.log('[Link Payments] Successfully linked', linkedItems.length, 'payment(s) to user:', user.id)
 
     return NextResponse.json({
       linked: true,
@@ -227,7 +302,11 @@ export async function POST(request: NextRequest) {
       items: linkedItems,
     })
   } catch (error) {
-    console.error('[Link Payments] Error:', error)
+    console.error('[Link Payments] Unexpected error:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       {
         error: 'Error linking payments',

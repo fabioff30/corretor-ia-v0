@@ -231,34 +231,71 @@ export function PixPostPayment(props: PixPostPaymentProps) {
         return
       }
 
-      // Enviar email de boas-vindas via Brevo após signup bem-sucedido
+      // Enviar email de boas-vindas via Brevo após signup bem-sucedido (com retry)
       if (email) {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
+        const sendWelcomeEmail = async (attempt = 1, maxAttempts = 2): Promise<boolean> => {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
-        try {
-          const emailResponse = await fetch('/api/emails/welcome', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email,
-              name,
-            }),
-            signal: controller.signal,
-          })
+          try {
+            console.log(`[PIX-Post] Sending welcome email (attempt ${attempt}/${maxAttempts})`, { email })
 
-          if (emailResponse.ok) {
-            setEmailSent(true)
-          } else {
-            setEmailError("O email de confirmação pode demorar alguns minutos para chegar. Verifique sua caixa de spam.")
+            const emailResponse = await fetch('/api/emails/welcome', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email,
+                name,
+              }),
+              signal: controller.signal,
+            })
+
+            clearTimeout(timeout)
+
+            if (emailResponse.ok) {
+              console.log('[PIX-Post] Welcome email sent successfully')
+              return true
+            } else {
+              const errorData = await emailResponse.json().catch(() => ({}))
+              console.error('[PIX-Post] Failed to send welcome email:', {
+                status: emailResponse.status,
+                statusText: emailResponse.statusText,
+                error: errorData
+              })
+
+              // Retry on server errors (5xx)
+              if (emailResponse.status >= 500 && attempt < maxAttempts) {
+                console.log(`[PIX-Post] Retrying email send in 2s... (attempt ${attempt + 1}/${maxAttempts})`)
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                return sendWelcomeEmail(attempt + 1, maxAttempts)
+              }
+
+              return false
+            }
+          } catch (welcomeError) {
+            clearTimeout(timeout)
+            console.error(`[PIX-Post] Error sending welcome email (attempt ${attempt}/${maxAttempts}):`, welcomeError)
+
+            // Retry on network errors
+            if (attempt < maxAttempts) {
+              console.log(`[PIX-Post] Retrying email send in 2s... (attempt ${attempt + 1}/${maxAttempts})`)
+              await new Promise(resolve => setTimeout(resolve, 2000))
+              return sendWelcomeEmail(attempt + 1, maxAttempts)
+            }
+
+            return false
           }
-        } catch (welcomeError) {
-          console.error('Erro ao enviar email de boas-vindas:', welcomeError)
-          setEmailError("O email de confirmação pode demorar alguns minutos para chegar. Verifique sua caixa de spam.")
-        } finally {
-          clearTimeout(timeout)
+        }
+
+        // Send email with retry
+        const emailSuccess = await sendWelcomeEmail()
+
+        if (emailSuccess) {
+          setEmailSent(true)
+        } else {
+          setEmailError("O email de confirmação pode demorar alguns minutos para chegar. Verifique sua caixa de spam ou entre em contato com o suporte.")
         }
       }
 
