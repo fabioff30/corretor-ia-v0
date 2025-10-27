@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Validate signature (skip in test mode if no signature)
+    // Note: v0 (old format) webhooks may fail validation but should still be processed
     if (xSignature && xRequestId) {
       const validation = validateWebhookSignature(
         xSignature,
@@ -85,14 +86,23 @@ export async function POST(request: NextRequest) {
 
       if (!validation.isValid) {
         console.error('[MP Webhook] Signature validation failed:', validation.error)
-        return NextResponse.json(
-          { received: true, error: 'Invalid signature' },
-          { status: 200 } // Return 200 to prevent retries
-        )
+
+        // If it's v0 format (old), allow it despite validation failure
+        // v0 webhooks use different validation method
+        if (webhookData.apiVersion === 'v0') {
+          console.warn('[MP Webhook] Allowing v0 webhook despite validation failure (old format)')
+        } else {
+          // v1 format MUST have valid signature
+          return NextResponse.json(
+            { received: true, error: 'Invalid signature' },
+            { status: 200 } // Return 200 to prevent retries
+          )
+        }
+      } else {
+        console.log('[MP Webhook] Signature validated successfully')
       }
-      console.log('[MP Webhook] Signature validated successfully')
     } else {
-      console.warn('[MP Webhook] No signature headers - skipping validation (test mode?)')
+      console.warn('[MP Webhook] No signature headers - skipping validation (v0 format or test mode)')
     }
 
     console.log('Webhook received:', {

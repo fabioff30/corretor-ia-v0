@@ -78,17 +78,23 @@ export function validateWebhookSignature(
       }
     }
 
-    // Check timestamp (reject if older than 15 minutes to prevent replay attacks)
+    // Check timestamp (reject if older than 30 minutes to prevent replay attacks)
+    // Note: Increased from 15 to 30 minutes to accommodate MP webhook delivery delays
     const timestamp = parseInt(ts, 10)
     const currentTimestamp = Math.floor(Date.now() / 1000)
     const timeDiff = currentTimestamp - timestamp
 
-    if (timeDiff > 900) {
-      // 15 minutes = 900 seconds
+    if (timeDiff > 1800) {
+      // 30 minutes = 1800 seconds
       return {
         isValid: false,
-        error: 'Webhook signature expired (older than 15 minutes)',
+        error: `Webhook signature expired (older than 30 minutes, age: ${timeDiff}s)`,
       }
+    }
+
+    // Warn if timestamp is suspiciously old (>5 minutes) but still within limit
+    if (timeDiff > 300) {
+      console.warn(`[MP Webhook] Warning: Webhook timestamp is ${timeDiff}s old (>5 minutes)`)
     }
 
     // Build manifest string
@@ -186,19 +192,54 @@ export interface WebhookData {
 
 export function parseWebhookPayload(body: any): WebhookData | null {
   try {
-    if (!body || !body.data || !body.data.id) {
-      return null
+    // Support both v0 (old) and v1 (new) webhook formats from Mercado Pago
+
+    // Format v1 (new): { data: { id: "..." }, type: "payment", action: "..." }
+    if (body && body.data && body.data.id) {
+      return {
+        id: body.data.id,
+        type: body.type || 'payment',
+        action: body.action || 'created',
+        liveMode: body.live_mode !== false,
+        userId: body.user_id || '',
+        apiVersion: body.api_version || 'v1',
+        dateCreated: body.date_created || new Date().toISOString(),
+      }
     }
 
-    return {
-      id: body.data.id,
-      type: body.type || 'payment',
-      action: body.action || 'created',
-      liveMode: body.live_mode !== false,
-      userId: body.user_id || '',
-      apiVersion: body.api_version || '',
-      dateCreated: body.date_created || new Date().toISOString(),
+    // Format v0 (old): { resource: "...", topic: "payment" }
+    if (body && body.resource && body.topic) {
+      // Extract ID from resource path (e.g., "/payments/123" -> "123")
+      const resourceParts = body.resource.split('/')
+      const id = resourceParts[resourceParts.length - 1]
+
+      if (!id) {
+        return null
+      }
+
+      // Map topic to type
+      let type: WebhookData['type'] = 'payment'
+      if (body.topic === 'merchant_order') {
+        type = 'payment'
+      } else if (body.topic === 'subscription') {
+        type = 'subscription'
+      } else if (body.topic.includes('payment')) {
+        type = 'payment'
+      }
+
+      return {
+        id,
+        type,
+        action: 'updated', // v0 doesn't specify action
+        liveMode: true, // v0 doesn't specify, assume true
+        userId: '',
+        apiVersion: 'v0',
+        dateCreated: new Date().toISOString(),
+      }
     }
+
+    // Neither format matched
+    return null
   } catch (error) {
     console.error('Error parsing webhook payload:', error)
     return null
