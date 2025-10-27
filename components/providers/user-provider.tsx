@@ -12,6 +12,7 @@ interface UserContextValue {
   error: string | null
   updateProfile: (updates: Partial<Profile>) => Promise<{ data: Profile | null; error: string | null }>
   uploadAvatar: (file: File) => Promise<{ data: string | null; error: string | null }>
+  refreshProfile: () => Promise<{ data: Profile | null; error: string | null }>
   signOut: () => Promise<{ error: Error | null }>
   isAuthenticated: boolean
   isPro: boolean
@@ -286,6 +287,35 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
     return { error: signOutError }
   }, [fetchProfile, supabase])
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) {
+      return { data: null, error: "Usuário não autenticado" }
+    }
+
+    try {
+      console.log('[UserProvider] Refreshing profile from database...')
+      setError(null)
+
+      const refreshedProfile = await fetchProfile(user.id)
+
+      if (!refreshedProfile) {
+        return { data: null, error: "Erro ao atualizar perfil" }
+      }
+
+      console.log('[UserProvider] Profile refreshed successfully:', {
+        planType: refreshedProfile.plan_type,
+        subscriptionStatus: refreshedProfile.subscription_status,
+      })
+
+      return { data: refreshedProfile, error: null }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao atualizar perfil"
+      console.error('[UserProvider] Error refreshing profile:', err)
+      setError(message)
+      return { data: null, error: message }
+    }
+  }, [user, fetchProfile])
+
   const value = useMemo<UserContextValue>(
     () => ({
       user,
@@ -294,13 +324,14 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       error,
       updateProfile,
       uploadAvatar,
+      refreshProfile,
       signOut,
       isAuthenticated: !!user,
       isPro: profile?.plan_type === "pro" || profile?.plan_type === "admin",
       isAdmin: profile?.plan_type === "admin",
       isFree: profile?.plan_type === "free",
     }),
-    [error, loading, profile, signOut, updateProfile, uploadAvatar, user]
+    [error, loading, profile, refreshProfile, signOut, updateProfile, uploadAvatar, user]
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>

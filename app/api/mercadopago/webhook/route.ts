@@ -137,19 +137,24 @@ export async function POST(request: NextRequest) {
  * Handle payment events
  */
 async function handlePaymentEvent(paymentId: string, webhookBody: any) {
+  const startTime = Date.now()
+  console.log(`[MP Webhook Payment] Started processing payment ${paymentId} at ${new Date().toISOString()}`)
+
   try {
     const mpClient = getMercadoPagoClient()
     const supabase = createServiceRoleClient()
 
     // Get payment details from MP
+    console.log(`[MP Webhook Payment] Fetching payment details from Mercado Pago...`)
     const payment = await mpClient.getPayment(paymentId)
 
-    console.log('Processing payment:', {
+    console.log(`[MP Webhook Payment] Payment details retrieved (${Date.now() - startTime}ms):`, {
       id: payment.id,
       status: payment.status,
       amount: payment.transaction_amount,
       payment_method: payment.payment_method_id,
-      external_reference: payment.external_reference
+      external_reference: payment.external_reference,
+      date_approved: payment.date_approved,
     })
 
     // Check if it's a PIX payment
@@ -166,7 +171,8 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       const isGuestPayment = externalReference.startsWith('guest_')
 
       // Update PIX payment record
-      const { data: pixPayment } = await supabase
+      console.log(`[MP Webhook Payment] Updating PIX payment record in database...`)
+      const { data: pixPayment, error: pixUpdateError } = await supabase
         .from('pix_payments')
         .update({
           status: 'paid',
@@ -176,10 +182,21 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         .select('user_id, email, plan_type')
         .single()
 
-      if (!pixPayment) {
-        console.error('PIX payment record not found:', payment.id)
+      if (pixUpdateError) {
+        console.error(`[MP Webhook Payment] Error updating PIX payment record:`, pixUpdateError)
         return
       }
+
+      if (!pixPayment) {
+        console.error(`[MP Webhook Payment] PIX payment record not found for payment ID: ${payment.id}`)
+        return
+      }
+
+      console.log(`[MP Webhook Payment] PIX payment record updated (${Date.now() - startTime}ms):`, {
+        user_id: pixPayment.user_id,
+        email: pixPayment.email,
+        plan_type: pixPayment.plan_type,
+      })
 
       // If this is a guest payment, mark as paid but don't create subscription yet
       if (isGuestPayment || !pixPayment.user_id) {
@@ -236,27 +253,34 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       }
 
       // Activate subscription
+      console.log(`[MP Webhook Payment] Activating subscription via RPC...`)
       const { error: activateError } = await supabase.rpc('activate_subscription', {
         p_user_id: userId,
         p_subscription_id: newSubscription.id,
       })
 
       if (activateError) {
-        console.error('Error activating subscription:', activateError)
+        console.error(`[MP Webhook Payment] Error activating subscription (${Date.now() - startTime}ms):`, activateError)
         return
       }
 
-      // Update user profile to pro
-      await supabase
-        .from('profiles')
-        .update({
-          plan_type: 'pro',
-          subscription_status: 'active',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
+      console.log(`[MP Webhook Payment] Subscription activated successfully (${Date.now() - startTime}ms)`)
 
-      console.log('PIX payment processed and subscription activated for user:', userId)
+      // Verify profile was updated
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('plan_type, subscription_status')
+        .eq('id', userId)
+        .single()
+
+      const duration = Date.now() - startTime
+      console.log(`[MP Webhook Payment] ✅ PIX payment processed successfully in ${duration}ms:`, {
+        userId,
+        paymentId: payment.id,
+        plan_type: updatedProfile?.plan_type,
+        subscription_status: updatedProfile?.subscription_status,
+        processing_time_ms: duration,
+      })
       return
     }
 

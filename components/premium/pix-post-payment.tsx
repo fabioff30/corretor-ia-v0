@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { sendGA4Event } from "@/utils/gtm-helper"
 import { obfuscateIdentifier } from "@/utils/analytics"
+import { useUserContext } from "@/components/providers/user-provider"
 
 type PlanType = "monthly" | "annual" | "test"
 
@@ -42,6 +43,7 @@ interface PixPostPaymentProps {
 export function PixPostPayment(props: PixPostPaymentProps) {
   const { paymentId, email, plan = "monthly", amount, isGuest = false } = props
   const { user, loading, signUp } = useAuth()
+  const { refreshProfile } = useUserContext()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -102,6 +104,28 @@ export function PixPostPayment(props: PixPostPaymentProps) {
 
     void trackView()
   }, [buildTrackingPayload])
+
+  // Refresh profile when user is logged in to get latest plan status
+  useEffect(() => {
+    if (user && !loading) {
+      console.log('[PIX Success] User is logged in, refreshing profile to get latest status...')
+
+      // Force refresh of profile from database
+      void refreshProfile().then(({ data, error }) => {
+        if (error) {
+          console.error('[PIX Success] Error refreshing profile:', error)
+        } else if (data) {
+          console.log('[PIX Success] Profile refreshed successfully:', {
+            planType: data.plan_type,
+            subscriptionStatus: data.subscription_status,
+          })
+
+          // Force router refresh to update server components
+          router.refresh()
+        }
+      })
+    }
+  }, [user, loading, refreshProfile, router])
 
   const handleLoggedCta = useCallback(
     async (destination: "dashboard" | "subscription") => {

@@ -88,7 +88,7 @@ export function PremiumPixModal({
     return () => clearInterval(interval)
   }, [isOpen, paymentData, status])
 
-  // Check payment status
+  // Check payment status and profile activation
   useEffect(() => {
     if (!isOpen || !paymentData) {
       return
@@ -100,17 +100,37 @@ export function PremiumPixModal({
 
     let isCancelled = false
     let intervalId: ReturnType<typeof setInterval> | null = null
+    let checkCount = 0
+    const maxChecks = 36 // 36 checks * 5s = 3 minutes timeout
 
     const checkPayment = async () => {
       if (isCancelled || !paymentData || statusRef.current === 'success' || statusRef.current === 'error') {
         return
       }
 
+      checkCount++
+
+      // Timeout after 3 minutes (36 checks)
+      if (checkCount > maxChecks) {
+        console.log('[PIX Modal] Timeout reached after 3 minutes')
+        setStatus('error')
+        toast({
+          title: "Verificação prolongada",
+          description: "O pagamento está demorando mais que o esperado. Entre em contato com o suporte se já pagou.",
+          variant: "destructive",
+        })
+        if (intervalId) {
+          clearInterval(intervalId)
+        }
+        return
+      }
+
       setStatus(current => (current === 'checking' ? current : 'checking'))
 
       try {
+        // Use new verification endpoint that checks BOTH payment AND profile activation
         const response = await fetch(
-          `/api/mercadopago/create-pix-payment?paymentId=${paymentData.paymentId}`,
+          `/api/verify-pix-activation?paymentId=${paymentData.paymentId}`,
           {
             credentials: "include",
           }
@@ -126,7 +146,16 @@ export function PremiumPixModal({
           return
         }
 
-        if (data.status === 'approved') {
+        console.log('[PIX Modal] Verification result:', {
+          paymentApproved: data.paymentApproved,
+          profileActivated: data.profileActivated,
+          subscriptionCreated: data.subscriptionCreated,
+          ready: data.ready,
+          checkCount,
+        })
+
+        // Only proceed if EVERYTHING is ready (payment + profile + subscription)
+        if (data.ready) {
           const anonymizedPayment = await obfuscateIdentifier(paymentData.paymentId, 'pid')
 
           setStatus('success')
@@ -172,7 +201,12 @@ export function PremiumPixModal({
           if (intervalId) {
             clearInterval(intervalId)
           }
+        } else if (data.paymentApproved && !data.profileActivated) {
+          // Payment approved but profile not yet activated (webhook still processing)
+          console.log('[PIX Modal] Payment approved, waiting for profile activation...')
+          setStatus('checking')
         } else {
+          // Payment not yet approved
           setStatus('waiting')
         }
       } catch (error) {
@@ -360,7 +394,10 @@ export function PremiumPixModal({
                 <Alert className="border-blue-200 bg-blue-50">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <AlertDescription>
-                    Verificando pagamento...
+                    <p className="font-medium">Verificando pagamento e ativação...</p>
+                    <p className="text-xs mt-1 text-muted-foreground">
+                      Aguarde enquanto confirmamos seu pagamento e ativamos seu plano Premium.
+                    </p>
                   </AlertDescription>
                 </Alert>
               )}
