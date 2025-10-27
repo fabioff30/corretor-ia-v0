@@ -46,6 +46,7 @@ export default function UpgradePage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           title: "CorretorIA Pro - Assinatura Mensal",
           price: PREMIUM_PLAN_PRICE,

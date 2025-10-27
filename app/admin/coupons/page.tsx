@@ -85,7 +85,9 @@ export default function AdminCouponsPage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch("/api/admin/coupons")
+      const response = await fetch("/api/admin/coupons", {
+        credentials: "include",
+      })
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
         throw new Error(payload?.error || "Não foi possível carregar os cupons.")
@@ -143,6 +145,7 @@ export default function AdminCouponsPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       })
 

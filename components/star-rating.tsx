@@ -43,6 +43,7 @@ export function StarRating({ onRatingSubmit, correctionId, textLength }: StarRat
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
             rating,
             feedback: feedback.trim(),

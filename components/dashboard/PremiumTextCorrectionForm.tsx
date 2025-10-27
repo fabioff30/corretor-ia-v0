@@ -206,6 +206,7 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           text: textToSend,
           isMobile,

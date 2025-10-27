@@ -215,6 +215,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           messages: [...messages, userMessageObj],
           sessionId: sessionId, // Pass the session ID to the API

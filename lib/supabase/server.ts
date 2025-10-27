@@ -6,8 +6,49 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
-export async function createClient() {
-  const cookieStore = await cookies()
+type CookieStore = ReturnType<typeof cookies>
+
+const resolvedCookieDomain = (() => {
+  const configuredDomain =
+    process.env.NEXT_PUBLIC_SUPABASE_COOKIE_DOMAIN || process.env.SUPABASE_COOKIE_DOMAIN
+
+  if (configuredDomain) {
+    return configuredDomain
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  if (!appUrl) {
+    return undefined
+  }
+
+  try {
+    const { hostname } = new URL(appUrl)
+    if (!hostname || hostname === 'localhost') {
+      return undefined
+    }
+
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      return undefined
+    }
+
+    return hostname.startsWith('www.') ? hostname.slice(4) : hostname
+  } catch (error) {
+    console.warn('[Supabase] Failed to resolve cookie domain from NEXT_PUBLIC_APP_URL', error)
+    return undefined
+  }
+})()
+
+function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
+  return {
+    ...options,
+    sameSite: options.sameSite ?? 'lax',
+    ...(resolvedCookieDomain ? { domain: resolvedCookieDomain } : {}),
+  }
+}
+
+export async function createClient(cookieStore?: CookieStore) {
+  const store = cookieStore ?? cookies()
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,11 +56,12 @@ export async function createClient() {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value
+          return store.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options })
+            const normalized = withNormalizedCookieOptions(options)
+            store.set({ name, value, ...normalized })
           } catch (error) {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
@@ -28,7 +70,8 @@ export async function createClient() {
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+            const normalized = withNormalizedCookieOptions(options)
+            store.set({ name, value: '', ...normalized })
           } catch (error) {
             // The `delete` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
@@ -39,6 +82,8 @@ export async function createClient() {
     }
   )
 }
+
+export { withNormalizedCookieOptions }
 
 /**
  * Cliente Supabase com service_role key para operações administrativas

@@ -41,7 +41,9 @@ export default function AdminLimitsPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/admin/limites')
+      const response = await fetch('/api/admin/limites', {
+        credentials: "include",
+      })
 
       if (!response.ok) {
         throw new Error('Erro ao buscar limites')

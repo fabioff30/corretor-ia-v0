@@ -19,7 +19,7 @@ export function useSecureAdminAuth() {
     try {
       const response = await fetch('/api/admin/auth', {
         method: 'GET',
-        credentials: 'include',
+        credentials: "include",
       })
       
       const data = await response.json()
@@ -48,7 +48,7 @@ export function useSecureAdminAuth() {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           action: 'login',
           password,
@@ -79,7 +79,7 @@ export function useSecureAdminAuth() {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           action: 'logout',
         }),

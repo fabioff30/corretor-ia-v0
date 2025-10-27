@@ -42,7 +42,9 @@ export function LimitsHistory({ refreshTrigger }: LimitsHistoryProps) {
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/admin/limites/history?page=${page}&limit=${limit}`)
+      const response = await fetch(`/api/admin/limites/history?page=${page}&limit=${limit}`, {
+        credentials: "include",
+      })
 
       if (!response.ok) {
         throw new Error('Erro ao buscar histórico')

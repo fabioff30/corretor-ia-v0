@@ -85,6 +85,7 @@ export function SubscriptionManagement() {
       const response = await fetch('/api/mercadopago/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
         body: JSON.stringify({ userId: user.id }),
       })
 

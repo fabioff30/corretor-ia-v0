@@ -233,6 +233,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           text: textToSend,
           isMobile,

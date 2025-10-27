@@ -46,6 +46,7 @@ export function AIDetectorRating({ verdict, probability, textLength }: AIDetecto
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
             rating,
             feedback: feedback.trim(),

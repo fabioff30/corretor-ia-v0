@@ -110,7 +110,10 @@ export function PremiumPixModal({
 
       try {
         const response = await fetch(
-          `/api/mercadopago/create-pix-payment?paymentId=${paymentData.paymentId}`
+          `/api/mercadopago/create-pix-payment?paymentId=${paymentData.paymentId}`,
+          {
+            credentials: "include",
+          }
         )
 
         if (!response.ok) {

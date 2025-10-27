@@ -76,6 +76,7 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: "include",
         body: JSON.stringify(
           user
             ? {
@@ -136,6 +137,7 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: "include",
         body: JSON.stringify({
           userId: user.id,
         }),

@@ -102,6 +102,7 @@ export default function AdminDashboardPage() {
 
       const response = await fetch("/api/admin/dashboard/summary", {
         cache: "no-store",
+        credentials: "include",
       })
 
       if (!response.ok) {

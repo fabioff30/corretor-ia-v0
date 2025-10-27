@@ -15,7 +15,9 @@ export function RatingStatsSection() {
     const fetchStats = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch("/api/rating-stats")
+        const response = await fetch("/api/rating-stats", {
+          credentials: "include",
+        })
 
         if (response.ok) {
           const data = await response.json()
