@@ -389,3 +389,153 @@ Gerenciar preferências: ${appBaseUrl}/account`
 
   return { subject, htmlContent, textContent }
 }
+
+export function paymentApprovedEmailTemplate({
+  name,
+  amount,
+  planType,
+  activationLink,
+}: TemplateContext & {
+  amount: number
+  planType: 'monthly' | 'annual'
+  activationLink: string
+}) {
+  const displayName = sanitizeName(name)
+  const formattedAmount = amount.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+  const planName = planType === 'monthly' ? 'Mensal' : 'Anual'
+  const subject = '✅ Pagamento aprovado! Ative sua assinatura Premium'
+
+  const htmlContent = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="pt-BR">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+  </head>
+  <body style='background-color:rgb(243,244,246);font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";padding-top:40px;padding-bottom:40px'>
+    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color:rgb(255,255,255);max-width:600px;margin-left:auto;margin-right:auto;padding:40px;border:1px solid rgb(229,231,235);border-radius:6px;">
+      <tbody>
+        <tr style="width:100%">
+          <td>
+            <h1 style="font-size:24px;font-weight:700;color:rgb(17,24,39);margin-bottom:24px;margin-top:0px">Pagamento Aprovado! 🎉</h1>
+            <p style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:16px;margin-top:0px">${displayName ? `Olá ${displayName},` : 'Olá,'}</p>
+            <p style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:16px;margin-top:0px">Ótimas notícias! Seu pagamento foi aprovado com sucesso. 🚀</p>
+
+            <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color:rgb(240,253,244);border-radius:8px;padding:20px;margin:24px 0;border:1px solid rgb(134,239,172)">
+              <tbody>
+                <tr>
+                  <td>
+                    <p style="font-size:16px;color:rgb(22,101,52);line-height:24px;margin:0 0 12px 0"><strong>✓ Detalhes do Pagamento</strong></p>
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:14px;color:rgb(22,101,52);padding:4px 0">Valor pago:</td>
+                        <td style="font-size:14px;color:rgb(22,101,52);font-weight:600;text-align:right;padding:4px 0">${formattedAmount}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:14px;color:rgb(22,101,52);padding:4px 0">Plano:</td>
+                        <td style="font-size:14px;color:rgb(22,101,52);font-weight:600;text-align:right;padding:4px 0">Premium ${planName}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:14px;color:rgb(22,101,52);padding:4px 0">Status:</td>
+                        <td style="font-size:14px;color:rgb(22,101,52);font-weight:600;text-align:right;padding:4px 0">✓ Aprovado</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:24px">Próximo passo: Ative sua assinatura</h2>
+
+            <p style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:16px;margin-top:0px">Para começar a usar todos os recursos Premium, clique no botão abaixo para ativar sua assinatura agora mesmo:</p>
+
+            <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:24px;margin-top:24px">
+              <tbody>
+                <tr>
+                  <td>
+                    <a href="${activationLink}" style="background-color:#534BD1;color:rgb(255,255,255);padding:16px 32px;border-radius:6px;font-size:18px;font-weight:600;text-decoration:none;box-sizing:border-box;display:inline-block;line-height:100%;max-width:100%;mso-padding-alt:0px" target="_blank" rel="noopener noreferrer">
+                      <span style="display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:12px">🚀 Ativar Assinatura Premium</span>
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2 style="font-size:20px;font-weight:600;color:rgb(17,24,39);margin-bottom:16px;margin-top:32px">O que você vai ter acesso:</h2>
+
+            <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px">
+              <tbody>
+                <tr>
+                  <td>
+                    <ul style="padding-left:18px;margin:0">
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:8px">✨ <strong>Correções ilimitadas</strong> - Use quantas vezes precisar</li>
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:8px">🔄 <strong>Reescritas ilimitadas</strong> - Melhore seus textos sem limites</li>
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:8px">🤖 <strong>Análises de IA ilimitadas</strong> - Detecte IA sem restrições</li>
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:8px">📝 <strong>Histórico completo</strong> - Todas as correções salvas</li>
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:8px">⚡ <strong>Processamento prioritário</strong> - Respostas mais rápidas</li>
+                      <li style="font-size:16px;color:rgb(55,65,81);line-height:24px;margin-bottom:0">🚫 <strong>Sem anúncios</strong> - Experiência premium limpa</li>
+                    </ul>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p style="font-size:14px;color:rgb(107,114,128);line-height:20px;margin-bottom:8px;margin-top:24px">Se o botão não funcionar, copie e cole este link no seu navegador:</p>
+            <p style="font-size:12px;color:rgb(107,114,128);line-height:18px;margin-bottom:16px;margin-top:0px;word-break:break-all;background-color:rgb(249,250,251);padding:12px;border-radius:4px;border:1px solid rgb(229,231,235)">${activationLink}</p>
+
+            <p style="font-size:14px;color:rgb(107,114,128);line-height:20px;margin-bottom:16px;margin-top:24px">Precisa de ajuda? Responda este e‑mail ou escreva para: <a href="mailto:contato@corretordetextoonline.com.br" style="color:#534BD1;text-decoration:none">contato@corretordetextoonline.com.br</a></p>
+
+            <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-top:1px solid rgb(229,231,235);padding-top:24px;margin-top:32px">
+              <tbody>
+                <tr>
+                  <td>
+                    <p style="font-size:12px;color:rgb(156,163,175);line-height:16px;margin:0">© 2025 CorretorIA - Correção de texto inteligente em português<br />
+                      Você está recebendo este e‑mail porque realizou um pagamento para o CorretorIA.<br />
+                      <a href="${appBaseUrl}/account" style="color:rgb(156,163,175);text-decoration:underline" target="_blank">Gerenciar preferências</a>
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>`
+
+  const textContent = `Pagamento Aprovado! 🎉
+
+${displayName ? `Olá ${displayName},` : 'Olá,'}
+
+Ótimas notícias! Seu pagamento foi aprovado com sucesso. 🚀
+
+✓ Detalhes do Pagamento:
+- Valor pago: ${formattedAmount}
+- Plano: Premium ${planName}
+- Status: ✓ Aprovado
+
+Próximo passo: Ative sua assinatura
+
+Para começar a usar todos os recursos Premium, clique no link abaixo para ativar sua assinatura:
+
+${activationLink}
+
+O que você vai ter acesso:
+✨ Correções ilimitadas - Use quantas vezes precisar
+🔄 Reescritas ilimitadas - Melhore seus textos sem limites
+🤖 Análises de IA ilimitadas - Detecte IA sem restrições
+📝 Histórico completo - Todas as correções salvas
+⚡ Processamento prioritário - Respostas mais rápidas
+🚫 Sem anúncios - Experiência premium limpa
+
+Precisa de ajuda? Escreva para: contato@corretordetextoonline.com.br
+
+---
+© 2025 CorretorIA - Correção de texto inteligente em português
+Gerenciar preferências: ${appBaseUrl}/account`
+
+  return { subject, htmlContent, textContent }
+}

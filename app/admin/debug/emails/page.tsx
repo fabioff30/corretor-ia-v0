@@ -29,6 +29,9 @@ export default function EmailDebugPage() {
   const [toEmail, setToEmail] = useState<string>('')
   const [name, setName] = useState<string>('Usuário Teste')
   const [resetLink, setResetLink] = useState<string>('')
+  const [amount, setAmount] = useState<string>('49.90')
+  const [planType, setPlanType] = useState<'monthly' | 'annual'>('monthly')
+  const [activationLink, setActivationLink] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingTemplates, setIsFetchingTemplates] = useState(true)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -97,6 +100,25 @@ export default function EmailDebugPage() {
       return
     }
 
+    if (selectedTemplate === 'payment-approved') {
+      if (!amount || parseFloat(amount) <= 0) {
+        toast({
+          title: 'Valor inválido',
+          description: 'Informe um valor válido para o pagamento',
+          variant: 'destructive',
+        })
+        return
+      }
+      if (!activationLink) {
+        toast({
+          title: 'Link obrigatório',
+          description: 'Informe o link de ativação da assinatura',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     setIsLoading(true)
 
     try {
@@ -110,6 +132,11 @@ export default function EmailDebugPage() {
           to: toEmail,
           name,
           ...(resetLink && { resetLink }),
+          ...(selectedTemplate === 'payment-approved' && {
+            amount: parseFloat(amount),
+            planType,
+            activationLink,
+          }),
         }),
       })
 
@@ -249,6 +276,59 @@ export default function EmailDebugPage() {
                   URL completa do link de recuperação de senha
                 </p>
               </div>
+            )}
+
+            {/* Payment Approved Fields (conditional) */}
+            {selectedTemplate === 'payment-approved' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Valor do Pagamento *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="49.90"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Valor pago pelo usuário (em reais)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="planType">Tipo de Plano *</Label>
+                  <Select value={planType} onValueChange={(value) => setPlanType(value as 'monthly' | 'annual')}>
+                    <SelectTrigger id="planType">
+                      <SelectValue placeholder="Selecione o tipo de plano..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="annual">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tipo do plano Premium adquirido
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="activationLink">Link de Ativação *</Label>
+                  <Input
+                    id="activationLink"
+                    type="url"
+                    placeholder="https://www.corretordetextoonline.com.br/api/verify-pix-activation?token=..."
+                    value={activationLink}
+                    onChange={(e) => setActivationLink(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL completa para ativar a assinatura Premium
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Result Display */}

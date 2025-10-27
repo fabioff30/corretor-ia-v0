@@ -2,6 +2,7 @@ import { sendBrevoEmail, type EmailRecipient } from "@/lib/email/brevo"
 import {
   cancellationEmailTemplate,
   passwordResetEmailTemplate,
+  paymentApprovedEmailTemplate,
   premiumUpgradeEmailTemplate,
   welcomeEmailTemplate,
 } from "@/lib/email/templates"
@@ -20,6 +21,12 @@ type CancellationContext = WelcomeContext
 
 type PasswordResetContext = WelcomeContext & {
   resetLink: string
+}
+
+type PaymentApprovedContext = WelcomeContext & {
+  amount: number
+  planType: 'monthly' | 'annual'
+  activationLink: string
 }
 
 export async function sendWelcomeEmail({ to, name }: WelcomeContext) {
@@ -54,6 +61,16 @@ export async function sendCancellationEmail({ to, name }: CancellationContext) {
 
 export async function sendPasswordResetEmail({ to, name, resetLink }: PasswordResetContext) {
   const template = passwordResetEmailTemplate({ name, resetLink })
+  await sendBrevoEmail({
+    to: [to],
+    subject: template.subject,
+    htmlContent: template.htmlContent,
+    textContent: template.textContent,
+  })
+}
+
+export async function sendPaymentApprovedEmail({ to, name, amount, planType, activationLink }: PaymentApprovedContext) {
+  const template = paymentApprovedEmailTemplate({ name, amount, planType, activationLink })
   await sendBrevoEmail({
     to: [to],
     subject: template.subject,

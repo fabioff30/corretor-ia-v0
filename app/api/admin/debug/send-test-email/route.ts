@@ -10,17 +10,21 @@ import {
   sendPremiumUpgradeEmail,
   sendCancellationEmail,
   sendPasswordResetEmail,
+  sendPaymentApprovedEmail,
 } from '@/lib/email/send'
 
 export const maxDuration = 15
 
-type EmailTemplate = 'welcome' | 'premium-upgrade' | 'cancellation' | 'password-reset'
+type EmailTemplate = 'welcome' | 'premium-upgrade' | 'cancellation' | 'password-reset' | 'payment-approved'
 
 interface SendTestEmailRequest {
   template: EmailTemplate
   to: string
   name?: string
   resetLink?: string
+  amount?: number
+  planType?: 'monthly' | 'annual'
+  activationLink?: string
 }
 
 export async function POST(request: Request) {
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body: SendTestEmailRequest = await request.json()
-    const { template, to, name, resetLink } = body
+    const { template, to, name, resetLink, amount, planType, activationLink } = body
 
     if (!template || !to) {
       return NextResponse.json(
@@ -101,6 +105,24 @@ export async function POST(request: Request) {
         await sendPasswordResetEmail({ to: recipient, name: recipient.name, resetLink })
         emailSent = true
         emailDetails = 'Email de recuperação de senha enviado'
+        break
+
+      case 'payment-approved':
+        if (!amount || !planType || !activationLink) {
+          return NextResponse.json(
+            { error: 'Valor, tipo de plano e link de ativação são obrigatórios para este template' },
+            { status: 400 }
+          )
+        }
+        await sendPaymentApprovedEmail({
+          to: recipient,
+          name: recipient.name,
+          amount,
+          planType,
+          activationLink
+        })
+        emailSent = true
+        emailDetails = 'Email de pagamento aprovado enviado'
         break
 
       default:
@@ -180,6 +202,12 @@ export async function GET() {
           name: 'Upgrade Premium',
           description: 'Email enviado quando um usuário ativa o plano Premium',
           requiredFields: ['to', 'name'],
+        },
+        {
+          id: 'payment-approved',
+          name: 'Pagamento Aprovado',
+          description: 'Email enviado quando um pagamento PIX é aprovado e requer ativação',
+          requiredFields: ['to', 'name', 'amount', 'planType', 'activationLink'],
         },
         {
           id: 'cancellation',
