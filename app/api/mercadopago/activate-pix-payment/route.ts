@@ -110,11 +110,11 @@ export async function POST(request: NextRequest) {
     const paidAtIso = mpPayment.date_approved || pixPayment.paid_at || new Date().toISOString()
     const { startDateIso, expiresAtIso } = calculateSubscriptionWindow(planType, paidAtIso)
 
-    // Ensure pix_payment belongs to the current user
+    // Ensure pix_payment belongs to the current user and mark as consumed
     const { error: updatePixError } = await supabase
       .from('pix_payments')
       .update({
-        status: 'paid',
+        status: 'consumed',  // Mark as consumed since we're activating it
         paid_at: paidAtIso,
         user_id: user.id,
         email: pixPayment.email || user.email,

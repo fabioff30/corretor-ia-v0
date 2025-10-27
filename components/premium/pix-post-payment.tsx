@@ -251,6 +251,54 @@ export function PixPostPayment(props: PixPostPaymentProps) {
         return
       }
 
+      // Link pending PIX payment to newly created account
+      console.log('[PIX Post-Payment] Account created successfully, linking payment...')
+      try {
+        const linkResponse = await fetch('/api/mercadopago/link-pix-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ email }),
+        })
+
+        if (linkResponse.ok) {
+          const linkData = await linkResponse.json()
+          if (linkData.success) {
+            console.log('[PIX Post-Payment] Payment linked successfully:', linkData)
+            sendGA4Event("pix_payment_linked_on_signup", {
+              ...basePayload,
+              subscriptionId: linkData.subscriptionId,
+              planType: linkData.planType,
+            })
+          } else if (linkData.alreadyActive) {
+            console.log('[PIX Post-Payment] User already has active subscription')
+          } else {
+            console.warn('[PIX Post-Payment] Failed to link payment:', linkData.error)
+          }
+        } else {
+          const errorData = await linkResponse.json().catch(() => ({}))
+          console.error('[PIX Post-Payment] Link payment request failed:', errorData)
+
+          // Don't block signup if linking fails - user can link later
+          if (linkResponse.status !== 404) {
+            // 404 means no approved payments found, which is okay
+            sendGA4Event("pix_payment_link_error_on_signup", {
+              ...basePayload,
+              error: errorData.error || 'Unknown error',
+            })
+          }
+        }
+      } catch (linkError) {
+        console.error('[PIX Post-Payment] Error calling link payment API:', linkError)
+        // Don't block signup flow if linking fails
+        sendGA4Event("pix_payment_link_error_on_signup", {
+          ...basePayload,
+          error: linkError instanceof Error ? linkError.message : 'Unknown error',
+        })
+      }
+
       // Enviar email de boas-vindas via Brevo após signup bem-sucedido (com retry)
       if (email) {
         const sendWelcomeEmail = async (attempt = 1, maxAttempts = 2): Promise<boolean> => {

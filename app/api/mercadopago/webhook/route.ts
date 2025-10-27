@@ -172,10 +172,29 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
 
       // Update PIX payment record
       console.log(`[MP Webhook Payment] Updating PIX payment record in database...`)
+
+      // First, get the payment to check if it's a guest payment
+      const { data: pixPaymentCheck, error: pixCheckError } = await supabase
+        .from('pix_payments')
+        .select('user_id, email, plan_type')
+        .eq('payment_intent_id', payment.id.toString())
+        .single()
+
+      if (pixCheckError || !pixPaymentCheck) {
+        console.error(`[MP Webhook Payment] PIX payment record not found for payment ID: ${payment.id}`)
+        return
+      }
+
+      const isGuestPaymentCheck = !pixPaymentCheck.user_id
+
+      // For guest payments: mark as 'approved' (not yet linked to account)
+      // For logged users: will be marked as 'consumed' after activation
+      const targetStatus = isGuestPaymentCheck ? 'approved' : 'paid'
+
       const { data: pixPayment, error: pixUpdateError } = await supabase
         .from('pix_payments')
         .update({
-          status: 'paid',
+          status: targetStatus,
           paid_at: payment.date_approved || new Date().toISOString(),
         })
         .eq('payment_intent_id', payment.id.toString())
@@ -196,16 +215,18 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         user_id: pixPayment.user_id,
         email: pixPayment.email,
         plan_type: pixPayment.plan_type,
+        status: targetStatus,
       })
 
-      // If this is a guest payment, mark as paid but don't create subscription yet
+      // If this is a guest payment, mark as approved but don't create subscription yet
       if (isGuestPayment || !pixPayment.user_id) {
         console.log('[MP Webhook] Guest PIX payment approved:', {
           paymentId: payment.id,
           email: pixPayment.email,
           amount: payment.transaction_amount,
+          status: 'approved',
         })
-        console.log('[MP Webhook] Payment marked as paid. Will be linked when user registers/logs in.')
+        console.log('[MP Webhook] Payment marked as APPROVED. Will be linked when user registers/logs in.')
         return
       }
 
@@ -288,6 +309,19 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         return
       }
 
+      // Mark payment as consumed (benefit applied)
+      const { error: consumeError } = await supabase
+        .from('pix_payments')
+        .update({
+          status: 'consumed',
+        })
+        .eq('payment_intent_id', payment.id.toString())
+
+      if (consumeError) {
+        console.error('[MP Webhook Payment] Error marking payment as consumed:', consumeError)
+        // Not critical - subscription already created
+      }
+
       const duration = Date.now() - startTime
       console.log(`[MP Webhook Payment] ✅ PIX payment processed successfully in ${duration}ms:`, {
         userId,
@@ -296,6 +330,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         subscription_status: updatedProfile?.subscription_status,
         subscription_expires_at: updatedProfile?.subscription_expires_at,
         rpcActivated: !activateError,
+        paymentConsumed: !consumeError,
         processing_time_ms: duration,
       })
       return
