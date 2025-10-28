@@ -51,11 +51,12 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     { name: "Correções ilimitadas", included: true },
     { name: "Análises de IA ilimitadas", included: true },
     { name: "Reescrita de texto ilimitada", included: true },
-    { name: "Sem limite de caracteres", included: true },
+    { name: "Até 20.000 caracteres por texto", included: true },
     { name: "Sem anúncios", included: true },
     { name: "Análise de estilo avançada", included: true },
     { name: "Prioridade no processamento", included: true },
     { name: "Histórico de correções inteligente", included: true },
+    { name: "Caracteres ilimitados", included: false, comingSoon: true },
     { name: "Extensão para navegador", included: false, comingSoon: true },
   ]
 

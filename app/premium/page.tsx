@@ -7,9 +7,9 @@ import { Building2, Plug, ShieldCheck, Headset, ArrowRight } from "lucide-react"
 
 // Atualizar os metadados da página premium
 export const metadata: Metadata = {
-  title: "CorretorIA Premium - Correção de Texto Sem Limites",
+  title: "CorretorIA Premium - Correção de Texto até 20 mil caracteres",
   description:
-    "Assine o plano premium do CorretorIA e desbloqueie correção de texto sem limites, análise avançada e muito mais.",
+    "Assine o plano premium do CorretorIA e desbloqueie correções ilimitadas com até 20 mil caracteres por texto, análise avançada e muito mais.",
 }
 
 export default function PremiumPage() {
@@ -19,10 +19,10 @@ export default function PremiumPage() {
       <main className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Escreva Sem Limites com CorretorIA Premium</h1>
+            <h1 className="text-4xl font-bold tracking-tight mb-4 gradient-text">Escreva Mais com CorretorIA Premium</h1>
             <p className="text-xl text-foreground/80 max-w-2xl mx-auto">
-              Correções ilimitadas, análise avançada de IA e histórico completo dos seus textos.
-              Experimente o poder total do CorretorIA e melhore sua escrita sem restrições.
+              Correções, análises e reescritas ilimitadas com até 20 mil caracteres por texto.
+              Histórico completo, análise avançada de IA e sem anúncios. Melhore sua escrita profissionalmente.
             </p>
           </div>
 
@@ -95,9 +95,9 @@ export default function PremiumPage() {
               <div>
                 <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
                 <p className="text-foreground/80">
-                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários e de caracteres. O plano
-                  premium remove todos os limites, oferece processamento prioritário, histórico automático em “Meus textos” e
-                  acesso a recursos avançados.
+                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários (1.500 caracteres por texto). O plano
+                  premium oferece correções, análises e reescritas ilimitadas com até 20.000 caracteres por texto, processamento prioritário,
+                  histórico automático em "Meus textos" e acesso a recursos avançados. Em breve, também teremos a opção de caracteres ilimitados.
                 </p>
               </div>
 
