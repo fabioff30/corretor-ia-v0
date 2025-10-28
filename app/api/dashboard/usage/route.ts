@@ -68,29 +68,57 @@ export async function GET() {
       )
     }
 
+    // Se não há registro de uso para hoje, criar um (usando upsert para evitar race conditions)
     if (!usage) {
       const { data: insertedUsage, error: insertError } = await supabase
         .from("usage_limits")
-        .insert({
-          user_id: user.id,
-          date: todayRange.start.slice(0, 10),
-          corrections_used: 0,
-          rewrites_used: 0,
-          ai_analyses_used: 0,
-          last_reset: todayRange.start,
-        })
+        .upsert(
+          {
+            user_id: user.id,
+            date: todayRange.start.slice(0, 10),
+            corrections_used: 0,
+            rewrites_used: 0,
+            ai_analyses_used: 0,
+            last_reset: todayRange.start,
+          },
+          {
+            onConflict: "user_id,date",
+            ignoreDuplicates: false,
+          }
+        )
         .select()
         .single()
 
       if (insertError) {
-        console.error("Erro ao criar registro de uso diário:", insertError)
-        return NextResponse.json(
-          { error: "Não foi possível inicializar o uso diário" },
-          { status: 500 },
-        )
-      }
+        // Se ainda assim houver erro de duplicação (race condition), buscar o registro existente
+        if (insertError.code === "23505") {
+          console.log("[Dashboard Usage] Registro já existe (race condition), buscando novamente...")
+          const { data: existingUsage, error: fetchError } = await supabase
+            .from("usage_limits")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("date", todayRange.start.slice(0, 10))
+            .single()
 
-      usage = insertedUsage
+          if (fetchError) {
+            console.error("Erro ao buscar registro existente após duplicação:", fetchError)
+            return NextResponse.json(
+              { error: "Não foi possível carregar o uso diário" },
+              { status: 500 },
+            )
+          }
+
+          usage = existingUsage
+        } else {
+          console.error("Erro ao criar registro de uso diário:", insertError)
+          return NextResponse.json(
+            { error: "Não foi possível inicializar o uso diário" },
+            { status: 500 },
+          )
+        }
+      } else {
+        usage = insertedUsage
+      }
     }
 
     const effectiveLimits =

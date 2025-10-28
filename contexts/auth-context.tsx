@@ -1,7 +1,7 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User as SupabaseUser, Session } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { supabase, User, UserWithSubscription } from '@/lib/supabase'
 import { sendGTMEvent } from '@/utils/gtm-helper'
 
@@ -23,6 +23,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserWithSubscription | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const lastAuthEventRef = useRef<{ event: AuthChangeEvent; sessionId: string | null } | null>(null)
+  const signInInProgressRef = useRef(false)
+  const lastSignInAttemptRef = useRef<number>(0)
 
   // Função para buscar dados completos do usuário
   const fetchUserWithSubscription = async (supabaseUser: SupabaseUser): Promise<UserWithSubscription | null> => {
@@ -112,6 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Escutar mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const sessionIdentifier = session?.access_token ?? session?.refresh_token ?? null
+      const lastEvent = lastAuthEventRef.current
+
+      if (lastEvent && lastEvent.event === event && lastEvent.sessionId === sessionIdentifier) {
+        console.debug('[Auth] Ignoring duplicate auth event:', event)
+        return
+      }
+
+      lastAuthEventRef.current = { event, sessionId: sessionIdentifier }
       console.log('Auth state changed:', event, session?.user?.email)
 
       // Track login event
@@ -247,18 +259,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
+    // Verificar se já há uma tentativa em andamento
+    if (signInInProgressRef.current) {
+      return { error: new Error('Uma tentativa de login já está em andamento. Aguarde um instante e tente novamente.') }
+    }
+
+    // Verificar cooldown (3 segundos entre tentativas para evitar rate limit)
+    const now = Date.now()
+    const lastAttempt = lastSignInAttemptRef.current
+    const cooldownMs = 3000 // 3 segundos
+
+    if (lastAttempt && (now - lastAttempt) < cooldownMs) {
+      const remainingMs = cooldownMs - (now - lastAttempt)
+      const remainingSeconds = Math.ceil(remainingMs / 1000)
+      return {
+        error: new Error(`Por favor, aguarde ${remainingSeconds} segundo(s) antes de tentar novamente.`)
+      }
+    }
+
+    signInInProgressRef.current = true
+    lastSignInAttemptRef.current = now
+
     try {
       setLoading(true)
+
+      // Fazer apenas UMA tentativa (sem retry automático para evitar rate limit)
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        // Mensagem específica para rate limit
+        if (error.message === 'Request rate limit reached') {
+          throw new Error('Você fez muitas tentativas de login em sequência. Por favor, aguarde alguns minutos e tente novamente.')
+        }
+
+        // Mensagem específica para credenciais inválidas
+        if (error.message === 'Invalid login credentials') {
+          throw new Error('Email ou senha incorretos. Verifique suas credenciais e tente novamente.')
+        }
+
+        throw error
+      }
+
       return { error: null }
     } catch (error) {
       return { error: error as Error }
     } finally {
+      signInInProgressRef.current = false
       setLoading(false)
     }
   }
@@ -297,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }
     } catch (error) {
       console.error('[Auth] signInWithGoogle failed:', error)
+      setLoading(false)
       return { error: error as Error }
     } finally {
       // Note: Don't set loading to false if redirect is successful

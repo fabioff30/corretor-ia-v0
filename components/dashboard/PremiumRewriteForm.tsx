@@ -482,7 +482,13 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
             <TabsContent value="result" className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="prose max-w-none">
+                  <div className="mb-2 flex justify-end">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      {result.rewrittenText.length.toLocaleString()} caracteres
+                    </span>
+                  </div>
+                  <div className="prose max-w-none max-h-[500px] overflow-y-auto pr-2">
                     <p className="whitespace-pre-wrap">{result.rewrittenText}</p>
                   </div>
                 </CardContent>
