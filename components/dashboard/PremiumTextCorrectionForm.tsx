@@ -94,8 +94,18 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    // Limite de 300k caracteres para usuários premium (validado no middleware)
-    setOriginalText(newText)
+    // Limite de 20k caracteres para usuários premium
+    if (newText.length <= 20000) {
+      setOriginalText(newText)
+    } else {
+      // Truncar no limite de 20k se ultrapassar
+      setOriginalText(newText.slice(0, 20000))
+      toast({
+        title: "Limite atingido",
+        description: "O limite máximo para usuários Premium é de 20.000 caracteres.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleToneChange = (tone: string, customInstruction?: string) => {
@@ -328,7 +338,7 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         </Badge>
         <Badge variant="outline" className="border-purple-500 text-purple-700">
           <Zap className="h-3 w-3 mr-1" />
-          Caracteres Ilimitados
+          Até 20.000 caracteres
         </Badge>
       </div>
 
@@ -347,9 +357,10 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
             id="originalText"
             value={originalText}
             onChange={handleTextChange}
-            placeholder="Cole ou digite seu texto aqui... Sem limites! 🚀"
+            placeholder="Cole ou digite seu texto aqui... Até 20.000 caracteres! 🚀"
             className="min-h-[300px] resize-y"
             disabled={isLoading}
+            maxLength={20000}
           />
         </div>
 

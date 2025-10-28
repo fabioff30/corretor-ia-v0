@@ -401,7 +401,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                     Você é Premium!
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Aproveite todos os recursos ilimitados.
+                    Aproveite até 20.000 caracteres por texto.
                   </p>
                 </div>
               ) : (
@@ -528,7 +528,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                     Você é Premium!
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Aproveite todos os recursos ilimitados.
+                    Aproveite até 20.000 caracteres por texto.
                   </p>
                 </div>
               ) : (
