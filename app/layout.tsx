@@ -14,6 +14,7 @@ import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
 import { AdSenseLoader } from "@/components/adsense-loader"
 import { GoogleOneTap } from "@/components/google-one-tap"
+import { CleverWebServerLoader } from "@/components/clever-webserver-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
 
@@ -181,28 +182,6 @@ export default async function RootLayout({
 
         {/* AdSense Loader - TEMPORARILY DISABLED */}
         {/* <AdSenseLoader initialProfile={initialProfile} /> */}
-
-        {/* CleverWebServer Script - TEMPORARILY DISABLED */}
-        {/* <Script id="clever-webserver" strategy="afterInteractive">
-          {`
-            (function (document, window) {
-              var a, c = document.createElement("script"), f = window.frameElement;
-              c.id = "CleverCoreLoader94925";
-              c.src = "https://scripts.cleverwebserver.com/5e874cbae3c8b61578de0cb6869547be.js";
-              c.async = true;
-              c.type = "text/javascript";
-              c.setAttribute("data-target", window.name || (f && f.getAttribute("id")));
-              c.setAttribute("data-cfasync", "false");
-              try {
-                a = parent.document.getElementsByTagName("script")[0] || document.getElementsByTagName("script")[0];
-              } catch (e) {
-                a = false;
-              }
-              a || (a = document.getElementsByTagName("head")[0] || document.getElementsByTagName("body")[0]);
-              a.parentNode.insertBefore(c, a);
-            })(document, window);
-          `}
-        </Script> */}
       </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {/* Meta Pixel Code - noscript */}
@@ -237,6 +216,7 @@ export default async function RootLayout({
               <CookieConsent />
               <JulinhoAssistant />
               <GoogleOneTap />
+              <CleverWebServerLoader />
             </ThemeProvider>
           </AuthProvider>
         </UserProvider>
