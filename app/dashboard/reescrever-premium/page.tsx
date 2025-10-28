@@ -53,7 +53,7 @@ export default function ReescreverPremiumPage() {
               Benefícios Premium Ativos
             </CardTitle>
             <CardDescription>
-              Reescreva textos com múltiplos estilos e sem limites
+              Reescreva textos com múltiplos estilos e até 20.000 caracteres
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -63,9 +63,9 @@ export default function ReescreverPremiumPage() {
                   <Zap className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm">Caracteres Ilimitados</p>
+                  <p className="font-medium text-sm">Até 20.000 Caracteres</p>
                   <p className="text-xs text-muted-foreground">
-                    Reescreva textos de qualquer tamanho
+                    Até 20.000 caracteres por texto
                   </p>
                 </div>
               </div>
@@ -131,7 +131,7 @@ export default function ReescreverPremiumPage() {
           <CardHeader>
             <CardTitle>Reescrever Texto Premium</CardTitle>
             <CardDescription>
-              Cole ou digite seu texto e escolha o estilo. Sem limites de caracteres!
+              Cole ou digite seu texto e escolha o estilo. Até 20.000 caracteres por texto!
             </CardDescription>
           </CardHeader>
           <CardContent>

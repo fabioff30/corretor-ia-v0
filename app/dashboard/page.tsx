@@ -111,8 +111,8 @@ export default function DashboardPage() {
 
               <StatsCard
                 title="Limite de Caracteres"
-                value={maxCharacters === -1 ? '∞' : maxCharacters}
-                description={isPremium ? 'Sem limites' : 'Por correção'}
+                value={maxCharacters === -1 ? '∞' : maxCharacters.toLocaleString()}
+                description={isPremium ? '20.000 por correção' : 'Por correção'}
                 icon={TrendingUp}
               />
             </>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm">Limite de Caracteres:</span>
                 <span className="font-medium">
-                  {maxCharacters === -1 ? 'Ilimitado' : `${maxCharacters} caracteres`}
+                  {maxCharacters === -1 ? 'Ilimitado' : `${maxCharacters.toLocaleString()} caracteres`}
                 </span>
               </div>
 

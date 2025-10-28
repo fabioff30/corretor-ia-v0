@@ -149,7 +149,7 @@ export function RewriteStyleCards() {
             </h3>
             <p className="text-muted-foreground">
               Com o plano Premium, você terá acesso a Técnico, Jornalístico, Publicitário, Blog Post,
-              Roteiro para Reels, Roteiro para YouTube e Palestra/Apresentação. Sem limites de caracteres.
+              Roteiro para Reels, Roteiro para YouTube e Palestra/Apresentação. Até 20.000 caracteres por texto.
             </p>
           </div>
 
@@ -160,7 +160,7 @@ export function RewriteStyleCards() {
             </div>
             <div className="flex items-center gap-2 text-left">
               <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <span>Caracteres ilimitados</span>
+              <span>Até 20.000 caracteres</span>
             </div>
             <div className="flex items-center gap-2 text-left">
               <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0" />

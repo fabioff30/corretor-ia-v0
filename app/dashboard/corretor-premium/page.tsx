@@ -63,9 +63,9 @@ export default function CorretorPremiumPage() {
                   <Zap className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm">Caracteres Ilimitados</p>
+                  <p className="font-medium text-sm">Até 20.000 Caracteres</p>
                   <p className="text-xs text-muted-foreground">
-                    Sem limite de tamanho para seus textos
+                    Até 20.000 caracteres por texto
                   </p>
                 </div>
               </div>
@@ -131,7 +131,7 @@ export default function CorretorPremiumPage() {
           <CardHeader>
             <CardTitle>Corretor de Texto Premium</CardTitle>
             <CardDescription>
-              Cole ou digite seu texto abaixo. Sem limites de caracteres!
+              Cole ou digite seu texto abaixo. Até 20.000 caracteres por texto!
             </CardDescription>
           </CardHeader>
           <CardContent>

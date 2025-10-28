@@ -144,7 +144,7 @@ export default function DetectorIAPremiumPage() {
           <CardHeader>
             <CardTitle>Detector de Conteúdo IA Premium</CardTitle>
             <CardDescription>
-              Analise textos para detectar se foram gerados por inteligência artificial. Sem limites!
+              Analise textos para detectar se foram gerados por inteligência artificial. Análises ilimitadas!
             </CardDescription>
           </CardHeader>
           <CardContent>

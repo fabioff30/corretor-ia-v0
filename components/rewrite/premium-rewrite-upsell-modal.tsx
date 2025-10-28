@@ -39,7 +39,7 @@ export function PremiumRewriteUpsellModal({
     { icon: CheckCircle, text: "Reescrita básica", free: true },
     { icon: X, text: "Sem anúncios", free: false },
     { icon: X, text: "7 estilos premium", free: false },
-    { icon: X, text: "Caracteres ilimitados", free: false },
+    { icon: X, text: "Até 20.000 caracteres", free: false },
     { icon: X, text: "Acesso premium", free: false },
   ]
 

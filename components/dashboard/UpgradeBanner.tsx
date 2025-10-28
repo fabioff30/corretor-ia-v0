@@ -19,7 +19,7 @@ export function UpgradeBanner({ className }: UpgradeBannerProps) {
     'Correções ilimitadas',
     'Reescritas ilimitadas',
     'Análises de IA ilimitadas',
-    'Sem limite de caracteres',
+    'Até 20.000 caracteres por texto',
     'Experiência sem anúncios',
   ]
 
