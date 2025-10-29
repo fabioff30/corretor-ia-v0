@@ -114,9 +114,10 @@ export function usePixPayment(): UsePixPaymentReturn {
 
       // Track success with anonymised identifiers
       sendGA4Event('pix_payment_created', {
-        payment: anonymizedPayment,
+        transaction_id: anonymizedPayment,
         plan: planType,
-        amount: payment.amount,
+        value: payment.amount,
+        currency: 'BRL',
         guest: isGuestPayment,
       })
 

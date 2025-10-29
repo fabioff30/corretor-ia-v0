@@ -83,9 +83,10 @@ export function PremiumPixModal({
     setStatus('success')
 
     sendGA4Event('pix_payment_confirmed', {
-      payment: anonymizedPayment,
+      transaction_id: anonymizedPayment,
       plan: paymentData.planType,
       value: paymentData.amount,
+      currency: 'BRL',
       manual: options.manual,
     })
 
@@ -341,9 +342,10 @@ export function PremiumPixModal({
       }
 
       sendGA4Event('pix_qr_displayed', {
-        payment: anonymizedPayment,
+        transaction_id: anonymizedPayment,
         plan: paymentData.planType,
         value: paymentData.amount,
+        currency: 'BRL',
       })
     }
 
@@ -368,8 +370,9 @@ export function PremiumPixModal({
     const logCancellation = async () => {
       const anonymizedPayment = await obfuscateIdentifier(paymentData?.paymentId, 'pid')
       sendGA4Event('pix_payment_canceled', {
-        payment: anonymizedPayment,
+        transaction_id: anonymizedPayment,
         plan: paymentData?.planType,
+        currency: 'BRL',
       })
     }
 

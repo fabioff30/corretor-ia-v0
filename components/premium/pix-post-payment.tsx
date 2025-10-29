@@ -73,11 +73,12 @@ export function PixPostPayment(props: PixPostPaymentProps) {
       }
 
       if (typeof amount === "number") {
-        payload.amount = amount
+        payload.value = amount
+        payload.currency = "BRL"
       }
 
       if (paymentId) {
-        payload.payment = await obfuscateIdentifier(paymentId, "pid")
+        payload.transaction_id = await obfuscateIdentifier(paymentId, "pid")
       }
 
       if (email) {
