@@ -10,8 +10,11 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { AIDetectorRating } from "@/components/ai-detector-rating"
+import { HumanizeTextButton } from "@/components/humanize-text-button"
 
 interface AIDetectionResultProps {
+  originalText?: string
+  isPremium?: boolean
   result: {
     verdict: "ai" | "human" | "uncertain"
     probability: number
@@ -87,7 +90,15 @@ const confidenceConfig = {
   high: { label: "Alta", color: "bg-green-500" },
 }
 
-export function AIDetectionResult({ result, textStats, brazilianism, grammarSummary, metadata }: AIDetectionResultProps) {
+export function AIDetectionResult({
+  result,
+  textStats,
+  brazilianism,
+  grammarSummary,
+  metadata,
+  originalText,
+  isPremium = false
+}: AIDetectionResultProps) {
   const config = verdictConfig[result.verdict]
   const Icon = config.icon
   const confidenceInfo = confidenceConfig[result.confidence]
@@ -133,6 +144,15 @@ export function AIDetectionResult({ result, textStats, brazilianism, grammarSumm
           )}
         </CardContent>
       </Card>
+
+      {/* Humanize Button - Only show for AI verdict */}
+      {result.verdict === "ai" && originalText && (
+        <HumanizeTextButton
+          text={originalText}
+          isPremium={isPremium}
+          aiProbability={result.probability}
+        />
+      )}
 
       {/* Donation Call to Action - BIG */}
       <motion.div

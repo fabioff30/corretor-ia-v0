@@ -3,6 +3,7 @@ export const FREE_CHARACTER_LIMIT = 1500
 export const PREMIUM_CHARACTER_LIMIT = 20000 // 20k characters for premium users
 export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit) - deprecated
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
+export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humanization
 
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2
@@ -13,7 +14,8 @@ export const PREMIUM_API_TIMEOUT = 300000 // 300 seconds (5 min) for premium end
 export const MIN_REQUEST_INTERVAL = 5000 // 5 seconds
 export const FETCH_TIMEOUT = 85000 // 85 seconds (slightly less than API timeout)
 export const PREMIUM_FETCH_TIMEOUT = 295000 // 295 seconds for premium endpoints (slightly less than max)
-export const AI_DETECTOR_TIMEOUT = 300000 // 300 seconds for AI detector webhook (ultrathink processing)
+export const AI_DETECTOR_TIMEOUT = 290000 // 290 seconds for AI detector webhook (10s margin before Vercel timeout)
+export const HUMANIZAR_TIMEOUT = 110000 // 110 seconds for humanization processing (10s margin before Vercel timeout)
 
 // Z-index values
 export const POPUP_OVERLAY_Z_INDEX = 9999
@@ -31,6 +33,7 @@ export const PREMIUM_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-corrigir`
 export const REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/reescrever`
 export const PREMIUM_REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-reescrever`
 export const ANALYSIS_WEBHOOK_URL = `${WORKERS_API_BASE}/api/analysis-ai`
+export const HUMANIZAR_WEBHOOK_URL = `${WORKERS_API_BASE}/api/humanizar`
 export const FALLBACK_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir` // Mesmo endpoint como fallback
 
 // Authentication - Server-side only

@@ -14,7 +14,8 @@ import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
 
-export const maxDuration = 120 // Increased for premium endpoints with ultrathink processing
+// Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
+export const maxDuration = 300
 
 // Health check endpoint (GET /api/correct)
 export async function GET() {

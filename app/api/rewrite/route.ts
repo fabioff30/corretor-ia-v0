@@ -16,7 +16,8 @@ import { saveCorrection } from "@/utils/limit-checker"
 import { isStylePremium } from "@/utils/rewrite-styles"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 120 // Increased for premium endpoints with ultrathink processing
+// Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
+export const maxDuration = 300
 
 // Health check endpoint (GET /api/rewrite)
 export async function GET() {

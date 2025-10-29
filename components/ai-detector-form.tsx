@@ -407,6 +407,8 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
           brazilianism={result.brazilianism}
           grammarSummary={result.grammarSummary}
           metadata={result.metadata || {}}
+          originalText={text}
+          isPremium={resolvedIsPremium}
         />
       )}
 

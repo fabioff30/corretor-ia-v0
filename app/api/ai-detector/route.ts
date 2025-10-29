@@ -8,7 +8,9 @@ import { dailyRateLimiter } from "@/lib/api/daily-rate-limit"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection } from "@/utils/limit-checker"
 
-export const maxDuration = 120
+// Use global maxDuration from vercel.json (300s) to allow AI detector processing
+// Remove this line to inherit from vercel.json, or set to 300 explicitly
+export const maxDuration = 300
 
 // Health check endpoint (GET /api/ai-detector)
 export async function GET() {
