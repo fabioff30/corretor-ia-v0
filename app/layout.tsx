@@ -12,7 +12,7 @@ import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
-import { AdSenseLoader } from "@/components/adsense-loader"
+import { AdSenseLoaderWithRoutes } from "@/components/adsense-loader-with-routes"
 import { GoogleOneTap } from "@/components/google-one-tap"
 import { CleverWebServerLoader } from "@/components/clever-webserver-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
@@ -180,8 +180,8 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* AdSense Loader - TEMPORARILY DISABLED */}
-        {/* <AdSenseLoader initialProfile={initialProfile} /> */}
+        {/* AdSense Loader - Ativo com controle de rotas */}
+        <AdSenseLoaderWithRoutes initialProfile={initialProfile} />
       </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {/* Meta Pixel Code - noscript */}
