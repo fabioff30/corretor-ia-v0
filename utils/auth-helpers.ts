@@ -14,14 +14,11 @@ export interface AuthContext {
 }
 
 export async function getCurrentUserWithProfile(): Promise<AuthContext> {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = await createClient(cookieStore)
 
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession()
-
+  // ✅ Use ONLY getUser() - it revalidates with Supabase server
+  // Never use getSession() in server-side code for security
   const {
     data: { user },
     error,
@@ -36,9 +33,6 @@ export async function getCurrentUserWithProfile(): Promise<AuthContext> {
 
     console.warn('[Auth][Debug] Supabase getUser returned no user', {
       getUserError: error?.message ?? null,
-      sessionError: sessionError?.message ?? null,
-      accessToken: session?.access_token ?? null,
-      refreshToken: session?.refresh_token ?? null,
       cookies: cookieSnapshot,
     })
 

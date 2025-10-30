@@ -79,33 +79,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Função para atualizar dados do usuário
   const refreshUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const userData = await fetchUserWithSubscription(session.user)
+      // ✅ Use getUser() instead of getSession() for server-side security
+      const { data: { user: authUser }, error } = await supabase.auth.getUser()
+
+      if (error) {
+        console.error('[Auth] Error refreshing user:', error)
+        return
+      }
+
+      if (authUser) {
+        const userData = await fetchUserWithSubscription(authUser)
         setUser(userData)
       }
     } catch (error) {
-      console.error('Erro ao atualizar dados do usuário:', error)
+      console.error('[Auth] Erro ao atualizar dados do usuário:', error)
     }
   }
 
   useEffect(() => {
     const initSupabaseAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Erro ao obter sessão:', error)
+        // ✅ Use getUser() instead of getSession() for security
+        // getUser() revalidates with Supabase server
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+
+        if (userError) {
+          console.error('[Auth] Error getting user:', userError)
+        }
+
+        // Get session for onAuthStateChange listener
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.warn('[Auth] Error getting session:', sessionError)
         }
 
         setSession(session)
 
-        if (session?.user) {
-          const userData = await fetchUserWithSubscription(session.user)
+        if (authUser) {
+          const userData = await fetchUserWithSubscription(authUser)
           setUser(userData)
         }
       } catch (error) {
-        console.error('Erro na inicialização da autenticação:', error)
+        console.error('[Auth] Erro na inicialização da autenticação:', error)
       } finally {
         setLoading(false)
       }
@@ -357,23 +373,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setLoading(true)
 
+    console.log('[Auth] Signing out user...')
+
     // Track logout before clearing session
     sendGTMEvent('logout', {
       method: 'manual',
       user_id: user?.id,
     })
 
+    // ✅ Call server-side logout FIRST to clear cookies properly
     try {
-      // Try to sign out from Supabase
-      const { error } = await supabase.auth.signOut()
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Include cookies in request
+      })
 
-      // Ignore "session_not_found" errors - session might already be expired/deleted
-      if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
-        console.error('Erro ao fazer logout:', error)
+      if (!response.ok) {
+        console.warn('[Auth] Server logout returned non-OK status:', response.status)
       }
+
+      console.log('[Auth] Server-side logout completed')
     } catch (error) {
-      // Ignore any errors - we'll clear local state anyway
-      console.warn('Erro ignorado durante logout:', error)
+      console.error('[Auth] Error during server-side logout:', error)
+      // Continue with client-side cleanup anyway
+    }
+
+    // Clear client-side state
+    try {
+      // This may fail if session doesn't exist, which is fine
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      console.warn('[Auth] Client signOut error (ignoring):', error)
     }
 
     // Always clear local state regardless of API result
@@ -381,12 +411,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
     setLoading(false)
 
-    // Call server-side logout to ensure cookies are cleared
-    try {
-      await fetch('/api/logout', { method: 'POST' })
-    } catch (error) {
-      console.warn('Erro ao limpar cookies do servidor:', error)
-    }
+    console.log('[Auth] Logout complete, redirecting to home...')
+
+    // ✅ Redirect to home page after logout
+    window.location.href = '/'
   }
 
   const updateProfile = async (data: Partial<User>) => {

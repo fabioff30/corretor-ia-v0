@@ -6,7 +6,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
-type CookieStore = ReturnType<typeof cookies>
+type CookieStore = Awaited<ReturnType<typeof cookies>>
 
 const resolvedCookieDomain = (() => {
   const configuredDomain =
@@ -42,13 +42,23 @@ const resolvedCookieDomain = (() => {
 function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
   return {
     ...options,
+    // ⚠️ IMPORTANTE: NÃO usar httpOnly: true
+    // O refresh token precisa ser acessível pelo client para manter a sessão
+    httpOnly: false,
+    // Apenas via HTTPS em produção
+    secure: process.env.NODE_ENV === 'production',
+    // Protege contra CSRF, permite navegação entre páginas
     sameSite: options.sameSite ?? 'lax',
+    // Disponível em toda aplicação
+    path: options.path ?? '/',
+    // Expira com o refresh token (7 dias)
+    maxAge: options.maxAge ?? 60 * 60 * 24 * 7,
     ...(resolvedCookieDomain ? { domain: resolvedCookieDomain } : {}),
   }
 }
 
 export async function createClient(cookieStore?: CookieStore) {
-  const store = cookieStore ?? cookies()
+  const store = cookieStore ?? (await cookies())
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
