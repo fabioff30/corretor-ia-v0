@@ -18,6 +18,7 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "https://www.googletagmanager.com " +
     "https://www.google-analytics.com " +
     "https://accounts.google.com " +
+    "https://www.gstatic.com " +
     "https://connect.facebook.net " +
     "https://static.hotjar.com " +
     "https://pagead2.googlesyndication.com " +
@@ -54,16 +55,22 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "https://vitals.vercel-insights.com " +
     "https://api.mercadopago.com " +
     "https://my-corretoria.vercel.app " +
+    "https://*.vercel.app " +
     "https://auto.ffmedia.com.br " +
+    "https://workers-api.fabiofariasf.workers.dev " +
     "https://*.supabase.co " +
     "wss://www.hotjar.com " +
     "wss://*.supabase.co " +
+    "wss://*.vercel.app " +
+    "https://*.vercel-insights.com " +
     "https://*.upstash.io",
     
     // Frame sources
     "frame-src 'self' " +
     "https://www.mercadopago.com " +
     "https://js.stripe.com " +
+    "https://checkout.stripe.com " +
+    "https://accounts.google.com " +
     "https://vars.hotjar.com",
     
     // Worker sources for service workers
