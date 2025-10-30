@@ -1018,7 +1018,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                     Desbloqueie todo o poder do CorretorIA Premium
                   </p>
                   <p className="text-foreground/80">
-                    Correções ilimitadas, histórico inteligente e suporte prioritário. Hoje você usou{" "}
+                    Correções ilimitadas, histórico inteligente, experiência sem anúncios e suporte prioritário. Hoje você usou{" "}
                     <strong>{freeCorrectionsCount}</strong> de{" "}
                     <strong>{correctionsDailyLimit}</strong> correções gratuitas.
                   </p>
