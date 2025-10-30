@@ -50,10 +50,16 @@ export function securityHeadersMiddleware(request: NextRequest) {
     // Connect sources for API calls
     "connect-src 'self' " +
     "https://www.google-analytics.com " +
+    "https://analytics.google.com " +
     "https://stats.g.doubleclick.net " +
+    "https://googleads.g.doubleclick.net " +
+    "https://pagead2.googlesyndication.com " +
+    "https://www.googletagmanager.com " +
     "https://www.facebook.com " +
     "https://vitals.vercel-insights.com " +
     "https://api.mercadopago.com " +
+    "https://mpc-prod-16-s6uit34pua-uk.a.run.app " +
+    "https://demo-1.conversionsapigateway.com " +
     "https://my-corretoria.vercel.app " +
     "https://*.vercel.app " +
     "https://auto.ffmedia.com.br " +
@@ -71,7 +77,9 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "https://js.stripe.com " +
     "https://checkout.stripe.com " +
     "https://accounts.google.com " +
-    "https://vars.hotjar.com",
+    "https://vars.hotjar.com " +
+    "https://googleads.g.doubleclick.net " +
+    "https://www.googletagmanager.com ",
     
     // Worker sources for service workers
     "worker-src 'self' blob:",
