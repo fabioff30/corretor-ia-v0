@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
   })
 
   // 5. Apply canonical URL middleware
-  return canonicalMiddleware(request)
+  return canonicalMiddleware(request, responseWithHeaders)
 }
 
 export const config = {

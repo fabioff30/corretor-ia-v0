@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getCanonicalUrl, CANONICAL_DOMAIN } from "@/utils/canonical-url"
 
-export function canonicalMiddleware(request: NextRequest) {
+export function canonicalMiddleware(request: NextRequest, response?: NextResponse) {
   const url = request.nextUrl.clone()
   const canonicalUrl = new URL(CANONICAL_DOMAIN)
   const canonicalHost = canonicalUrl.host
@@ -21,10 +21,19 @@ export function canonicalMiddleware(request: NextRequest) {
   ) {
     url.host = canonicalHost
     url.protocol = canonicalProtocol
-    return NextResponse.redirect(url, 308)
+    const redirectResponse = NextResponse.redirect(url, 308)
+
+    if (response) {
+      response.cookies.getAll().forEach(cookie => {
+        const { name, value, ...options } = cookie
+        redirectResponse.cookies.set(name, value, options)
+      })
+    }
+
+    return redirectResponse
   }
 
-  const response = NextResponse.next()
+  const targetResponse = response ?? NextResponse.next()
 
   // Build the canonical path with query parameters if needed
   let canonicalPath = url.pathname
@@ -39,7 +48,7 @@ export function canonicalMiddleware(request: NextRequest) {
   const canonicalHref = getCanonicalUrl(canonicalPath, searchParams)
 
   // Add the canonical URL as a Link header
-  response.headers.set("Link", `<${canonicalHref}>; rel="canonical"`)
+  targetResponse.headers.set("Link", `<${canonicalHref}>; rel="canonical"`)
 
-  return response
+  return targetResponse
 }
