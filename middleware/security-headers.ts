@@ -17,6 +17,7 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
     "https://www.googletagmanager.com " +
     "https://www.google-analytics.com " +
+    "https://accounts.google.com " +
     "https://connect.facebook.net " +
     "https://static.hotjar.com " +
     "https://pagead2.googlesyndication.com " +
@@ -54,7 +55,9 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "https://api.mercadopago.com " +
     "https://my-corretoria.vercel.app " +
     "https://auto.ffmedia.com.br " +
+    "https://*.supabase.co " +
     "wss://www.hotjar.com " +
+    "wss://*.supabase.co " +
     "https://*.upstash.io",
     
     // Frame sources
