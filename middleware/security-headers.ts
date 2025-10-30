@@ -30,7 +30,6 @@ export function securityHeadersMiddleware(request: NextRequest) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action *",
-    "frame-ancestors 'none'",
 
     // Upgrade insecure requests in production
     ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
@@ -41,7 +40,6 @@ export function securityHeadersMiddleware(request: NextRequest) {
   
   // Additional security headers
   response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   
