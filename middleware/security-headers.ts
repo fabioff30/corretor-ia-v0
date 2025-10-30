@@ -10,94 +10,28 @@ export function securityHeadersMiddleware(request: NextRequest) {
   
   // Content Security Policy
   const csp = [
-    // Default source
+    // Default source remains scoped to our origin
     "default-src 'self'",
-    
-    // Script sources - allow inline scripts for Next.js and specific external scripts
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
-    "https://www.googletagmanager.com " +
-    "https://www.google-analytics.com " +
-    "https://accounts.google.com " +
-    "https://www.gstatic.com " +
-    "https://connect.facebook.net " +
-    "https://static.hotjar.com " +
-    "https://pagead2.googlesyndication.com " +
-    "https://scripts.cleverwebserver.com " +
-    "https://www.mercadopago.com " +
-    "https://js.stripe.com",
-    
-    // Style sources
-    "style-src 'self' 'unsafe-inline' " +
-    "https://fonts.googleapis.com " +
-    "https://www.mercadopago.com",
-    
-    // Font sources
-    "font-src 'self' " +
-    "https://fonts.gstatic.com " +
-    "data:",
-    
-    // Image sources
-    "img-src 'self' data: blob: " +
-    "https://*.vercel-storage.com " +
-    "https://www.facebook.com " +
-    "https://www.google-analytics.com " +
-    "https://pagead2.googlesyndication.com " +
-    "https://tpc.googlesyndication.com " +
-    "https://*.wordpress.com " +
-    "https://*.wp.com " +
-    "https://secure.gravatar.com",
-    
-    // Connect sources for API calls
-    "connect-src 'self' " +
-    "https://www.google-analytics.com " +
-    "https://analytics.google.com " +
-    "https://stats.g.doubleclick.net " +
-    "https://googleads.g.doubleclick.net " +
-    "https://pagead2.googlesyndication.com " +
-    "https://www.googletagmanager.com " +
-    "https://www.facebook.com " +
-    "https://vitals.vercel-insights.com " +
-    "https://api.mercadopago.com " +
-    "https://mpc-prod-16-s6uit34pua-uk.a.run.app " +
-    "https://demo-1.conversionsapigateway.com " +
-    "https://my-corretoria.vercel.app " +
-    "https://*.vercel.app " +
-    "https://auto.ffmedia.com.br " +
-    "https://workers-api.fabiofariasf.workers.dev " +
-    "https://*.supabase.co " +
-    "wss://www.hotjar.com " +
-    "wss://*.supabase.co " +
-    "wss://*.vercel.app " +
-    "https://*.vercel-insights.com " +
-    "https://*.upstash.io",
-    
-    // Frame sources
-    "frame-src 'self' " +
-    "https://www.mercadopago.com " +
-    "https://js.stripe.com " +
-    "https://checkout.stripe.com " +
-    "https://accounts.google.com " +
-    "https://vars.hotjar.com " +
-    "https://googleads.g.doubleclick.net " +
-    "https://www.googletagmanager.com ",
-    
+
+    // Allow all script, style, image, font and frame sources while keeping inline allowances
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
+    "style-src 'self' 'unsafe-inline' *",
+    "img-src 'self' data: blob: *",
+    "font-src 'self' data: *",
+    "frame-src 'self' *",
+
+    // Permit any outbound connections (fetch, websockets, etc.)
+    "connect-src 'self' *",
+
     // Worker sources for service workers
     "worker-src 'self' blob:",
-    
-    // Object sources (disable for security)
+
+    // Maintain critical protections
     "object-src 'none'",
-    
-    // Base URI restriction
     "base-uri 'self'",
-    
-    // Form action restriction
-    "form-action 'self' " +
-    "https://api.mercadopago.com " +
-    "https://checkout.stripe.com",
-    
-    // Frame ancestors (clickjacking protection)
+    "form-action *",
     "frame-ancestors 'none'",
-    
+
     // Upgrade insecure requests in production
     ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
   ].join('; ')
