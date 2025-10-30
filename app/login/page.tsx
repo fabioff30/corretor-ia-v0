@@ -15,15 +15,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Mail, Lock, Sparkles, AlertTriangle } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
-import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useUser } from '@/hooks/use-user'
-import { sendGTMEvent } from '@/utils/gtm-helper'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useUser()
+  const { signIn, signInWithGoogle } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,8 +31,6 @@ export default function LoginPage() {
     email: '',
     password: '',
   })
-
-  const supabase = createClient()
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
@@ -43,22 +41,19 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) {
+      return
+    }
+
     setError(null)
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
+      const { error } = await signIn(formData.email, formData.password)
 
-      if (error) throw error
-
-      // Track login success
-      sendGTMEvent('login', {
-        method: 'email',
-        user_id: data.user?.id,
-      })
+      if (error) {
+        throw error
+      }
 
       toast({
         title: 'Login realizado com sucesso!',
@@ -68,33 +63,47 @@ export default function LoginPage() {
       router.push('/dashboard')
     } catch (err: any) {
       console.error('Erro ao fazer login:', err)
-      setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
+      const message =
+        err?.message === 'Request rate limit reached'
+          ? 'Detectamos muitas tentativas de login em sequência. Aguarde alguns segundos e tente novamente.'
+          : err?.message || 'Erro ao fazer login. Verifique suas credenciais.'
+      setError(message)
+      toast({
+        title: 'Erro ao fazer login',
+        description: message,
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleGoogleLogin = async () => {
+    if (isGoogleLoading) {
+      return
+    }
+
     setError(null)
     setIsGoogleLoading(true)
 
     try {
-      // Track Google login attempt
-      sendGTMEvent('login_attempt', {
-        method: 'google',
-      })
+      const { error } = await signInWithGoogle()
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) throw error
+      if (error) {
+        throw error
+      }
     } catch (err: any) {
       console.error('Erro ao fazer login com Google:', err)
-      setError(err.message || 'Erro ao fazer login com Google.')
+      const message =
+        err?.message === 'Request rate limit reached'
+          ? 'Detectamos muitas tentativas de login com Google. Aguarde alguns segundos e tente novamente.'
+          : err?.message || 'Erro ao fazer login com Google.'
+      setError(message)
+      toast({
+        title: 'Erro ao fazer login com Google',
+        description: message,
+        variant: 'destructive',
+      })
       setIsGoogleLoading(false)
     }
   }

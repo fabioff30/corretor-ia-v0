@@ -71,7 +71,7 @@ export async function verifyAdminToken(token: string): Promise<AdminUser | null>
  */
 export async function setAdminSession(adminId: string = 'admin') {
   const token = await createAdminToken(adminId)
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   
   cookieStore.set({
     name: COOKIE_NAME,
@@ -89,7 +89,7 @@ export async function setAdminSession(adminId: string = 'admin') {
  */
 export async function getAdminSession(): Promise<AdminUser | null> {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sessionCookie = cookieStore.get(COOKIE_NAME)
     
     if (!sessionCookie?.value) {
@@ -106,8 +106,8 @@ export async function getAdminSession(): Promise<AdminUser | null> {
 /**
  * Clear admin session
  */
-export function clearAdminSession() {
-  const cookieStore = cookies()
+export async function clearAdminSession() {
+  const cookieStore = await cookies()
   cookieStore.delete(COOKIE_NAME)
 }
 

@@ -28,7 +28,10 @@ export function createClient() {
     }
   )
 
-  // Monitor auth state changes to detect and prevent refresh loops
+  // Monitor auth state changes to detect refresh loops
+  // NOTE: Disabled to prevent duplicate event handling - UserProvider handles auth events
+  // Uncommenting this can cause logout loops due to duplicate SIGNED_OUT events
+  /*
   client.auth.onAuthStateChange((event, session) => {
     const now = Date.now()
 
@@ -59,6 +62,7 @@ export function createClient() {
       consecutiveFailures = 0
     }
   })
+  */
 
   return client
 }

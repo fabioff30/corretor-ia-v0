@@ -5,6 +5,12 @@ export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit) - 
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humanization
 
+// Daily usage limits (configured in Supabase plan_limits_config table)
+// Free plan: 3 corrections/day, 3 rewrites/day, 1 AI analysis/day
+// Pro plan: unlimited (-1) for all operations
+// These limits are enforced in /api/correct and /api/rewrite routes
+// via canUserPerformOperation() and incrementUserUsage() functions
+
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2
 

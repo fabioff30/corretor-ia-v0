@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useUser } from '@/hooks/use-user'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -39,8 +39,6 @@ export function SubscriptionManagement() {
   const [loading, setLoading] = useState(true)
   const [isCanceling, setIsCanceling] = useState(false)
   const { toast } = useToast()
-  const supabase = createClient()
-
   const isPro = profile?.plan_type === 'pro'
   const isAdmin = profile?.plan_type === 'admin'
 

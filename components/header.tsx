@@ -79,8 +79,8 @@ export function Header() {
       description: "Você saiu da sua conta.",
     })
 
-    router.replace("/")
-    router.refresh()
+    // Redirect to home page (full page reload to ensure clean state)
+    window.location.href = '/'
   }
 
   return (

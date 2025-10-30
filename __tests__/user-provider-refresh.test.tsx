@@ -9,35 +9,90 @@ import type { User } from '@supabase/supabase-js'
 import type { Profile } from '@/types/supabase'
 import { UserProvider, useUserContext } from '@/components/providers/user-provider'
 
-const maybeSingle = jest.fn()
-const queryBuilder = {
-  select: jest.fn(() => queryBuilder),
-  eq: jest.fn(() => queryBuilder),
-  maybeSingle,
+type SupabaseMockStore = {
+  supabase?: any
+  createClient?: jest.Mock
+  maybeSingle?: jest.Mock
+  queryBuilder?: {
+    select: jest.Mock
+    eq: jest.Mock
+    maybeSingle: jest.Mock
+  }
+  unsubscribe?: jest.Mock
 }
 
-const unsubscribe = jest.fn()
+let supabaseMockStore: SupabaseMockStore
 
-const supabaseMock = {
-  from: jest.fn(() => queryBuilder),
-  auth: {
-    getUser: jest.fn(),
-    onAuthStateChange: jest.fn(() => ({
-      data: { subscription: { unsubscribe } },
-    })),
-    signOut: jest.fn(),
-  },
-  storage: {
-    from: jest.fn(() => ({
-      upload: jest.fn(),
-      getPublicUrl: jest.fn(() => ({ data: { publicUrl: '' } })),
-    })),
-  },
+jest.mock('@/lib/supabase/client', () => {
+  const maybeSingle = jest.fn()
+  const unsubscribe = jest.fn()
+
+  const queryBuilder = {
+    select: jest.fn(() => queryBuilder),
+    eq: jest.fn(() => queryBuilder),
+    maybeSingle,
+  }
+
+  const supabaseMock = {
+    from: jest.fn(() => queryBuilder),
+    auth: {
+      getUser: jest.fn(),
+      onAuthStateChange: jest.fn(() => ({
+        data: { subscription: { unsubscribe } },
+      })),
+      signOut: jest.fn(),
+    },
+    storage: {
+      from: jest.fn(() => ({
+        upload: jest.fn(),
+        getPublicUrl: jest.fn(() => ({ data: { publicUrl: '' } })),
+      })),
+    },
+  }
+
+  const createClientMock = jest.fn(() => supabaseMock)
+
+  supabaseMockStore = {
+    supabase: supabaseMock,
+    createClient: createClientMock,
+    maybeSingle,
+    queryBuilder,
+    unsubscribe,
+  }
+
+  return {
+    supabase: supabaseMock,
+    createClient: createClientMock,
+  }
+})
+
+const getSupabaseMock = () => {
+  if (!supabaseMockStore.supabase) {
+    throw new Error('Supabase mock not initialized')
+  }
+  return supabaseMockStore.supabase
 }
 
-jest.mock('@/lib/supabase/client', () => ({
-  createClient: jest.fn(() => supabaseMock),
-}))
+const getMaybeSingle = () => {
+  if (!supabaseMockStore.maybeSingle) {
+    throw new Error('maybeSingle mock not initialized')
+  }
+  return supabaseMockStore.maybeSingle
+}
+
+const getQueryBuilder = () => {
+  if (!supabaseMockStore.queryBuilder) {
+    throw new Error('Query builder mock not initialized')
+  }
+  return supabaseMockStore.queryBuilder
+}
+
+const getUnsubscribe = () => {
+  if (!supabaseMockStore.unsubscribe) {
+    throw new Error('unsubscribe mock not initialized')
+  }
+  return supabaseMockStore.unsubscribe
+}
 
 const mockUser: User = {
   id: 'user-123',
@@ -81,6 +136,11 @@ describe('UserProvider - refreshProfile()', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    const supabaseMock = getSupabaseMock()
+    const queryBuilder = getQueryBuilder()
+    const maybeSingle = getMaybeSingle()
+    const unsubscribe = getUnsubscribe()
+
     maybeSingle.mockReset()
     queryBuilder.select.mockReset()
     queryBuilder.eq.mockReset()
@@ -112,6 +172,7 @@ describe('UserProvider - refreshProfile()', () => {
 
   it('should refresh profile from database and update state', async () => {
     // Start with FREE profile
+    const maybeSingle = getMaybeSingle()
     maybeSingle.mockResolvedValue({ data: mockProfileFree, error: null })
 
     let refreshFn: (() => Promise<{ data: Profile | null; error: string | null }>) | null = null

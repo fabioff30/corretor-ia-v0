@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         })
 
       case 'logout':
-        clearAdminSession()
+        await clearAdminSession()
         return NextResponse.json({
           success: true,
           message: 'Logged out successfully'

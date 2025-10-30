@@ -12,7 +12,7 @@ import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
-import { saveCorrection } from "@/utils/limit-checker"
+import { saveCorrection, canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker"
 
 // Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
 export const maxDuration = 300
@@ -81,6 +81,45 @@ export async function POST(request: NextRequest) {
       }
 
       isPremium = true
+    }
+
+    // Check usage limits for authenticated free users
+    // Try to get current user even if not a premium request
+    let currentUserContext: AuthContext | null = premiumContext
+    if (!currentUserContext) {
+      try {
+        currentUserContext = await getCurrentUserWithProfile()
+      } catch {
+        // Not authenticated, continue with regular flow
+        currentUserContext = null
+      }
+    }
+
+    // If user is authenticated and not premium, check limits
+    if (currentUserContext?.user && !isPremium) {
+      const userId = currentUserContext.user.id
+      const userPlan = currentUserContext.profile?.plan_type
+
+      // Only check limits for free users
+      if (userPlan === 'free') {
+        const limitCheck = await canUserPerformOperation(userId, 'correct')
+
+        if (!limitCheck.allowed) {
+          return NextResponse.json(
+            {
+              error: "Limite diário excedido",
+              message: limitCheck.reason || "Você atingiu o limite diário de correções",
+              details: [
+                `Limite: ${limitCheck.limit} correções por dia`,
+                "Faça upgrade para o plano Premium para correções ilimitadas"
+              ]
+            },
+            { status: 429 }
+          )
+        }
+
+        console.log(`API: Free user ${userId} - ${limitCheck.remaining}/${limitCheck.limit} corrections remaining`, requestId)
+      }
     }
 
     // Validate text length (skip for premium users)
@@ -237,6 +276,42 @@ export async function POST(request: NextRequest) {
           saveResult.error,
           requestId
         )
+      }
+    } else if (currentUserContext?.user && currentUserContext.profile?.plan_type === 'free') {
+      // For free users, save correction and increment usage
+      const userId = currentUserContext.user.id
+      const toneStyleToPersist = customTone?.trim() ? customTone.trim() : tone
+
+      // Save correction to history
+      const saveResult = await saveCorrection({
+        userId,
+        originalText: text,
+        correctedText: normalized.text,
+        operationType: "correct",
+        toneStyle: toneStyleToPersist,
+        evaluation: processedEvaluation,
+      })
+
+      if (saveResult.success && saveResult.id) {
+        correctionId = saveResult.id
+      } else if (!saveResult.success) {
+        console.error(
+          "API: Failed to persist free user correction",
+          saveResult.error,
+          requestId
+        )
+      }
+
+      // Increment usage counter
+      const incrementResult = await incrementUserUsage(userId, 'correct')
+      if (!incrementResult.success) {
+        console.error(
+          "API: Failed to increment usage for free user",
+          incrementResult.error,
+          requestId
+        )
+      } else {
+        console.log(`API: Successfully incremented usage for free user ${userId}`, requestId)
       }
     }
 

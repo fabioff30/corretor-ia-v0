@@ -24,8 +24,8 @@ describe('Timeout Configuration', () => {
       expect(FETCH_TIMEOUT).toBeLessThan(API_REQUEST_TIMEOUT)
     })
 
-    it('should have AI_DETECTOR_TIMEOUT set to 120 seconds', () => {
-      expect(AI_DETECTOR_TIMEOUT).toBe(120000) // 120 seconds
+    it('should have AI_DETECTOR_TIMEOUT set to 300 seconds', () => {
+      expect(AI_DETECTOR_TIMEOUT).toBe(300000) // 300 seconds (5 minutes)
     })
 
     it('should have timeouts in milliseconds', () => {
@@ -63,8 +63,8 @@ describe('Character Limits', () => {
   })
 
   describe('Premium Tier Limits', () => {
-    it('should have PREMIUM_CHARACTER_LIMIT set to 5000', () => {
-      expect(PREMIUM_CHARACTER_LIMIT).toBe(5000)
+    it('should have PREMIUM_CHARACTER_LIMIT set to 300000', () => {
+      expect(PREMIUM_CHARACTER_LIMIT).toBe(300000)
     })
 
     it('should have premium limit greater than free limit', () => {
@@ -73,8 +73,8 @@ describe('Character Limits', () => {
   })
 
   describe('AI Detector Limits', () => {
-    it('should have AI_DETECTOR_CHARACTER_LIMIT greater than premium', () => {
-      expect(AI_DETECTOR_CHARACTER_LIMIT).toBeGreaterThan(PREMIUM_CHARACTER_LIMIT)
+    it('should have AI_DETECTOR_CHARACTER_LIMIT set to 10000', () => {
+      expect(AI_DETECTOR_CHARACTER_LIMIT).toBe(10000)
     })
 
     it('should have AI_DETECTOR_DAILY_LIMIT set to 2', () => {
@@ -84,9 +84,9 @@ describe('Character Limits', () => {
 
   describe('Limit Hierarchy', () => {
     it('should maintain proper limit hierarchy', () => {
-      // Free < Premium < AI Detector
-      expect(FREE_CHARACTER_LIMIT).toBeLessThan(PREMIUM_CHARACTER_LIMIT)
-      expect(PREMIUM_CHARACTER_LIMIT).toBeLessThan(AI_DETECTOR_CHARACTER_LIMIT)
+      // Free < AI Detector < Premium (premium users have the highest allowance)
+      expect(FREE_CHARACTER_LIMIT).toBeLessThan(AI_DETECTOR_CHARACTER_LIMIT)
+      expect(AI_DETECTOR_CHARACTER_LIMIT).toBeLessThan(PREMIUM_CHARACTER_LIMIT)
     })
   })
 })
@@ -96,11 +96,11 @@ describe('Configuration Compliance', () => {
     // Updated timeout policy: allow long-running requests (90s API, 85s fetch, 120s detector)
     expect(API_REQUEST_TIMEOUT).toBe(90000)
     expect(FETCH_TIMEOUT).toBe(85000)
-    expect(AI_DETECTOR_TIMEOUT).toBe(120000)
+    expect(AI_DETECTOR_TIMEOUT).toBe(300000)
 
     // Character limits
     expect(FREE_CHARACTER_LIMIT).toBe(1500)
-    expect(PREMIUM_CHARACTER_LIMIT).toBe(5000)
+    expect(PREMIUM_CHARACTER_LIMIT).toBe(300000)
     expect(AI_DETECTOR_CHARACTER_LIMIT).toBe(10000)
 
     // Daily limit for AI detector

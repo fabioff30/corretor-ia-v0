@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import { sendGTMEvent } from '@/utils/gtm-helper'
 import { useUser } from '@/hooks/use-user'
 
@@ -61,7 +61,6 @@ interface PromptMomentNotification {
 
 export function GoogleOneTap() {
   const { user } = useUser()
-  const supabase = createClient()
   const initialized = useRef(false)
 
   useEffect(() => {

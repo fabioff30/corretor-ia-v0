@@ -131,6 +131,10 @@ Cloudflare Workers API (workers-api.fabiofariasf.workers.dev)
 ### Configuration & Constants
 Key configuration in `utils/constants.ts`:
 - Character limits: `FREE_CHARACTER_LIMIT` (1500), `PREMIUM_CHARACTER_LIMIT` (5000), `AI_DETECTOR_CHARACTER_LIMIT` (10000)
+- Daily usage limits (configured in Supabase `plan_limits_config` table):
+  - Free plan: 3 corrections/day, 3 rewrites/day, 1 AI analysis/day
+  - Pro/Admin plan: unlimited (-1) for all operations
+  - Enforced via `canUserPerformOperation()` and `incrementUserUsage()` in `/api/correct` and `/api/rewrite`
 - Rate limits: `AI_DETECTOR_DAILY_LIMIT` (2 uses per day)
 - API timeouts: `API_REQUEST_TIMEOUT` (90s), `PREMIUM_API_TIMEOUT` (120s), `AI_DETECTOR_TIMEOUT` (120s)
 - Google Analytics, AdSense, and GTM IDs

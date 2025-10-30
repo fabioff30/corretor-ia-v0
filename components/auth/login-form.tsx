@@ -32,10 +32,14 @@ export function LoginForm() {
       const { error } = await signIn(email, password)
       
       if (error) {
-        setError(error.message)
+        const message =
+          error.message === "Request rate limit reached"
+            ? "Detectamos muitas tentativas de login em sequência. Aguarde alguns segundos e tente novamente."
+            : error.message
+        setError(message)
         toast({
           title: "Erro no login",
-          description: error.message,
+          description: message,
           variant: "destructive"
         })
       } else {
@@ -46,7 +50,11 @@ export function LoginForm() {
         router.push("/dashboard")
       }
     } catch (err) {
-      const errorMessage = "Erro inesperado no login"
+      const rawMessage = err instanceof Error ? err.message : null
+      const errorMessage =
+        rawMessage === "Request rate limit reached"
+          ? "Detectamos muitas tentativas de login em sequência. Aguarde alguns segundos e tente novamente."
+          : rawMessage || "Erro inesperado no login"
       setError(errorMessage)
       toast({
         title: "Erro no login", 

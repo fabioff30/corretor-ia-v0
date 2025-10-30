@@ -62,8 +62,16 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session se expirado - importante para sessões de longa duração
-  await supabase.auth.getUser()
+  // Check if Supabase auth cookies exist before calling getUser()
+  // This prevents unnecessary refresh attempts after logout
+  const hasAuthCookies = request.cookies.getAll().some(cookie =>
+    cookie.name.startsWith('sb-') && cookie.value && cookie.value !== ''
+  )
+
+  if (hasAuthCookies) {
+    // Refresh session se expirado - importante para sessões de longa duração
+    await supabase.auth.getUser()
+  }
 
   return response
 }

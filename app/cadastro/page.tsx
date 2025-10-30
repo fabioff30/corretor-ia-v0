@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Mail, Lock, User, Sparkles, AlertTriangle, Check, X } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useUser } from '@/hooks/use-user'
 
@@ -34,8 +34,6 @@ export default function CadastroPage() {
     password: '',
     confirmPassword: '',
   })
-
-  const supabase = createClient()
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {

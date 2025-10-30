@@ -5,7 +5,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import type { PlanLimitsConfig } from '@/types/supabase'
 import { useUser } from './use-user'
 
@@ -15,7 +15,6 @@ export function usePlanLimits() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
   const planType: 'free' | 'pro' = profile?.plan_type === 'pro' || profile?.plan_type === 'admin' ? 'pro' : 'free'
 
   useEffect(() => {

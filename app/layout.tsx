@@ -3,7 +3,6 @@ import "@/app/globals.css"
 import type { Metadata } from "next"
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
@@ -205,22 +204,19 @@ export default async function RootLayout({
         </noscript>
 
         <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
-          <AuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-              <div className="flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <Toaster />
-              <CookieConsent />
-              <JulinhoAssistant />
-              <GoogleOneTap />
-              <CleverWebServerLoader />
-            </ThemeProvider>
-          </AuthProvider>
-        </UserProvider>
-      </body>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <Toaster />
+            <CookieConsent />
+            <JulinhoAssistant />
+            <GoogleOneTap />
+            <CleverWebServerLoader />
+          </ThemeProvider>
+        </UserProvider>      </body>
     </html>
   )
 }

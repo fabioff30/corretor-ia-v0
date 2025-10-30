@@ -257,7 +257,9 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
   )
 
   const signOut = useCallback(async () => {
-    // Always clear local state first
+    console.log('[UserProvider] Starting logout...')
+
+    // Clear local state first
     setUser(null)
     setProfile(null)
 
@@ -266,44 +268,34 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       localStorage.removeItem('user-plan-type')
     }
 
+    // Call server-side logout FIRST to clear cookies
     try {
-      const { error: signOutError } = await supabase.auth.signOut()
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
 
-      // Ignore "session_not_found" errors - session might already be expired/deleted
-      if (signOutError && signOutError.message === 'Session from session_id claim in JWT does not exist') {
-        console.warn('[UserProvider] Session already expired, ignoring error')
-        setError(null)
-        return { error: null }
+      if (!response.ok) {
+        console.warn('[UserProvider] Server logout returned non-OK status:', response.status)
+      } else {
+        console.log('[UserProvider] Server-side logout completed')
       }
-
-      if (signOutError) {
-        console.error('[UserProvider] Erro ao fazer logout:', signOutError)
-        setError(signOutError.message)
-
-        // Try to restore user state if logout failed for other reasons
-        const {
-          data: { user: currentUser },
-        } = await supabase.auth.getUser()
-
-        if (currentUser) {
-          setUser(currentUser)
-          await fetchProfile(currentUser.id)
-        } else {
-          setProfile(null)
-        }
-
-        return { error: signOutError }
-      }
-
-      setError(null)
-      return { error: null }
     } catch (error) {
-      // Ignore any errors during logout - local state already cleared
-      console.warn('[UserProvider] Erro ignorado durante logout:', error)
-      setError(null)
-      return { error: null }
+      console.warn('[UserProvider] Error during server-side logout:', error)
+      // Continue with client-side cleanup anyway
     }
-  }, [fetchProfile]) // supabase is singleton
+
+    // Clear client-side session (local only to avoid triggering server calls)
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+      console.log('[UserProvider] Client-side logout completed')
+    } catch (error) {
+      console.warn('[UserProvider] Client signOut error (ignoring):', error)
+    }
+
+    setError(null)
+    return { error: null }
+  }, []) // supabase is singleton
 
   const refreshProfile = useCallback(async () => {
     if (!user) {
