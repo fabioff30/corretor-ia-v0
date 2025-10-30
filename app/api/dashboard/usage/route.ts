@@ -31,12 +31,18 @@ export async function GET() {
     const today = new Date()
     const todayRange = formatDateRange(today)
 
+    // Calculate date 30 days ago for recent activity
+    const thirtyDaysAgo = subDays(today, 30).toISOString()
+
     const planType = profile.plan_type === "admin" ? "pro" : profile.plan_type
 
-    // Fetch daily usage, plan limits, and lifetime totals in parallel
+    // Fetch daily usage, plan limits, last 30 days counts, and lifetime totals in parallel
     const [
       { data: limits, error: limitsError },
       { data: usageData, error: usageError },
+      { count: correctionsLast30Days, error: corrections30Error },
+      { count: rewritesLast30Days, error: rewrites30Error },
+      { count: aiAnalysesLast30Days, error: aiAnalyses30Error },
       { count: correctionsTotal, error: correctionsError },
       { count: rewritesTotal, error: rewritesError },
       { count: aiAnalysesTotal, error: aiAnalysesError },
@@ -54,6 +60,27 @@ export async function GET() {
         .eq("user_id", user.id)
         .eq("date", todayRange.start.slice(0, 10))
         .maybeSingle(),
+      // Get corrections count from last 30 days
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "correct")
+        .gte("created_at", thirtyDaysAgo),
+      // Get rewrites count from last 30 days
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "rewrite")
+        .gte("created_at", thirtyDaysAgo),
+      // Get AI analyses count from last 30 days
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "ai_analysis")
+        .gte("created_at", thirtyDaysAgo),
       // Get total corrections count (lifetime)
       supabase
         .from("user_corrections")
@@ -82,7 +109,16 @@ export async function GET() {
       )
     }
 
-    // Log errors for total counts but don't fail the request
+    // Log errors for counts but don't fail the request
+    if (corrections30Error) {
+      console.error("Erro ao buscar correções dos últimos 30 dias:", corrections30Error)
+    }
+    if (rewrites30Error) {
+      console.error("Erro ao buscar reescritas dos últimos 30 dias:", rewrites30Error)
+    }
+    if (aiAnalyses30Error) {
+      console.error("Erro ao buscar análises de IA dos últimos 30 dias:", aiAnalyses30Error)
+    }
     if (correctionsError) {
       console.error("Erro ao buscar total de correções:", correctionsError)
     }
@@ -174,7 +210,7 @@ export async function GET() {
     const isPremium = profile.plan_type === "pro" || profile.plan_type === "admin"
 
     const stats = {
-      // Daily usage
+      // Daily usage (kept for backwards compatibility with usage limit checks)
       corrections_used: usage.corrections_used,
       rewrites_used: usage.rewrites_used,
       ai_analyses_used: usage.ai_analyses_used,
@@ -188,6 +224,10 @@ export async function GET() {
         ? -1
         : Math.max(0, effectiveLimits.ai_analyses_per_day - usage.ai_analyses_used),
       date: usage.date,
+      // Last 30 days activity
+      corrections_last_30_days: correctionsLast30Days ?? 0,
+      rewrites_last_30_days: rewritesLast30Days ?? 0,
+      ai_analyses_last_30_days: aiAnalysesLast30Days ?? 0,
       // Lifetime totals
       corrections_total: correctionsTotal ?? 0,
       rewrites_total: rewritesTotal ?? 0,

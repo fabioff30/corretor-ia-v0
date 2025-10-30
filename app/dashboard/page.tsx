@@ -50,63 +50,36 @@ export default function DashboardPage() {
           ) : (
             <>
               <StatsCard
-                title="Correções Hoje"
-                value={stats?.corrections_used || 0}
+                title="Correções"
+                value={stats?.corrections_last_30_days || 0}
                 description={
                   isPremium
-                    ? `${stats?.corrections_total || 0} no total`
-                    : `${stats?.corrections_remaining || 0} restantes · ${stats?.corrections_total || 0} no total`
+                    ? `Últimos 30 dias · ${stats?.corrections_total || 0} no total`
+                    : `Últimos 30 dias · ${stats?.corrections_total || 0} no total`
                 }
                 icon={FileText}
-                progress={
-                  !isPremium
-                    ? {
-                        current: stats?.corrections_used || 0,
-                        max: stats?.corrections_remaining === -1 ? -1 : (stats?.corrections_used || 0) + (stats?.corrections_remaining || 0),
-                        showLabel: false,
-                      }
-                    : undefined
-                }
               />
 
               <StatsCard
-                title="Reescritas Hoje"
-                value={stats?.rewrites_used || 0}
+                title="Reescritas"
+                value={stats?.rewrites_last_30_days || 0}
                 description={
                   isPremium
-                    ? `${stats?.rewrites_total || 0} no total`
-                    : `${stats?.rewrites_remaining || 0} restantes · ${stats?.rewrites_total || 0} no total`
+                    ? `Últimos 30 dias · ${stats?.rewrites_total || 0} no total`
+                    : `Últimos 30 dias · ${stats?.rewrites_total || 0} no total`
                 }
                 icon={Wand2}
-                progress={
-                  !isPremium
-                    ? {
-                        current: stats?.rewrites_used || 0,
-                        max: stats?.rewrites_remaining === -1 ? -1 : (stats?.rewrites_used || 0) + (stats?.rewrites_remaining || 0),
-                        showLabel: false,
-                      }
-                    : undefined
-                }
               />
 
               <StatsCard
-                title="Análises de IA Hoje"
-                value={stats?.ai_analyses_used || 0}
+                title="Análises de IA"
+                value={stats?.ai_analyses_last_30_days || 0}
                 description={
                   isPremium
-                    ? `${stats?.ai_analyses_total || 0} no total`
-                    : `${stats?.ai_analyses_remaining || 0} restantes · ${stats?.ai_analyses_total || 0} no total`
+                    ? `Últimos 30 dias · ${stats?.ai_analyses_total || 0} no total`
+                    : `Últimos 30 dias · ${stats?.ai_analyses_total || 0} no total`
                 }
                 icon={Sparkles}
-                progress={
-                  !isPremium
-                    ? {
-                        current: stats?.ai_analyses_used || 0,
-                        max: stats?.ai_analyses_remaining === -1 ? -1 : (stats?.ai_analyses_used || 0) + (stats?.ai_analyses_remaining || 0),
-                        showLabel: false,
-                      }
-                    : undefined
-                }
               />
 
               <StatsCard
