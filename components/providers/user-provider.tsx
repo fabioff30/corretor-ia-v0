@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/supabase"
 import { supabase } from "@/lib/supabase/client"
+import { checkAndCleanup, monitorAuthErrors, RefreshLoopDetector } from "@/utils/auth-cleanup"
 
 // Monitor de refresh loops
 let refreshFailureCount = 0
@@ -21,6 +22,9 @@ function handleRefreshFailure() {
 
   refreshFailureCount++
   lastRefreshFailure = now
+
+  // Registrar no detector global
+  RefreshLoopDetector.recordRefresh()
 
   // Se houver muitas falhas consecutivas, limpar cookies
   if (refreshFailureCount >= MAX_REFRESH_FAILURES) {
@@ -131,6 +135,12 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
   useEffect(() => {
     let isMounted = true
+
+    // Executar limpeza automática e monitoramento na primeira carga
+    checkAndCleanup().catch(err => {
+      console.error('[UserProvider] Erro na limpeza automática:', err)
+    })
+    monitorAuthErrors()
 
     const fetchUser = async () => {
       try {
