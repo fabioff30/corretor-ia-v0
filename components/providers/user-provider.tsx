@@ -5,6 +5,33 @@ import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/supabase"
 import { supabase } from "@/lib/supabase/client"
 
+// Monitor de refresh loops
+let refreshFailureCount = 0
+let lastRefreshFailure = 0
+const MAX_REFRESH_FAILURES = 3
+const FAILURE_WINDOW_MS = 10000 // 10 segundos
+
+function handleRefreshFailure() {
+  const now = Date.now()
+
+  // Reset contador se passou tempo suficiente
+  if (now - lastRefreshFailure > FAILURE_WINDOW_MS) {
+    refreshFailureCount = 0
+  }
+
+  refreshFailureCount++
+  lastRefreshFailure = now
+
+  // Se houver muitas falhas consecutivas, limpar cookies
+  if (refreshFailureCount >= MAX_REFRESH_FAILURES) {
+    console.error('[UserProvider] Too many refresh failures, clearing all auth cookies')
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {
+      // Ignore errors, just try to clean up
+    })
+    refreshFailureCount = 0
+  }
+}
+
 interface UserContextValue {
   user: User | null
   profile: Profile | null
@@ -146,8 +173,24 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return
+
+      // Detectar falhas de refresh
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        console.warn('[UserProvider] Token refresh failed, session is null')
+        handleRefreshFailure()
+        return
+      }
+
+      // Reset contador em caso de sucesso
+      if (event === 'TOKEN_REFRESHED' && session) {
+        refreshFailureCount = 0
+      }
+
+      if (event === 'SIGNED_IN' && session) {
+        refreshFailureCount = 0
+      }
 
       const nextUser = session?.user ?? null
       setUser(nextUser)
