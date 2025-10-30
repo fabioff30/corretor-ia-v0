@@ -10,6 +10,8 @@ interface UserContextValue {
   profile: Profile | null
   loading: boolean
   error: string | null
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<Profile>) => Promise<{ data: Profile | null; error: string | null }>
   uploadAvatar: (file: File) => Promise<{ data: string | null; error: string | null }>
   refreshProfile: () => Promise<{ data: Profile | null; error: string | null }>
@@ -256,6 +258,54 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
     [user] // supabase is singleton
   )
 
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      setError(null)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (signInError) {
+        setError(signInError.message)
+        return { error: signInError }
+      }
+
+      return { error: null }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao fazer login'
+      setError(message)
+      return { error: error as Error }
+    }
+  }, [])
+
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      setError(null)
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (signInError) {
+        setError(signInError.message)
+        return { error: signInError }
+      }
+
+      return { error: null }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao fazer login com Google'
+      setError(message)
+      return { error: error as Error }
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
     console.log('[UserProvider] Starting logout...')
 
@@ -332,6 +382,8 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       profile,
       loading,
       error,
+      signIn,
+      signInWithGoogle,
       updateProfile,
       uploadAvatar,
       refreshProfile,
@@ -341,7 +393,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       isAdmin: profile?.plan_type === "admin",
       isFree: profile?.plan_type === "free",
     }),
-    [error, loading, profile, refreshProfile, signOut, updateProfile, uploadAvatar, user]
+    [error, loading, profile, refreshProfile, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, user]
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
