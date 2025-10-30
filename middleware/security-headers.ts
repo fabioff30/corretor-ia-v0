@@ -44,15 +44,6 @@ export function securityHeadersMiddleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 
-    'accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), ' +
-    'cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), ' +
-    'execution-while-not-rendered=(), execution-while-out-of-viewport=(), ' +
-    'fullscreen=(self), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), ' +
-    'microphone=(), midi=(), navigation-override=(), payment=(self), ' +
-    'picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), ' +
-    'sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()'
-  )
   
   // Strict Transport Security for HTTPS
   if (process.env.NODE_ENV === 'production') {
