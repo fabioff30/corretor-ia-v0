@@ -7,7 +7,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard, Crown } from "lucide-react"
+import { Menu, Sparkles, X, Shield, LogOut, LogIn, LayoutDashboard, Crown, Loader2 } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
@@ -201,44 +201,47 @@ export function Header() {
           <ModeToggle />
 
           {/* User Auth Button - Desktop */}
-          {!userLoading && (
-            <div className="hidden md:flex">
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
+          <div className="hidden md:flex">
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Ir para Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleUserLogout}
-                      className="text-red-500 cursor-pointer"
-                      disabled={isLoggingOut}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sair
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button asChild>
-                  <Link href="/login">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Entrar
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
+                      Ir para Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleUserLogout}
+                    className="text-red-500 cursor-pointer"
+                    disabled={isLoggingOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : userLoading ? (
+              <Button variant="outline" disabled>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Carregando
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href="/login">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Entrar
+                </Link>
+              </Button>
+            )}
+          </div>
 
           <button className="md:hidden" onClick={toggleMenu} aria-label="Toggle Menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -298,38 +301,45 @@ export function Header() {
             </Link>
 
             {/* User Auth Button - Mobile */}
-            {!userLoading && (
-              <div className="mt-2">
-                {user ? (
-                  <>
-                    <Button asChild className="w-full mb-2">
-                      <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full text-red-500 hover:text-red-600"
-                      onClick={() => {
-                        setIsMenuOpen(false)
-                        handleUserLogout()
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sair
-                    </Button>
-                  </>
-                ) : (
-                  <Button asChild className="w-full">
-                    <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Entrar
+            <div className="mt-2">
+              {user ? (
+                <>
+                  <Button asChild className="w-full mb-2">
+                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Dashboard
                     </Link>
                   </Button>
-                )}
-              </div>
-            )}
+                  <Button
+                    variant="outline"
+                    className="w-full text-red-500 hover:text-red-600"
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      handleUserLogout()
+                    }}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <LogOut className="mr-2 h-4 w-4" />
+                    )}
+                    Sair
+                  </Button>
+                </>
+              ) : userLoading ? (
+                <div className="flex w-full justify-center py-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Button asChild className="w-full">
+                  <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Entrar
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
