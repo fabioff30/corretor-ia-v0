@@ -400,7 +400,11 @@ export function AIDetectionResult({
                           <span className="text-sm font-medium">Comprimento Médio de Frase</span>
                           <span className="text-sm font-bold">{textStats.avgSentenceLength.toFixed(1)} palavras</span>
                         </div>
-                        <Progress value={Math.min(100, (textStats.avgSentenceLength / 30) * 100)} className="h-2" />
+                        <Progress
+                          value={Math.min(100, (textStats.avgSentenceLength / 30) * 100)}
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                          indicatorClassName="bg-purple-600"
+                        />
                         <p className="text-xs text-muted-foreground mt-1">
                           {textStats.avgSentenceLength < 15 ? 'Frases curtas' : textStats.avgSentenceLength < 25 ? 'Comprimento ideal' : 'Frases longas'}
                         </p>
@@ -413,7 +417,11 @@ export function AIDetectionResult({
                           <span className="text-sm font-medium">Comprimento Médio de Palavra</span>
                           <span className="text-sm font-bold">{textStats.avgWordLength.toFixed(2)} caracteres</span>
                         </div>
-                        <Progress value={Math.min(100, (textStats.avgWordLength / 10) * 100)} className="h-2" />
+                        <Progress
+                          value={Math.min(100, (textStats.avgWordLength / 10) * 100)}
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                          indicatorClassName="bg-purple-600"
+                        />
                         <p className="text-xs text-muted-foreground mt-1">
                           {textStats.avgWordLength < 4 ? 'Vocabulário simples' : textStats.avgWordLength < 6 ? 'Vocabulário médio' : 'Vocabulário complexo'}
                         </p>
@@ -426,7 +434,11 @@ export function AIDetectionResult({
                           <span className="text-sm font-medium">Taxa de Maiúsculas</span>
                           <span className="text-sm font-bold">{(textStats.uppercaseRatio * 100).toFixed(1)}%</span>
                         </div>
-                        <Progress value={textStats.uppercaseRatio * 100} className="h-2" />
+                        <Progress
+                          value={textStats.uppercaseRatio * 100}
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                          indicatorClassName="bg-purple-600"
+                        />
                       </div>
                     )}
 
@@ -436,7 +448,11 @@ export function AIDetectionResult({
                           <span className="text-sm font-medium">Taxa de Dígitos</span>
                           <span className="text-sm font-bold">{(textStats.digitRatio * 100).toFixed(1)}%</span>
                         </div>
-                        <Progress value={textStats.digitRatio * 100} className="h-2" />
+                        <Progress
+                          value={textStats.digitRatio * 100}
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                          indicatorClassName="bg-purple-600"
+                        />
                       </div>
                     )}
 
@@ -446,7 +462,11 @@ export function AIDetectionResult({
                           <span className="text-sm font-medium">Taxa de Pontuação</span>
                           <span className="text-sm font-bold">{(textStats.punctuationRatio * 100).toFixed(1)}%</span>
                         </div>
-                        <Progress value={textStats.punctuationRatio * 100} className="h-2" />
+                        <Progress
+                          value={textStats.punctuationRatio * 100}
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                          indicatorClassName="bg-purple-600"
+                        />
                       </div>
                     )}
                   </div>
