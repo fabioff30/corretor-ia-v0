@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, Mail, Lock, User, Eye, EyeOff, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
 
 export function RegisterForm() {
@@ -27,7 +27,7 @@ export function RegisterForm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   
-  const { signUp } = useAuth()
+  const { signUp } = useUser()
   const { toast } = useToast()
   const router = useRouter()
 

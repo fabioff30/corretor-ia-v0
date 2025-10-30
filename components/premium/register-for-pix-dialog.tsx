@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Loader2, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
-import { useAuth } from '@/contexts/auth-context'
+import { useUser } from "@/components/providers/user-provider"
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -52,7 +52,7 @@ export function RegisterForPixDialog({
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { signUp, signInWithGoogle } = useAuth()
+  const { signUp, signInWithGoogle } = useUser()
   const { toast } = useToast()
 
   const planName = planType === 'monthly' ? 'Mensal' : 'Anual'

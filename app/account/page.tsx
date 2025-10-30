@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useSubscription } from "@/hooks/use-subscription"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,7 @@ import { useEffect, useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AccountPage() {
-  const { user, loading, updateProfile } = useAuth()
+  const { user, loading, updateProfile } = useUser()
   const subscription = useSubscription()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")

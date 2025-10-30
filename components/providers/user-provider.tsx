@@ -354,3 +354,6 @@ export function useUserContext() {
   }
   return context
 }
+
+// Alias para compatibilidade com código existente
+export const useUser = useUserContext

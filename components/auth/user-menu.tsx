@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useSubscription } from "@/hooks/use-subscription"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 
 export function UserMenu() {
-  const { user, signOut, loading } = useAuth()
+  const { user, signOut, loading } = useUser()
   const subscription = useSubscription()
   const [isSigningOut, setIsSigningOut] = useState(false)
 

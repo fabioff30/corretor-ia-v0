@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useSubscription } from "@/hooks/use-subscription"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function UpgradePage() {
-  const { user } = useAuth()
+  const { user } = useUser()
   const subscription = useSubscription()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)

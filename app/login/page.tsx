@@ -16,14 +16,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Mail, Lock, Sparkles, AlertTriangle } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
 import { useToast } from '@/hooks/use-toast'
-import { useUser } from '@/hooks/use-user'
-import { useAuth } from '@/contexts/auth-context'
+import { useUser } from "@/components/providers/user-provider"
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useUser()
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle } = useUser()
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

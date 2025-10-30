@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
 
 export function LoginForm() {
@@ -19,7 +19,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   
-  const { signIn } = useAuth()
+  const { signIn } = useUser()
   const { toast } = useToast()
   const router = useRouter()
 

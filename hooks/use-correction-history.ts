@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { CorrectionHistory, supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/auth-context'
+import { useUser } from "@/components/providers/user-provider"
 
 export const useCorrectionHistory = () => {
-  const { user } = useAuth()
+  const { user } = useUser()
   const [history, setHistory] = useState<CorrectionHistory[]>([])
   const [loading, setLoading] = useState(true)
 

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
 import { sendGA4Event } from "@/utils/gtm-helper"
 import { obfuscateIdentifier } from "@/utils/analytics"
@@ -38,7 +38,7 @@ interface PixPostPaymentProps {
 
 export function PixPostPayment(props: PixPostPaymentProps) {
   const { paymentId, email, plan = "monthly", amount, isGuest = false } = props
-  const { user, loading, signUp } = useAuth()
+  const { user, loading, signUp } = useUser()
   const { refreshProfile } = useUserContext()
   const { toast } = useToast()
   const router = useRouter()
