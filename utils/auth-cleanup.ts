@@ -6,19 +6,20 @@
 import { supabase } from '@/lib/supabase/client'
 
 const CLEANUP_FLAG_KEY = 'auth_cleanup_done'
-const CLEANUP_VERSION = '1' // Incrementar para forçar nova limpeza
+const CLEANUP_VERSION = '3' // Incrementado para forçar nova limpeza sem signOut()
 
 /**
  * Limpa todos os cookies e storage relacionados à autenticação do Supabase
+ * IMPORTANTE: Não chama signOut() para evitar disparar eventos de auth que causam loops
  */
 export async function forceAuthCleanup(): Promise<void> {
   console.log('[AuthCleanup] Iniciando limpeza forçada de autenticação...')
 
   try {
-    // 1. Limpar sessão do Supabase (local only)
-    await supabase.auth.signOut({ scope: 'local' })
+    // NOTA: NÃO chamamos supabase.auth.signOut() aqui porque isso dispara eventos
+    // de auth (SIGNED_OUT) que tentam refresh de tokens já limpos, causando loop 429
 
-    // 2. Limpar localStorage
+    // 1. Limpar localStorage
     if (typeof window !== 'undefined') {
       const keysToRemove: string[] = []
 
@@ -37,10 +38,10 @@ export async function forceAuthCleanup(): Promise<void> {
       keysToRemove.forEach(key => localStorage.removeItem(key))
       console.log('[AuthCleanup] Removidos', keysToRemove.length, 'itens do localStorage')
 
-      // 3. Limpar sessionStorage
+      // 2. Limpar sessionStorage
       sessionStorage.clear()
 
-      // 4. Tentar limpar cookies via JavaScript (complementar ao signOut)
+      // 3. Limpar cookies via JavaScript (sem disparar eventos Supabase)
       const cookies = document.cookie.split(';')
       cookies.forEach(cookie => {
         const eqPos = cookie.indexOf('=')

@@ -6,7 +6,8 @@ import type { Profile } from "@/types/supabase"
 import { supabase } from "@/lib/supabase/client"
 import { checkAndCleanup, monitorAuthErrors, RefreshLoopDetector } from "@/utils/auth-cleanup"
 
-// Monitor de refresh loops
+// Monitor de refresh loops - apenas registra, não tenta corrigir
+// (A correção é feita pelo RefreshLoopDetector em auth-cleanup.ts)
 let refreshFailureCount = 0
 let lastRefreshFailure = 0
 const MAX_REFRESH_FAILURES = 3
@@ -23,15 +24,12 @@ function handleRefreshFailure() {
   refreshFailureCount++
   lastRefreshFailure = now
 
-  // Registrar no detector global
+  // Apenas registrar no detector global - ele fará a limpeza se necessário
+  // NÃO chamamos signOut() aqui pois isso dispara eventos que causam mais loops
   RefreshLoopDetector.recordRefresh()
 
-  // Se houver muitas falhas consecutivas, limpar cookies
   if (refreshFailureCount >= MAX_REFRESH_FAILURES) {
-    console.error('[UserProvider] Too many refresh failures, clearing all auth cookies')
-    supabase.auth.signOut({ scope: 'local' }).catch(() => {
-      // Ignore errors, just try to clean up
-    })
+    console.error('[UserProvider] Too many refresh failures detected, RefreshLoopDetector will handle cleanup')
     refreshFailureCount = 0
   }
 }
