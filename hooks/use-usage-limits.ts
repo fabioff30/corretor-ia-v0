@@ -9,6 +9,7 @@ import { useUser } from './use-user'
 import type { PlanLimitsConfig, UsageLimit } from '@/types/supabase'
 
 export interface UsageStats {
+  // Daily usage
   corrections_used: number
   rewrites_used: number
   ai_analyses_used: number
@@ -16,6 +17,10 @@ export interface UsageStats {
   rewrites_remaining: number
   ai_analyses_remaining: number
   date: string
+  // Lifetime totals
+  corrections_total: number
+  rewrites_total: number
+  ai_analyses_total: number
 }
 
 interface UsageHistoryEntry {

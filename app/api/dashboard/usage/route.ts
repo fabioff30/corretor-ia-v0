@@ -33,22 +33,46 @@ export async function GET() {
 
     const planType = profile.plan_type === "admin" ? "pro" : profile.plan_type
 
-    const [{ data: limits, error: limitsError }, { data: usageData, error: usageError }] =
-      await Promise.all([
-        supabase
-          .from("plan_limits_config")
-          .select(
-            "plan_type, max_characters, corrections_per_day, rewrites_per_day, ai_analyses_per_day, show_ads, updated_at",
-          )
-          .eq("plan_type", planType)
-          .maybeSingle(),
-        supabase
-          .from("usage_limits")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("date", todayRange.start.slice(0, 10))
-          .maybeSingle(),
-      ])
+    // Fetch daily usage, plan limits, and lifetime totals in parallel
+    const [
+      { data: limits, error: limitsError },
+      { data: usageData, error: usageError },
+      { count: correctionsTotal, error: correctionsError },
+      { count: rewritesTotal, error: rewritesError },
+      { count: aiAnalysesTotal, error: aiAnalysesError },
+    ] = await Promise.all([
+      supabase
+        .from("plan_limits_config")
+        .select(
+          "plan_type, max_characters, corrections_per_day, rewrites_per_day, ai_analyses_per_day, show_ads, updated_at",
+        )
+        .eq("plan_type", planType)
+        .maybeSingle(),
+      supabase
+        .from("usage_limits")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", todayRange.start.slice(0, 10))
+        .maybeSingle(),
+      // Get total corrections count (lifetime)
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "correct"),
+      // Get total rewrites count (lifetime)
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "rewrite"),
+      // Get total AI analyses count (lifetime)
+      supabase
+        .from("user_corrections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("operation_type", "ai_analysis"),
+    ])
 
     if (limitsError) {
       console.error("Erro ao buscar limites do plano:", limitsError)
@@ -56,6 +80,17 @@ export async function GET() {
         { error: "Não foi possível carregar as configurações do plano" },
         { status: 500 },
       )
+    }
+
+    // Log errors for total counts but don't fail the request
+    if (correctionsError) {
+      console.error("Erro ao buscar total de correções:", correctionsError)
+    }
+    if (rewritesError) {
+      console.error("Erro ao buscar total de reescritas:", rewritesError)
+    }
+    if (aiAnalysesError) {
+      console.error("Erro ao buscar total de análises de IA:", aiAnalysesError)
     }
 
     let usage = usageData
@@ -139,6 +174,7 @@ export async function GET() {
     const isPremium = profile.plan_type === "pro" || profile.plan_type === "admin"
 
     const stats = {
+      // Daily usage
       corrections_used: usage.corrections_used,
       rewrites_used: usage.rewrites_used,
       ai_analyses_used: usage.ai_analyses_used,
@@ -152,6 +188,10 @@ export async function GET() {
         ? -1
         : Math.max(0, effectiveLimits.ai_analyses_per_day - usage.ai_analyses_used),
       date: usage.date,
+      // Lifetime totals
+      corrections_total: correctionsTotal ?? 0,
+      rewrites_total: rewritesTotal ?? 0,
+      ai_analyses_total: aiAnalysesTotal ?? 0,
     }
 
     // Build 7-day history for reference (optional future use)

@@ -54,8 +54,8 @@ export default function DashboardPage() {
                 value={stats?.corrections_used || 0}
                 description={
                   isPremium
-                    ? 'Uso ilimitado'
-                    : `${stats?.corrections_remaining || 0} restantes`
+                    ? `${stats?.corrections_total || 0} no total`
+                    : `${stats?.corrections_remaining || 0} restantes · ${stats?.corrections_total || 0} no total`
                 }
                 icon={FileText}
                 progress={
@@ -74,8 +74,8 @@ export default function DashboardPage() {
                 value={stats?.rewrites_used || 0}
                 description={
                   isPremium
-                    ? 'Uso ilimitado'
-                    : `${stats?.rewrites_remaining || 0} restantes`
+                    ? `${stats?.rewrites_total || 0} no total`
+                    : `${stats?.rewrites_remaining || 0} restantes · ${stats?.rewrites_total || 0} no total`
                 }
                 icon={Wand2}
                 progress={
@@ -94,8 +94,8 @@ export default function DashboardPage() {
                 value={stats?.ai_analyses_used || 0}
                 description={
                   isPremium
-                    ? 'Uso ilimitado'
-                    : `${stats?.ai_analyses_remaining || 0} restantes`
+                    ? `${stats?.ai_analyses_total || 0} no total`
+                    : `${stats?.ai_analyses_remaining || 0} restantes · ${stats?.ai_analyses_total || 0} no total`
                 }
                 icon={Sparkles}
                 progress={
