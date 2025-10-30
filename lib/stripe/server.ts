@@ -83,7 +83,7 @@ export async function createCheckoutSession(
 
   // Create checkout session
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
-    customer: customerId,
+    customer: customerId, // Customer already has email associated, so don't pass customer_email
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [
@@ -94,7 +94,6 @@ export async function createCheckoutSession(
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    customer_email: email, // Ensure email is pre-filled
     metadata,
     subscription_data: {
       metadata,

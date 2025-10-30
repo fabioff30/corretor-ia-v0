@@ -32,6 +32,7 @@ interface RegisterForPixDialogProps {
   onSuccess: () => void
   planType: 'monthly' | 'annual'
   planPrice: number
+  paymentMethod?: 'pix' | 'card' // Optional, defaults to 'pix'
 }
 
 export function RegisterForPixDialog({
@@ -40,6 +41,7 @@ export function RegisterForPixDialog({
   onSuccess,
   planType,
   planPrice,
+  paymentMethod = 'pix',
 }: RegisterForPixDialogProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -59,13 +61,17 @@ export function RegisterForPixDialog({
     currency: 'BRL',
   })
 
+  const paymentMethodText = paymentMethod === 'pix' ? 'PIX' : 'Cartão'
+  const paymentActionText = paymentMethod === 'pix' ? 'gerar o PIX' : 'prosseguir com o pagamento'
+
   const handleGoogleSignIn = async () => {
     setError(null)
     setIsGoogleLoading(true)
 
     try {
       // Save pending plan to localStorage before redirect
-      localStorage.setItem('pendingPixPlan', planType)
+      const storageKey = paymentMethod === 'pix' ? 'pendingPixPlan' : 'pendingCardPlan'
+      localStorage.setItem(storageKey, planType)
 
       const { error: googleError } = await signInWithGoogle()
 
@@ -126,17 +132,9 @@ export function RegisterForPixDialog({
         return
       }
 
-      toast({
-        title: '✅ Conta criada com sucesso!',
-        description: 'Gerando seu QR Code PIX...',
-      })
-
-      // Small delay to ensure auth state is updated
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Close dialog and trigger PIX generation
+      // Don't show toast here - parent will handle it
+      // Just trigger the success callback
       onSuccess()
-      onClose()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao criar conta'
       setError(message)
@@ -156,7 +154,7 @@ export function RegisterForPixDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl">Criar Conta para Continuar</DialogTitle>
           <DialogDescription className="text-base">
-            Para gerar o PIX do plano <strong>{planName}</strong> ({formattedPrice}), precisamos que você crie sua
+            Para {paymentActionText} do plano <strong>{planName}</strong> ({formattedPrice}), precisamos que você crie sua
             conta primeiro. Assim garantimos que você possa ativar o plano após o pagamento.
           </DialogDescription>
         </DialogHeader>
@@ -353,7 +351,7 @@ export function RegisterForPixDialog({
               ) : (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Criar e Gerar PIX
+                  Criar e Continuar
                 </>
               )}
             </Button>

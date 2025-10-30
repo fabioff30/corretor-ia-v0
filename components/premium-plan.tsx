@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug, QrCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,6 @@ import { useSubscription } from "@/hooks/use-subscription"
 import { usePixPayment } from "@/hooks/use-pix-payment"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
 import { RegisterForPixDialog } from "@/components/premium/register-for-pix-dialog"
 
@@ -29,11 +26,12 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const [isLoading, setIsLoading] = useState<PlanType | null>(null)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [pixLoadingPlan, setPixLoadingPlan] = useState<PlanType | null>(null)
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false)
-  const [guestEmail, setGuestEmail] = useState('')
   const [pendingPlanType, setPendingPlanType] = useState<PlanType | null>(null)
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'card' | null>(null)
+  const [justRegistered, setJustRegistered] = useState(false)
+  const pixGeneratedRef = useRef(false) // Prevent multiple PIX generations
+  const stripeCheckoutRef = useRef(false) // Prevent multiple Stripe checkouts
   const router = useRouter()
   const { user, profile } = useUser()
   const { createSubscription, isActive, isPro } = useSubscription()
@@ -71,17 +69,21 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       return
     }
 
-    // If not logged in, ask for email first
+    // If not logged in, open register dialog to create account BEFORE payment (same as PIX)
     if (!user) {
       setPendingPlanType(planType)
       setPendingPaymentMethod('card')
-      setIsEmailDialogOpen(true)
+      setIsRegisterDialogOpen(true)
+      // Persist intent in localStorage so after registration, we can auto-create checkout
+      localStorage.setItem('pendingCardPlan', planType)
       return
     }
 
     // Logged in user - create subscription directly
     try {
       setIsLoading(planType)
+
+      console.log('[Stripe] Creating checkout for authenticated user:', planType)
 
       const amount = planType === 'monthly' ? 29.90 : 299.00
       const analyticsPayload = {
@@ -132,11 +134,13 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         ],
       })
 
+      console.log('[Stripe] Redirecting to checkout:', result.checkoutUrl)
+
       // Redirect to Stripe checkout
       window.location.href = result.checkoutUrl
 
     } catch (error) {
-      console.error('Error subscribing:', error)
+      console.error('[Stripe] Error subscribing:', error)
 
       // Check if it's the "already has subscription" error
       const errorMessage = error instanceof Error ? error.message : "Tente novamente mais tarde."
@@ -174,7 +178,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     if (!user) {
       setPendingPlanType(planType)
       setIsRegisterDialogOpen(true)
-      // Persist intent in localStorage so after registration+reload, we can auto-generate PIX
+      // Persist intent in localStorage so after registration, we can auto-generate PIX
       localStorage.setItem('pendingPixPlan', planType)
       return
     }
@@ -182,6 +186,8 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     // Logged in user - create PIX payment directly
     try {
       setPixLoadingPlan(planType)
+
+      console.log('[Premium] Generating PIX payment for', planType, 'plan')
 
       // Create PIX payment with coupon if available
       const normalizedUserEmail = (profile?.email ?? user.email ?? '').trim()
@@ -194,10 +200,19 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       )
 
       if (payment) {
+        console.log('[Premium] PIX payment created successfully, opening modal')
+        // Ensure modal opens
         setIsPixModalOpen(true)
+      } else {
+        console.error('[Premium] PIX payment creation returned null')
+        toast({
+          title: "Erro ao gerar PIX",
+          description: "Não foi possível gerar o pagamento PIX. Tente novamente.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      console.error('Error creating PIX payment:', error)
+      console.error('[Premium] Error creating PIX payment:', error)
       toast({
         title: "Erro ao gerar PIX",
         description: "Não foi possível gerar o pagamento PIX. Tente novamente.",
@@ -208,108 +223,76 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     }
   }
 
-  // Called after successful registration - reload page to initialize auth properly
-  // The useEffect below will detect pending plan and auto-generate PIX
+  // Called after successful registration - handle payment based on pending method
   const handlePixAfterRegister = async () => {
-    // Wait for registration to finalize
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('[Premium] Registration successful, checking payment method...')
 
-    // Reload page - the useEffect will handle PIX generation
-    window.location.reload()
+    // Set flag to trigger payment flow when user state updates
+    setJustRegistered(true)
+
+    // Close the register dialog
+    setIsRegisterDialogOpen(false)
+
+    // Check which payment method is pending
+    const pendingPixPlan = localStorage.getItem('pendingPixPlan')
+    const pendingCardPlan = localStorage.getItem('pendingCardPlan')
+
+    if (pendingPixPlan) {
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Gerando seu QR Code PIX...",
+      })
+    } else if (pendingCardPlan) {
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Redirecionando para pagamento...",
+      })
+    }
   }
 
-  // Auto-generate PIX after registration + reload
+  // Auto-trigger payment flow after registration when user becomes available
   useEffect(() => {
-    if (!user || pixLoadingPlan !== null) return
+    // Only trigger if we just registered and now have a user
+    if (!justRegistered || !user) return
 
-    const pendingPlan = localStorage.getItem('pendingPixPlan') as PlanType | null
-    if (pendingPlan) {
-      // Clear from storage
+    const pendingPixPlan = localStorage.getItem('pendingPixPlan') as PlanType | null
+    const pendingCardPlan = localStorage.getItem('pendingCardPlan') as PlanType | null
+
+    // Handle PIX payment
+    if (pendingPixPlan && !pixGeneratedRef.current) {
+      console.log('[Premium] User authenticated after registration, generating PIX for plan:', pendingPixPlan)
+
+      // Mark as generated to prevent duplicates
+      pixGeneratedRef.current = true
+
+      // Clear flags and storage
       localStorage.removeItem('pendingPixPlan')
+      setJustRegistered(false)
 
-      // Auto-trigger PIX generation with the pending plan
-      console.log('[Premium] Auto-generating PIX for plan:', pendingPlan)
-      handlePixPayment(pendingPlan)
+      // Small delay to ensure auth state is fully updated
+      setTimeout(() => {
+        handlePixPayment(pendingPixPlan)
+      }, 500)
     }
-  }, [user, pixLoadingPlan])
+    // Handle Stripe card payment
+    else if (pendingCardPlan && !stripeCheckoutRef.current) {
+      console.log('[Premium] User authenticated after registration, creating Stripe checkout for plan:', pendingCardPlan)
 
-  const handleGuestPayment = async () => {
-    if (!guestEmail || !pendingPlanType || !pendingPaymentMethod) {
-      toast({
-        title: "Email necessário",
-        description: "Por favor, insira seu email para continuar.",
-        variant: "destructive",
-      })
-      return
+      // Mark as processed to prevent duplicates
+      stripeCheckoutRef.current = true
+
+      // Clear flags and storage
+      localStorage.removeItem('pendingCardPlan')
+      setJustRegistered(false)
+
+      // Small delay to ensure auth state is fully updated
+      setTimeout(() => {
+        handleSubscribe(pendingCardPlan)
+      }, 500)
     }
+  }, [user, justRegistered])
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const trimmedGuestEmail = guestEmail.trim()
-
-    if (!emailRegex.test(trimmedGuestEmail)) {
-      toast({
-        title: "Email inválido",
-        description: "Por favor, insira um email válido.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setIsEmailDialogOpen(false)
-
-      if (pendingPaymentMethod === 'pix') {
-        // Guest PIX payment
-        setPixLoadingPlan(pendingPlanType)
-
-        const payment = await createPixPayment(
-          pendingPlanType,
-          undefined, // no userId
-          undefined, // no userEmail
-          trimmedGuestEmail, // guestEmail
-          couponCode // coupon code if available
-        )
-
-        if (payment) {
-          setIsPixModalOpen(true)
-          toast({
-            title: "PIX gerado!",
-            description: "Após o pagamento, faça login com este email para ativar o premium.",
-          })
-        }
-        setPixLoadingPlan(null)
-      } else {
-        // Guest card payment (Stripe)
-        setIsLoading(pendingPlanType)
-
-        const result = await createSubscription(pendingPlanType, guestEmail, couponCode)
-
-        if (result) {
-          toast({
-            title: "Redirecionando...",
-            description: "Após o pagamento, faça login com este email para ativar o premium.",
-          })
-          // Redirect to Stripe checkout
-          window.location.href = result.checkoutUrl
-        }
-        setIsLoading(null)
-      }
-    } catch (error) {
-      console.error('Error creating guest payment:', error)
-      toast({
-        title: "Erro ao processar pagamento",
-        description: "Não foi possível processar o pagamento. Tente novamente.",
-        variant: "destructive",
-      })
-      setPixLoadingPlan(null)
-      setIsLoading(null)
-    } finally {
-      setGuestEmail('')
-      setPendingPlanType(null)
-      setPendingPaymentMethod(null)
-    }
-  }
+  // Removed guest payment flow - users must create account first (both PIX and Stripe)
 
   const handlePixSuccess = () => {
     setIsPixModalOpen(false)
@@ -675,74 +658,14 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         </Tabs>
       </div>
 
-      {/* Email Dialog for Guest Card Payment (Stripe) */}
-      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Informe seu email para continuar</DialogTitle>
-            <DialogDescription>
-              Após o pagamento, você poderá criar sua conta com este email para ativar o plano premium.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="guest-email">Email</Label>
-              <Input
-                id="guest-email"
-                type="email"
-                placeholder="seu@email.com"
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleGuestPayment()
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Após o pagamento, crie sua conta ou faça login com este email para ativar o premium.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEmailDialogOpen(false)
-                setGuestEmail('')
-                setPendingPlanType(null)
-                setPendingPaymentMethod(null)
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleGuestPayment}
-              disabled={!guestEmail || pixLoadingPlan !== null || isLoading !== null}
-            >
-              {pixLoadingPlan !== null || isLoading !== null ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {pendingPaymentMethod === 'pix' ? 'Gerando PIX...' : 'Processando...'}
-                </>
-              ) : (
-                <>
-                  {pendingPaymentMethod === 'pix' ? <QrCode className="mr-2 h-4 w-4" /> : <Zap className="mr-2 h-4 w-4" />}
-                  Continuar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Register Dialog for PIX Payment (Forces account creation) */}
+      {/* Register Dialog for Payment (Forces account creation for both PIX and Card) */}
       <RegisterForPixDialog
         isOpen={isRegisterDialogOpen}
         onClose={() => setIsRegisterDialogOpen(false)}
         onSuccess={handlePixAfterRegister}
         planType={pendingPlanType || 'monthly'}
         planPrice={pendingPlanType === 'monthly' ? monthlyPriceWithDiscount : annualPriceWithDiscount}
+        paymentMethod={pendingPaymentMethod || 'pix'}
       />
 
       {/* PIX Payment Modal */}
