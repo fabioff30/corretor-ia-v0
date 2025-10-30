@@ -133,7 +133,11 @@ export function AIDetectionResult({
               <span className="text-sm font-medium">Probabilidade</span>
               <span className="text-2xl font-bold">{probabilityPercent}%</span>
             </div>
-            <Progress value={probabilityPercent} className="h-3" />
+            <Progress
+              value={probabilityPercent}
+              className="h-3 bg-gray-100 dark:bg-gray-800"
+              indicatorClassName="bg-purple-600"
+            />
           </div>
 
           {/* Explanation */}
