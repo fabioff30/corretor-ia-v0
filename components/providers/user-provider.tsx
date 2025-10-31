@@ -158,13 +158,18 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
           throw userError
         }
 
-        setUser(currentUser)
-
-        if (currentUser) {
-          await fetchProfile(currentUser.id)
-        } else {
+        // Quando não há sessão, garantir que estado reflete usuário anônimo
+        if (!currentUser) {
+          setUser(null)
           setProfile(null)
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user-plan-type')
+          }
+          return
         }
+
+        setUser(currentUser)
+        await fetchProfile(currentUser.id)
       } catch (err) {
         if (err instanceof Error && err.message !== "Auth session missing!") {
           console.error("Erro ao buscar usuário:", err)
@@ -207,7 +212,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         await fetchProfile(nextUser.id)
       } else {
         setProfile(null)
-        // Limpar plan-type ao fazer logout
+        // Limpar plan-type ao fazer logout ou sessão ausente
         if (typeof window !== 'undefined') {
           localStorage.removeItem('user-plan-type')
         }
