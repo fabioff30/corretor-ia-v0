@@ -164,6 +164,12 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
           setProfile(null)
           if (typeof window !== 'undefined') {
             localStorage.removeItem('user-plan-type')
+
+            // Se não houver cookies sb- conhecidos, encerrar carregamento imediatamente
+            const hasSupabaseCookies = document.cookie.split(';').some(chunk => chunk.trim().startsWith('sb-'))
+            if (!hasSupabaseCookies) {
+              setLoading(false)
+            }
           }
           return
         }
@@ -379,12 +385,17 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
         const name = (eqIdx > -1 ? rawCookie.slice(0, eqIdx) : rawCookie).trim()
 
         if (name.startsWith('sb-')) {
-          const domains = ['', window.location.hostname.replace(/^www\./, ''), window.location.hostname]
+          const hostname = window.location.hostname
+          const baseDomain = hostname.replace(/^www\./, '')
+          const domains = Array.from(new Set(['', hostname, baseDomain, `.${baseDomain}`].filter(Boolean)))
           const paths = ['/', '']
+          const secureAttr = window.location.protocol === 'https:' ? 'Secure; ' : ''
 
           domains.forEach(domain => {
             paths.forEach(path => {
-              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path || '/' };${domain ? `domain=${domain};` : ''}secure;SameSite=Lax`
+              const domainAttr = domain ? `Domain=${domain.startsWith('.') ? domain : `.${domain}`}; ` : ''
+              const pathAttr = `Path=${path || '/' }; `
+              document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ${pathAttr}${domainAttr}${secureAttr}SameSite=Lax`
             })
           })
         }
@@ -416,6 +427,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       console.warn('[UserProvider] Client signOut error (ignoring):', error)
     }
 
+    setLoading(false)
     setError(null)
     return { error: null }
   }, []) // supabase is singleton
