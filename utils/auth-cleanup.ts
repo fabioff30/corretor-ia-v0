@@ -43,18 +43,39 @@ export async function forceAuthCleanup(): Promise<void> {
 
       // 3. Limpar cookies via JavaScript (sem disparar eventos Supabase)
       const cookies = document.cookie.split(';')
+      const hostname = window.location.hostname
+      const baseDomain = hostname.replace(/^www\./, '')
+      const secureAttr = window.location.protocol === 'https:' ? 'Secure; ' : ''
+
+      const domainVariants = Array.from(new Set([
+        hostname,
+        baseDomain,
+      ].filter(Boolean)))
+
+      const domainVariantsWithDot = domainVariants
+        .map(domain => (domain.startsWith('.') ? domain : `.${domain}`))
+        .filter(Boolean)
+
+      const allDomainVariants = Array.from(new Set([...domainVariants, ...domainVariantsWithDot]))
+
+      const pathVariants = ['/', '']
+
       cookies.forEach(cookie => {
         const eqPos = cookie.indexOf('=')
         const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
 
         if (name.startsWith('sb-')) {
-          // Limpar em múltiplos paths e domínios
-          const domains = ['', 'localhost', window.location.hostname]
-          const paths = ['/', '']
+          // Primeiro, remover sem Domain (host atual)
+          pathVariants.forEach(path => {
+            const pathAttr = `Path=${path || '/'}; `
+            document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ${pathAttr}${secureAttr}SameSite=Lax`
+          })
 
-          domains.forEach(domain => {
-            paths.forEach(path => {
-              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=${path};${domain ? `domain=${domain};` : ''}`
+          // Depois, remover usando diferentes variantes de domínio
+          allDomainVariants.forEach(domain => {
+            pathVariants.forEach(path => {
+              const pathAttr = `Path=${path || '/'}; `
+              document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ${pathAttr}Domain=${domain}; ${secureAttr}SameSite=Lax`
             })
           })
         }

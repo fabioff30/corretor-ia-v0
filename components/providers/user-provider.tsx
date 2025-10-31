@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/supabase"
 import { supabase } from "@/lib/supabase/client"
-import { checkAndCleanup, monitorAuthErrors, RefreshLoopDetector } from "@/utils/auth-cleanup"
+import { checkAndCleanup, monitorAuthErrors, RefreshLoopDetector, forceAuthCleanup } from "@/utils/auth-cleanup"
 
 // Monitor de refresh loops - apenas registra, não tenta corrigir
 // (A correção é feita pelo RefreshLoopDetector em auth-cleanup.ts)
@@ -375,31 +375,10 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
     setUser(null)
     setProfile(null)
 
-    // Limpar plan-type do localStorage ao fazer logout
+    // Limpar dados locais imediatamente para refletir estado de logout
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user-plan-type')
-
-      // Garantir remoção dos cookies sb-* ao finalizar a sessão pelo cliente
-      document.cookie.split(';').forEach(rawCookie => {
-        const eqIdx = rawCookie.indexOf('=')
-        const name = (eqIdx > -1 ? rawCookie.slice(0, eqIdx) : rawCookie).trim()
-
-        if (name.startsWith('sb-')) {
-          const hostname = window.location.hostname
-          const baseDomain = hostname.replace(/^www\./, '')
-          const domains = Array.from(new Set(['', hostname, baseDomain, `.${baseDomain}`].filter(Boolean)))
-          const paths = ['/', '']
-          const secureAttr = window.location.protocol === 'https:' ? 'Secure; ' : ''
-
-          domains.forEach(domain => {
-            paths.forEach(path => {
-              const domainAttr = domain ? `Domain=${domain.startsWith('.') ? domain : `.${domain}`}; ` : ''
-              const pathAttr = `Path=${path || '/' }; `
-              document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ${pathAttr}${domainAttr}${secureAttr}SameSite=Lax`
-            })
-          })
-        }
-      })
+      localStorage.removeItem('auth_cleanup_done')
     }
 
     // Call server-side logout FIRST to clear cookies
@@ -421,10 +400,15 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
     // Clear client-side session (local only to avoid triggering server calls)
     try {
-      await supabase.auth.signOut({ scope: 'local' })
+      await supabase.auth.signOut({ scope: 'global' })
       console.log('[UserProvider] Client-side logout completed')
     } catch (error) {
       console.warn('[UserProvider] Client signOut error (ignoring):', error)
+    }
+
+    // Remover artefatos remanescentes (cookies/sessionStorage) após signOut
+    if (typeof window !== 'undefined') {
+      await forceAuthCleanup()
     }
 
     setLoading(false)
