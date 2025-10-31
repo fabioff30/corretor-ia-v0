@@ -13,7 +13,7 @@ import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
 function getSafeRedirectUrl(next: string | null, origin: string): URL {
-  const fallback = new URL("/premium", origin) // Redirect to premium page to trigger PIX generation
+  const fallback = new URL("/dashboard", origin)
 
   if (!next) {
     return fallback
