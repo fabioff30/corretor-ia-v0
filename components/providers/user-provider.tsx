@@ -372,6 +372,23 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
     // Limpar plan-type do localStorage ao fazer logout
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user-plan-type')
+
+      // Garantir remoção dos cookies sb-* ao finalizar a sessão pelo cliente
+      document.cookie.split(';').forEach(rawCookie => {
+        const eqIdx = rawCookie.indexOf('=')
+        const name = (eqIdx > -1 ? rawCookie.slice(0, eqIdx) : rawCookie).trim()
+
+        if (name.startsWith('sb-')) {
+          const domains = ['', window.location.hostname.replace(/^www\./, ''), window.location.hostname]
+          const paths = ['/', '']
+
+          domains.forEach(domain => {
+            paths.forEach(path => {
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path || '/' };${domain ? `domain=${domain};` : ''}secure;SameSite=Lax`
+            })
+          })
+        }
+      })
     }
 
     // Call server-side logout FIRST to clear cookies
