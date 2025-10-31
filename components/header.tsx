@@ -228,11 +228,6 @@ export function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : userLoading ? (
-              <Button variant="outline" disabled>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Carregando
-              </Button>
             ) : (
               <Button asChild>
                 <Link href="/login">
@@ -327,10 +322,6 @@ export function Header() {
                     Sair
                   </Button>
                 </>
-              ) : userLoading ? (
-                <div className="flex w-full justify-center py-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
               ) : (
                 <Button asChild className="w-full">
                   <Link href="/login" onClick={() => setIsMenuOpen(false)}>
