@@ -222,7 +222,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       }
     } else {
       // Se o usuário tentar colar um texto maior que o limite, cortar para o tamanho máximo
-      setOriginalText(newText.slice(0, currentCharLimit))
+      setOriginalText(newText.slice(0, characterLimit || FREE_CHARACTER_LIMIT))
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
@@ -368,7 +368,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     if (!isUnlimited && characterLimit !== null && originalText.length > characterLimit) {
       toast({
         title: "Texto muito longo",
-        description: `Por favor, reduza o texto para no máximo ${currentCharLimit} caracteres.`,
+        description: `Por favor, reduza o texto para no máximo ${characterLimit} caracteres.`,
         variant: "destructive",
       })
       return

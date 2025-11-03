@@ -46,13 +46,8 @@ export async function validateAndSanitizeInput(
     sanitizedBody.text = sanitizeText(sanitizedBody.text)
   }
 
-  const mockRequest = new Request(request.url, {
-    method: request.method,
-    headers: request.headers,
-    body: JSON.stringify(sanitizedBody),
-  })
-
-  const validatedInput = await validateInput(mockRequest)
+  // Pass sanitizedBody directly to avoid double JSON parsing
+  const validatedInput = await validateInput(request, sanitizedBody)
   if (validatedInput instanceof NextResponse) {
     logRequest(requestId, {
       status: 400,

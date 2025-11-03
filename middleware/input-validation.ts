@@ -69,12 +69,12 @@ const SECURITY_PATTERNS = [
   /delete\s+from/i,
   /update\s+set/i,
   
-  // Command injection
-  /\|\s*\w+/,
-  /;\s*\w+/,
-  /&&\s*\w+/,
-  /\$\(/,
-  /`[^`]*`/,
+  // Command injection (more specific patterns to avoid false positives)
+  /;\s*(rm|ls|cat|chmod|chown|sudo|bash|sh|curl|wget|nc|netcat)\b/i,
+  /\|\s*(rm|ls|cat|chmod|chown|sudo|bash|sh|curl|wget|nc|netcat)\b/i,
+  /&&\s*(rm|ls|cat|chmod|chown|sudo|bash|sh|curl|wget|nc|netcat)\b/i,
+  /\$\([^\)]*\)/,
+  /`[^`]*(rm|ls|cat|chmod|chown|sudo|bash|sh|curl|wget|nc|netcat)[^`]*`/i,
   
   // Path traversal
   /\.\.\//,
@@ -222,14 +222,17 @@ const contactFormSchema = z.object({
 
 /**
  * Enhanced input validation with security logging
+ * @param req - The request object
+ * @param parsedBody - Optional pre-parsed body to avoid double parsing
  */
-export async function validateInput(req: NextRequest | Request) {
+export async function validateInput(req: NextRequest | Request, parsedBody?: any) {
   const requestId = crypto.randomUUID()
   const ip = (req as any).ip || (req as Request).headers.get("x-forwarded-for") || "unknown"
   const userAgent = (req as Request).headers.get("user-agent") || "unknown"
-  
+
   try {
-    const body = await (req as Request).json()
+    // Use pre-parsed body if provided, otherwise parse from request
+    const body = parsedBody ?? await (req as Request).json()
     
     // Determine which schema to use based on the request
     let schema: any = correctionRequestSchema
