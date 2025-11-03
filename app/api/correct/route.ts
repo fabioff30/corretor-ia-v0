@@ -13,6 +13,7 @@ import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection, canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker"
+import { safeJsonParse, extractValidJson } from "@/utils/safe-json-fetch"
 
 // Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
 export const maxDuration = 300
@@ -170,7 +171,21 @@ export async function POST(request: NextRequest) {
         throw new Error("Empty response from webhook")
       }
 
-      data = JSON.parse(responseText)
+      // Use safe JSON parsing with recovery for malformed JSON
+      let parseResult = safeJsonParse<any>(responseText)
+
+      // If parsing fails, attempt to extract valid JSON
+      if (!parseResult.success) {
+        console.info("API: Attempting to recover from malformed JSON...", requestId)
+        parseResult = extractValidJson<any>(responseText)
+      }
+
+      // If still failed, throw error to trigger fallback
+      if (!parseResult.success) {
+        throw new Error(parseResult.error || "Failed to parse JSON response")
+      }
+
+      data = parseResult.data
     } catch (parseError) {
       console.warn("API: Webhook returned empty or malformed response, using fallback", requestId)
 
