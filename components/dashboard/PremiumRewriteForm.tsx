@@ -32,6 +32,7 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { PremiumLoading } from "@/components/ui/premium-loading"
+import { PremiumLoading as PremiumShimmer } from "@/components/premium-loading"
 import { StarRating } from "@/components/star-rating"
 import { API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { Badge } from "@/components/ui/badge"
@@ -414,6 +415,14 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
           )}
         </div>
       </form>
+
+      {isLoading && (
+        <Card>
+          <CardContent className="pt-6">
+            <PremiumShimmer lines={4} />
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert variant="destructive">
