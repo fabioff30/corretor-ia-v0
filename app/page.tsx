@@ -5,7 +5,7 @@ import { HowToUseSection } from "@/components/how-to-use-section"
 import { UseCasesSection } from "@/components/use-cases-section"
 import { FAQSection } from "@/components/faq-section"
 import { CTASection } from "@/components/cta-section"
-import { SupportersSection } from "@/components/supporters-section"
+import { SubscriptionBox } from "@/components/subscription-box"
 import Link from "next/link"
 import Script from "next/script"
 
@@ -57,8 +57,8 @@ export default function Home() {
         }}
       />
       <HeroSection />
-      <SupportersSection />
       <BenefitsSection />
+      <SubscriptionBox />
       <HowToUseSection />
       <UseCasesSection />
       <section className="py-16 bg-muted/30">
