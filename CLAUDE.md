@@ -220,7 +220,15 @@ See `SUPABASE_SETUP.md` for complete database setup instructions.
   - Webhook validation with HMAC-SHA256
   - Full payment transaction history
   - See `MERCADOPAGO_SETUP.md` for setup guide
-- **Analytics**: Google Tag Manager, Meta Pixel, Hotjar
+- **Analytics**:
+  - **Google Analytics 4**: Official `@next/third-parties/google` integration
+    - Cookie consent-aware loading via `GoogleAnalyticsWrapper`
+    - Custom event tracking with `useGoogleAnalytics` hook
+    - Credentials stored securely in Vercel Blob Storage
+    - See `GOOGLE_ANALYTICS_SETUP.md` for complete setup guide
+  - **Google Tag Manager**: Enhanced event tracking and tag management
+  - **Meta Pixel**: Facebook conversion tracking with consent management
+  - **Hotjar**: User behavior analytics and heatmaps
 - **Monetization**: Google AdSense with consent management, CleverWebServer script integration
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
 - **Email**: React Email components for notifications
@@ -309,6 +317,13 @@ UPSTASH_REDIS_REST_TOKEN=your-redis-token
 # Alternative Payment (Stripe)
 STRIPE_SECRET_KEY=sk_your_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_your_key
+
+# Google Analytics 4
+NEXT_PUBLIC_GOOGLE_ANALYTICS=G-XXXXXXXXXX
+GOOGLE_CLOUD_CREDENTIALS_BLOB_URL=https://blob.vercel-storage.com/...
+
+# Vercel Blob Storage
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_XXXXX
 ```
 
 ## 🔧 Common Issues & Solutions
@@ -353,6 +368,7 @@ headers: {
 - **MERCADOPAGO_SETUP.md** - Mercado Pago integration guide for subscriptions
 - **PIX_SETUP.md** - PIX payment setup and troubleshooting
 - **STRIPE_PRODUCTION_SETUP.md** - Alternative payment provider setup
+- **GOOGLE_ANALYTICS_SETUP.md** - Complete Google Analytics 4 integration guide with Vercel Blob credentials storage
 - **AGENTS.md** - AI agent integration documentation
 - **jest.config.js** - Jest configuration with Next.js integration
 - **jest.setup.ts** - Test environment setup with TextEncoder/TextDecoder polyfills and crypto mocks

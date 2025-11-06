@@ -12,7 +12,9 @@
   "dependencies": {
     "@ai-sdk/openai": "latest",
     "@emotion/is-prop-valid": "latest",
+    "@google-analytics/data": "^5.2.1",
     "@hookform/resolvers": "^3.10.0",
+    "@next/third-parties": "^16.0.1",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -47,6 +49,7 @@
     "@tailwindcss/typography": "latest",
     "@types/jsdom": "^21.1.7",
     "@upstash/redis": "latest",
+    "@vercel/blob": "^2.0.0",
     "ai": "latest",
     "autoprefixer": "^10.4.21",
     "canvas": "latest",

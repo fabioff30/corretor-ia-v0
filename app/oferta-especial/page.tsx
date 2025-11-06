@@ -3,6 +3,7 @@ import { PremiumPlan } from "@/components/premium-plan"
 import { BackgroundGradient } from "@/components/background-gradient"
 import { SocialProofStats } from "@/components/social-proof-stats"
 import { TestimonialsReal } from "@/components/testimonials-real"
+import { RotatingTestimonial } from "@/components/rotating-testimonial"
 import { Sparkles, Clock, Zap } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -49,9 +50,14 @@ export default function OfertaEspecialPage() {
             </div>
           </div>
 
-          {/* Social Proof Statistics */}
-          <div className="mb-8">
+          {/* Social Proof Statistics - Desktop Only */}
+          <div className="mb-8 hidden md:block">
             <SocialProofStats />
+          </div>
+
+          {/* Rotating Testimonial */}
+          <div className="mb-8">
+            <RotatingTestimonial />
           </div>
 
           {/* Componente de Planos com Cupom Aplicado */}

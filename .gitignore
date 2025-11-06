@@ -26,3 +26,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .playwright-mcp/
+
+# Google Cloud credentials
+utils/corretor-de-texto-*.json
+*-service-account.json

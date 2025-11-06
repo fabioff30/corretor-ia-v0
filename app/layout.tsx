@@ -16,6 +16,7 @@ import { GoogleOneTap } from "@/components/google-one-tap"
 import { CleverWebServerLoader } from "@/components/clever-webserver-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
+import { GoogleAnalyticsWrapper } from "@/components/google-analytics-wrapper"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -114,26 +115,9 @@ export default async function RootLayout({
         `}
         </Script>
 
-        {/* Google Analytics 4 - gtag.js */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-ZR7B5DMLER"
-          strategy="afterInteractive"
-        />
-
-        {/* Google Analytics 4 - Configuration */}
-        <Script id="ga4-config" strategy="afterInteractive">
-          {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-
-          // Inicializar o GA4
-          gtag('config', 'G-ZR7B5DMLER', {
-            page_path: window.location.pathname,
-            send_page_view: true
-          });
-        `}
-        </Script>
+        {/* Google Analytics 4 - Carregado via @next/third-parties */}
+        {/* A implementação foi movida para o componente GoogleAnalyticsWrapper */}
+        {/* que respeita o consentimento de cookies do usuário */}
 
         {/* Google Tag Manager - Script */}
         <Script id="google-tag-manager" strategy="afterInteractive">
@@ -215,6 +199,7 @@ export default async function RootLayout({
             <JulinhoAssistant />
             <GoogleOneTap />
             <CleverWebServerLoader />
+            <GoogleAnalyticsWrapper />
           </ThemeProvider>
         </UserProvider>      </body>
     </html>

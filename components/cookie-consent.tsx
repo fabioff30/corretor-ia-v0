@@ -28,6 +28,9 @@ export function CookieConsent() {
     // Disparar um evento para notificar outras partes da aplicação
     window.dispatchEvent(new Event("storage"))
 
+    // Disparar evento customizado para notificar componentes específicos
+    window.dispatchEvent(new CustomEvent("cookie-consent-changed", { detail: { consent: "accepted" } }))
+
     setShowConsent(false)
 
     // Ativar o Google Tag Manager completamente
@@ -53,6 +56,9 @@ export function CookieConsent() {
 
     // Disparar um evento para notificar outras partes da aplicação
     window.dispatchEvent(new Event("storage"))
+
+    // Disparar evento customizado para notificar componentes específicos
+    window.dispatchEvent(new CustomEvent("cookie-consent-changed", { detail: { consent: "declined" } }))
 
     setShowConsent(false)
 
