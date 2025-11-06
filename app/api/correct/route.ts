@@ -49,11 +49,13 @@ export async function POST(request: NextRequest) {
       isPremium: isPremiumRequest = false,
     } = validatedInput
     const customTone = typeof requestBody?.customTone === "string" ? requestBody.customTone : undefined
+    const useAdvancedAI = typeof requestBody?.useAdvancedAI === "boolean" ? requestBody.useAdvancedAI : false
 
     let isPremium = false
     let premiumContext: AuthContext | null = null
 
-    if (isPremiumRequest) {
+    // If useAdvancedAI is true, treat as premium request
+    if (isPremiumRequest || useAdvancedAI) {
       premiumContext = await getCurrentUserWithProfile()
 
       const premiumUser = premiumContext.user
@@ -131,6 +133,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
     console.log(`API: Selected tone: ${tone}`, requestId)
+    if (useAdvancedAI && isPremium) {
+      console.log(`API: Using Advanced AI (premium models)`, requestId)
+    }
 
     // Call webhook (use premium webhook for premium users)
     const webhookData: Record<string, any> = {

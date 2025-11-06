@@ -32,6 +32,7 @@ import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { useUser } from "@/hooks/use-user"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
+import { AdvancedAIToggle } from "@/components/advanced-ai-toggle"
 import { Badge } from "@/components/ui/badge"
 import { SupabaseConfigNotice } from "@/components/supabase-config-notice"
 import Link from "next/link"
@@ -115,6 +116,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
   const [customTone, setCustomTone] = useState<string>("")
+  const [useAdvancedAI, setUseAdvancedAI] = useState(false)
 
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
@@ -512,8 +514,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       const payload = {
         text: textToSend,
         isMobile: isMobile,
-        ...(operationMode === "correct" 
-          ? { tone: currentTone } 
+        ...(operationMode === "correct"
+          ? { tone: currentTone, useAdvancedAI: useAdvancedAI && isPremium }
           : { style: selectedRewriteStyle }
         ),
       }
@@ -1179,6 +1181,18 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           {operationMode === "correct" && (
             <div className="mb-4">
               <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
+            </div>
+          )}
+
+          {/* Toggle de IA Avançada */}
+          {operationMode === "correct" && (
+            <div className="mb-4">
+              <AdvancedAIToggle
+                isPremium={isPremium}
+                isEnabled={useAdvancedAI}
+                onToggle={setUseAdvancedAI}
+                isLoading={isLoading}
+              />
             </div>
           )}
 
