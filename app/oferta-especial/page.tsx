@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { PremiumPlan } from "@/components/premium-plan"
 import { BackgroundGradient } from "@/components/background-gradient"
 import { SocialProofStats } from "@/components/social-proof-stats"
+import { TestimonialsReal } from "@/components/testimonials-real"
 import { Sparkles, Clock, Zap } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -85,6 +86,11 @@ export default function OfertaEspecialPage() {
                 Acesse todos os seus textos em "Meus textos"
               </p>
             </div>
+          </div>
+
+          {/* Testimonials from Real Users */}
+          <div className="mt-16">
+            <TestimonialsReal />
           </div>
 
           {/* FAQ Específico */}
