@@ -1136,7 +1136,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               className="min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground"
               value={originalText}
               onChange={handleTextChange}
-              disabled={isLoading}
+              disabled={isLoading || (!isPremium && useAdvancedAI)}
               maxLength={characterLimit ?? undefined}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
@@ -1151,6 +1151,32 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               </div>
             </div>
           </div>
+
+          {/* Mensagem quando IA Avançada está ativa para free users */}
+          {!isPremium && useAdvancedAI && (
+            <Alert className="border-primary/30 bg-primary/5">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-primary font-semibold">IA Avançada Ativada</AlertTitle>
+              <AlertDescription>
+                Este recurso é exclusivo para assinantes Premium. Assine agora para desbloquear correções com modelos de IA ultrapoderosos.
+                <div className="mt-3">
+                  <Button
+                    onClick={() => {
+                      sendGTMEvent("premium_cta_click", {
+                        location: "advanced_ai_textarea_blocked",
+                      })
+                      router.push("/premium")
+                    }}
+                    size="sm"
+                    className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  >
+                    <Crown className="mr-2 h-4 w-4" />
+                    Assinar Premium
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Contador de caracteres */}
           <TooltipProvider>

@@ -32,21 +32,26 @@ export function AdvancedAIToggle({
   const sendGAEvent = useGoogleAnalytics()
 
   const handleToggle = (checked: boolean) => {
-    if (!isPremium) {
-      setShowPopover(true)
-      sendGAEvent("advanced_ai_toggle_blocked", {
-        category: "upsell",
-        label: "free_user_attempted_toggle",
-      })
-      return
-    }
-
+    // Always allow toggle state change
     onToggle(checked)
-    sendGAEvent("advanced_ai_toggled", {
-      category: "engagement",
-      label: checked ? "enabled" : "disabled",
-      value: checked ? 1 : 0,
-    })
+
+    if (!isPremium) {
+      // For free users, show popover when enabling to explain premium requirement
+      if (checked) {
+        setShowPopover(true)
+        sendGAEvent("advanced_ai_enabled_free_user", {
+          category: "upsell",
+          label: "free_user_enabled_advanced_ai",
+        })
+      }
+    } else {
+      // For premium users, track toggle interactions
+      sendGAEvent("advanced_ai_toggled", {
+        category: "engagement",
+        label: checked ? "enabled" : "disabled",
+        value: checked ? 1 : 0,
+      })
+    }
   }
 
   const handleUpgradeClick = () => {
@@ -92,7 +97,7 @@ export function AdvancedAIToggle({
           <p className="text-xs text-muted-foreground mt-0.5">
             {isPremium
               ? "Correções com modelos de IA mais potentes"
-              : "Desbloqueie correções com IA ultrapoderosa"}
+              : "Ative para ver os benefícios Premium"}
           </p>
         </div>
       </div>
@@ -126,10 +131,10 @@ export function AdvancedAIToggle({
             <div>
               <Switch
                 id="advanced-ai-toggle"
-                checked={false}
+                checked={isEnabled}
                 onCheckedChange={handleToggle}
-                disabled={true}
-                className="opacity-50 cursor-not-allowed"
+                disabled={isLoading}
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-primary/80"
               />
             </div>
           </PopoverTrigger>
