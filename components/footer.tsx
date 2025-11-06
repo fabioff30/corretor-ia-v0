@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Github, Linkedin, Sparkles, BookOpen, Globe } from "lucide-react"
+import { EasterEggSecret } from "@/components/easter-egg-secret"
 
 export function Footer() {
   return (
@@ -140,6 +141,7 @@ export function Footer() {
                 FFMedia
               </a>{" "}
               para falantes de português
+              <EasterEggSecret />
             </p>
           </div>
         </div>
