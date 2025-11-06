@@ -11,6 +11,10 @@ interface Evaluation {
   toneApplied?: string
   styleApplied?: string
   changes?: string[]
+  // Premium fields
+  improvements?: string[]
+  analysis?: string
+  model?: string
 }
 
 interface NormalizedResponse {
@@ -147,5 +151,9 @@ function normalizeEvaluation(evaluation: any): Evaluation {
     ...(evaluation?.toneApplied && { toneApplied: evaluation.toneApplied }),
     ...(evaluation?.styleApplied && { styleApplied: evaluation.styleApplied }),
     ...(evaluation?.changes && { changes: evaluation.changes }),
+    // Premium fields
+    ...(Array.isArray(evaluation?.improvements) && { improvements: evaluation.improvements }),
+    ...(typeof evaluation?.analysis === "string" && { analysis: evaluation.analysis }),
+    ...(typeof evaluation?.model === "string" && { model: evaluation.model }),
   }
 }
