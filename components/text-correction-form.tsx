@@ -1101,6 +1101,18 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         </Tabs>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Toggle de IA Avançada */}
+          {operationMode === "correct" && (
+            <div className="mb-4">
+              <AdvancedAIToggle
+                isPremium={isPremium}
+                isEnabled={useAdvancedAI}
+                onToggle={setUseAdvancedAI}
+                isLoading={isLoading}
+              />
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             {isPremium ? (
               <span className="flex items-center gap-2 font-medium text-primary">
@@ -1181,18 +1193,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           {operationMode === "correct" && (
             <div className="mb-4">
               <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
-            </div>
-          )}
-
-          {/* Toggle de IA Avançada */}
-          {operationMode === "correct" && (
-            <div className="mb-4">
-              <AdvancedAIToggle
-                isPremium={isPremium}
-                isEnabled={useAdvancedAI}
-                onToggle={setUseAdvancedAI}
-                isLoading={isLoading}
-              />
             </div>
           )}
 
