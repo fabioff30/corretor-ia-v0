@@ -16,6 +16,10 @@ interface TextCorrectionTabsProps {
     suggestions: string[]
     score: number
     toneChanges: string[]
+    // Premium fields
+    improvements?: string[]
+    analysis?: string
+    model?: string
   }
 }
 
