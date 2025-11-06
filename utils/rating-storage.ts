@@ -71,8 +71,15 @@ export async function getRatingDetails(limit = 50, offset = 0): Promise<RatingDa
     // LRANGE retorna elementos da lista em um intervalo específico
     const ratings = await redis.lrange(RATINGS_DETAILED_KEY, offset, offset + limit - 1)
 
-    // Converter as strings JSON em objetos
-    return ratings.map((rating) => JSON.parse(rating) as RatingData)
+    // Converter as strings JSON em objetos (Upstash Redis pode retornar objetos ou strings)
+    return ratings.map((rating) => {
+      // Se já for um objeto, retorna diretamente
+      if (typeof rating === 'object' && rating !== null) {
+        return rating as RatingData
+      }
+      // Se for string, faz parse
+      return JSON.parse(rating as string) as RatingData
+    })
   } catch (error) {
     console.error("Erro ao obter avaliações detalhadas:", error)
     return []
@@ -96,20 +103,29 @@ export async function getRatingById(id: string): Promise<RatingData | null> {
     const allRatings = await redis.lrange(RATINGS_DETAILED_KEY, 0, -1)
 
     // Encontrar a avaliação com o ID correspondente
-    const ratingJson = allRatings.find((rating) => {
+    const ratingData = allRatings.find((rating) => {
       try {
-        const parsed = JSON.parse(rating)
+        // Se já for objeto, verifica direto
+        if (typeof rating === 'object' && rating !== null) {
+          return (rating as RatingData).id === id
+        }
+        // Se for string, faz parse
+        const parsed = JSON.parse(rating as string)
         return parsed.id === id
       } catch {
         return false
       }
     })
 
-    if (!ratingJson) {
+    if (!ratingData) {
       return null
     }
 
-    return JSON.parse(ratingJson) as RatingData
+    // Retorna o objeto diretamente se já for objeto, ou faz parse se for string
+    if (typeof ratingData === 'object' && ratingData !== null) {
+      return ratingData as RatingData
+    }
+    return JSON.parse(ratingData as string) as RatingData
   } catch (error) {
     console.error("Erro ao obter avaliação por ID:", error)
     return null
