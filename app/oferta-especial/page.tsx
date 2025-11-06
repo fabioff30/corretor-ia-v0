@@ -22,13 +22,17 @@ export default function OfertaEspecialPage() {
               OFERTA ESPECIAL
             </div>
             <h1 className="text-5xl font-bold tracking-tight mb-4 gradient-text">
-              50% OFF no Primeiro Mês
+              🚨 Seu Limite Acabou?<br />
+              Desbloqueie Agora com 50% OFF
             </h1>
+            <p className="text-lg font-semibold text-red-600 dark:text-red-400 mb-3">
+              (Apenas hoje - Últimas 47 vagas)
+            </p>
             <p className="text-2xl font-semibold text-primary mb-2">
               De R$ 29,90 por apenas R$ 14,95
             </p>
             <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
-              Você atingiu seu limite de uso gratuito. Aproveite esta oferta exclusiva e continue escrevendo sem limites!
+              Aproveite esta oferta exclusiva e continue escrevendo sem limites!
             </p>
 
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-foreground/70">
