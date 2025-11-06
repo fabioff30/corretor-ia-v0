@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getRatingStats } from "@/utils/rating-stats"
-import { createClient } from "@/utils/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "edge"
 export const dynamic = "force-dynamic"
