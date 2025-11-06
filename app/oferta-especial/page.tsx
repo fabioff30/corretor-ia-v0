@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { PremiumPlan } from "@/components/premium-plan"
 import { BackgroundGradient } from "@/components/background-gradient"
+import { SocialProofStats } from "@/components/social-proof-stats"
 import { Sparkles, Clock, Zap } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -45,6 +46,11 @@ export default function OfertaEspecialPage() {
                 <span>Ativação imediata</span>
               </div>
             </div>
+          </div>
+
+          {/* Social Proof Statistics */}
+          <div className="mb-8">
+            <SocialProofStats />
           </div>
 
           {/* Componente de Planos com Cupom Aplicado */}
