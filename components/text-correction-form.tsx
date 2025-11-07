@@ -54,6 +54,11 @@ import {
   getRewriteStyle,
 } from "@/utils/rewrite-styles"
 
+// Importar componentes de pain banner
+import { PainBanner } from "@/components/pain-banner"
+import { PainBannerData } from "@/lib/api/response-normalizer"
+import { wasPainBannerDismissedThisSession, markPainBannerDismissed } from "@/utils/banner-frequency"
+
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
@@ -127,6 +132,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
   const correctionsDailyLimit = limits?.corrections_per_day ?? 5
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
+
+  // Estado para controlar o pain banner
+  const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
+  const [showPainBanner, setShowPainBanner] = useState(false)
 
   const readFreeCorrectionUsage = () => {
     if (typeof window === "undefined") {
@@ -618,6 +627,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               toneChanges: data.evaluation.toneChanges || [],
               styleApplied: "",
               changes: [],
+              // Preserve premium and pain banner fields
+              ...(data.evaluation.improvements && { improvements: data.evaluation.improvements }),
+              ...(data.evaluation.analysis && { analysis: data.evaluation.analysis }),
+              ...(data.evaluation.model && { model: data.evaluation.model }),
+              ...(data.evaluation.painBanner && { painBanner: data.evaluation.painBanner }),
             }
           }
         }
@@ -706,6 +720,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         correctedText: processedText,
         evaluation: processedData.evaluation,
       })
+
+      // Detectar e mostrar pain banner para usuários gratuitos (com delay de 5 segundos)
+      if (!isPremium && operationMode === "correct" && processedData.evaluation.painBanner) {
+        const painBanner = processedData.evaluation.painBanner
+        const alreadyDismissed = wasPainBannerDismissedThisSession(painBanner.id)
+
+        if (!alreadyDismissed) {
+          // Armazenar dados do banner e mostrar modal após 5 segundos
+          setTimeout(() => {
+            setPainBannerData(painBanner)
+            setShowPainBanner(true)
+          }, 5000)
+        }
+      }
 
       // Modificar a parte onde definimos os flags após a correção bem-sucedida
       // Localizar a seção após setResult({...}) e antes do toast
@@ -864,6 +892,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     setError(null)
     setIsTyping(false)
     setShowRating(false)
+  }
+
+  // Handlers do pain banner
+  const handlePainBannerClose = () => {
+    if (painBannerData) {
+      markPainBannerDismissed(painBannerData.id)
+    }
+    setShowPainBanner(false)
+  }
+
+  const handlePainBannerCta = () => {
+    setShowPainBanner(false)
+    router.push("/premium")
   }
 
   // Calcular a cor do contador de caracteres
@@ -1488,6 +1529,16 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       onOpenChange={setShowPremiumUpsellModal}
       selectedStyle={pendingPremiumStyle}
     />
+
+    {/* Pain Banner Modal */}
+    {painBannerData && (
+      <PainBanner
+        painBanner={painBannerData}
+        open={showPainBanner}
+        onOpenChange={setShowPainBanner}
+        onCtaClick={handlePainBannerCta}
+      />
+    )}
   </>
   )
 }

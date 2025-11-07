@@ -2,6 +2,15 @@
  * Normalizes different webhook response formats to a standard format
  */
 
+export type PainBanner = "concordancia" | "virgula" | "muito_formal" | "muito_informal"
+
+export interface PainBannerData {
+  id: PainBanner
+  title: string
+  description: string
+  highlight: string
+}
+
 interface Evaluation {
   strengths: string[]
   weaknesses: string[]
@@ -15,6 +24,8 @@ interface Evaluation {
   improvements?: string[]
   analysis?: string
   model?: string
+  // Pain detection field (for free users)
+  painBanner?: PainBannerData
 }
 
 interface NormalizedResponse {
@@ -34,6 +45,7 @@ export function normalizeWebhookResponse(
 
   let extractedText = ""
   let evaluation: any = null
+  let painBanner: any = null
 
   // Try different response formats
   if (Array.isArray(data) && data.length > 0) {
@@ -42,12 +54,14 @@ export function normalizeWebhookResponse(
     if (result) {
       extractedText = result.text
       evaluation = result.evaluation
+      painBanner = result.painBanner
     }
   } else if (typeof data === "object" && data) {
     const result = extractFromObject(data, textFieldNames)
     if (result) {
       extractedText = result.text
       evaluation = result.evaluation
+      painBanner = result.painBanner
     }
   } else if (typeof data === "string") {
     try {
@@ -56,6 +70,7 @@ export function normalizeWebhookResponse(
       if (result) {
         extractedText = result.text
         evaluation = result.evaluation
+        painBanner = result.painBanner
       }
     } catch {
       throw new Error("Failed to parse string response")
@@ -68,6 +83,7 @@ export function normalizeWebhookResponse(
     if (foundData) {
       extractedText = foundData.text
       evaluation = foundData.evaluation
+      painBanner = foundData.painBanner
     } else {
       throw new Error("Text field not found in response")
     }
@@ -78,6 +94,11 @@ export function normalizeWebhookResponse(
     evaluation = createDefaultEvaluation()
   }
 
+  // Add painBanner to evaluation if it exists
+  if (painBanner) {
+    evaluation.painBanner = painBanner
+  }
+
   return {
     text: extractedText,
     evaluation: normalizeEvaluation(evaluation),
@@ -85,14 +106,15 @@ export function normalizeWebhookResponse(
 }
 
 /**
- * Extracts text and evaluation from an object
+ * Extracts text, evaluation, and painBanner from an object
  */
-function extractFromObject(obj: any, textFieldNames: string[]): { text: string; evaluation: any } | null {
+function extractFromObject(obj: any, textFieldNames: string[]): { text: string; evaluation: any; painBanner?: any } | null {
   for (const fieldName of textFieldNames) {
     if (obj[fieldName]) {
       return {
         text: obj[fieldName],
         evaluation: obj.evaluation || null,
+        painBanner: obj.painBanner || null,
       }
     }
   }
@@ -102,7 +124,7 @@ function extractFromObject(obj: any, textFieldNames: string[]): { text: string; 
 /**
  * Recursively searches for text fields in nested objects
  */
-function findFieldsRecursively(obj: any, textFieldNames: string[]): { text: string; evaluation: any } | null {
+function findFieldsRecursively(obj: any, textFieldNames: string[]): { text: string; evaluation: any; painBanner?: any } | null {
   if (!obj || typeof obj !== "object") return null
 
   // Check if current object has required fields
@@ -111,6 +133,7 @@ function findFieldsRecursively(obj: any, textFieldNames: string[]): { text: stri
       return {
         text: obj[fieldName],
         evaluation: obj.evaluation || null,
+        painBanner: obj.painBanner || null,
       }
     }
   }
@@ -155,5 +178,10 @@ function normalizeEvaluation(evaluation: any): Evaluation {
     ...(Array.isArray(evaluation?.improvements) && { improvements: evaluation.improvements }),
     ...(typeof evaluation?.analysis === "string" && { analysis: evaluation.analysis }),
     ...(typeof evaluation?.model === "string" && { model: evaluation.model }),
+    // Pain detection field (for free users)
+    ...(evaluation?.painBanner &&
+      typeof evaluation.painBanner === "object" && {
+        painBanner: evaluation.painBanner,
+      }),
   }
 }
