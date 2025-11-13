@@ -197,80 +197,76 @@ export default function RewriteTextPage() {
       />
 
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-        {/* Main Content Wrapper with Flex for Mobile Reordering */}
-        <div className="flex flex-col">
-          {/* Form Section - Priority #1: First on Mobile */}
-          <section className="container mx-auto px-4 mb-12 order-1 pt-6 md:pt-0">
-            <div className="max-w-4xl mx-auto">
-              <Card className="shadow-2xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl flex items-center justify-center gap-2">
-                    <Lightbulb className="h-6 w-6 text-primary" />
-                    Reescreva Seu Texto Agora
-                  </CardTitle>
-                  <p className="text-muted-foreground">
-                    Cole seu texto abaixo, escolha o estilo desejado e deixe nossa IA fazer a mágica acontecer
-                  </p>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <TextCorrectionForm initialMode="rewrite" enableCrossNavigation={true} />
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* Hero Section - Priority #2: After Tool on Mobile */}
-          <section className="container mx-auto px-4 py-12 order-2">
-            <div className="max-w-6xl mx-auto text-center">
-              <div className="flex justify-center gap-2 mb-6">
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  IA Avançada
-                </Badge>
-                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                  <Zap className="h-3 w-3 mr-1" />
-                  Instantâneo
-                </Badge>
-                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                  <Shield className="h-3 w-3 mr-1" />
-                  100% Gratuito
-                </Badge>
-              </div>
-
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+        {/* Form Section - Mobile First: Tool at the top */}
+        <section className="container mx-auto px-4 pt-6 pb-8 md:pt-12 md:pb-12">
+          <div className="max-w-4xl mx-auto">
+            {/* Title Card - Visible on Mobile, Compact */}
+            <div className="mb-4 md:hidden text-center">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Reescrever Texto com IA
               </h1>
+            </div>
 
-              <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-4xl mx-auto leading-relaxed">
-                Transforme qualquer texto em <strong>5 estilos diferentes</strong> mantendo o significado original.
-                Nossa inteligência artificial reescreve instantaneamente e corrige erros automaticamente.
-              </p>
+            {/* Main Tool Card */}
+            <Card className="shadow-2xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+              <CardContent className="p-0">
+                <TextCorrectionForm initialMode="rewrite" enableCrossNavigation={true} />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto mb-12">
-                <div className="text-center">
-                  <Clock className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <div className="text-2xl font-bold">10s</div>
-                  <div className="text-sm text-muted-foreground">Processamento</div>
-                </div>
-                <div className="text-center">
-                  <Target className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <div className="text-2xl font-bold">5</div>
-                  <div className="text-sm text-muted-foreground">Estilos</div>
-                </div>
-                <div className="text-center">
-                  <Users className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <div className="text-2xl font-bold">50K+</div>
-                  <div className="text-sm text-muted-foreground">Usuários</div>
-                </div>
-                <div className="text-center">
-                  <Award className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <div className="text-2xl font-bold">4.8★</div>
-                  <div className="text-sm text-muted-foreground">Avaliação</div>
-                </div>
+        {/* Hero Section - Hidden on Mobile, Visible on Desktop */}
+        <section className="hidden md:block container mx-auto px-4 py-12">
+          <div className="max-w-6xl mx-auto text-center">
+            <div className="flex justify-center gap-2 mb-6">
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20">
+                <Sparkles className="h-3 w-3 mr-1" />
+                IA Avançada
+              </Badge>
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                <Zap className="h-3 w-3 mr-1" />
+                Instantâneo
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                <Shield className="h-3 w-3 mr-1" />
+                100% Gratuito
+              </Badge>
+            </div>
+
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Reescrever Texto com IA
+            </h1>
+
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-4xl mx-auto leading-relaxed">
+              Transforme qualquer texto em <strong>5 estilos diferentes</strong> mantendo o significado original.
+              Nossa inteligência artificial reescreve instantaneamente e corrige erros automaticamente.
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto mb-12">
+              <div className="text-center">
+                <Clock className="h-8 w-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold">10s</div>
+                <div className="text-sm text-muted-foreground">Processamento</div>
+              </div>
+              <div className="text-center">
+                <Target className="h-8 w-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold">5</div>
+                <div className="text-sm text-muted-foreground">Estilos</div>
+              </div>
+              <div className="text-center">
+                <Users className="h-8 w-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold">50K+</div>
+                <div className="text-sm text-muted-foreground">Usuários</div>
+              </div>
+              <div className="text-center">
+                <Award className="h-8 w-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold">4.8★</div>
+                <div className="text-sm text-muted-foreground">Avaliação</div>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
         {/* Marketing Content - After Tool on Mobile */}
         {/* Rewrite Style Cards */}
