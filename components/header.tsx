@@ -108,6 +108,12 @@ export function Header() {
             Detector de IA
           </Link>
           <Link
+            href="/conversor"
+            className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/conversor") ? "text-primary" : "text-foreground/60"}`}
+          >
+            Conversor
+          </Link>
+          <Link
             href="/blog"
             className={`text-sm font-medium transition-colors hover:text-primary ${isActive("/blog") ? "text-primary" : "text-foreground/60"}`}
           >
@@ -272,6 +278,13 @@ export function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Detector de IA
+            </Link>
+            <Link
+              href="/conversor"
+              className={`px-2 py-1 rounded-md ${isActive("/conversor") ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Conversor de Documentos
             </Link>
             <Link
               href="/blog"
