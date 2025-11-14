@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Upload, FileText, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 interface UploadedFile {
   file: File;

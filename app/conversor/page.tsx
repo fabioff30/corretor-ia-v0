@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { DocumentUploader } from "@/components/DocumentUploader"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileText, Zap, Shield, Info } from "lucide-react"
-import { createClient } from "@/utils/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
   title: "Conversor de Documentos para Markdown - PDF, DOCX, XLSX e mais",
