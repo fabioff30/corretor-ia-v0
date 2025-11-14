@@ -59,6 +59,9 @@ import { PainBanner } from "@/components/pain-banner"
 import { PainBannerData } from "@/lib/api/response-normalizer"
 import { wasPainBannerDismissedThisSession, markPainBannerDismissed } from "@/utils/banner-frequency"
 
+// Importar componente de upload de arquivo
+import { FileToTextUploader } from "@/components/file-to-text-uploader"
+
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
@@ -1191,6 +1194,17 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 <span>IA Avançada</span>
               </div>
             </div>
+          </div>
+
+          {/* Upload de arquivo para conversão */}
+          <div className="flex items-center justify-between">
+            <FileToTextUploader
+              onTextExtracted={(text) => {
+                setOriginalText(text);
+                setCharCount(text.length);
+              }}
+              isPremium={isPremium}
+            />
           </div>
 
           {/* Mensagem quando IA Avançada está ativa para free users */}
