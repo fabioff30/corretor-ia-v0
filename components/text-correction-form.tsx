@@ -106,6 +106,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [isConvertingFile, setIsConvertingFile] = useState(false)
   const [requestTimer, setRequestTimer] = useState<number | null>(null)
   const lastRequestTime = useRef<number>(0)
   const { toast } = useToast()
@@ -1180,7 +1181,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               className="min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground"
               value={originalText}
               onChange={handleTextChange}
-              disabled={isLoading || (!isPremium && useAdvancedAI)}
+              disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI)}
               maxLength={characterLimit ?? undefined}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
@@ -1217,9 +1218,23 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                   }, 100);
                 }
               }}
+              onConversionStateChange={(converting) => {
+                setIsConvertingFile(converting);
+              }}
               isPremium={isPremium}
             />
           </div>
+
+          {/* Alerta de conversão em andamento */}
+          {isConvertingFile && (
+            <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <AlertTitle className="text-blue-900 dark:text-blue-100">Convertendo documento...</AlertTitle>
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                Aguarde enquanto extraímos o texto do seu arquivo. Isso pode levar alguns segundos dependendo do tamanho do documento.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Mensagem quando IA Avançada está ativa para free users */}
           {!isPremium && useAdvancedAI && (
@@ -1287,7 +1302,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           {/* Adicionar o componente de ajuste de tom */}
           {operationMode === "correct" && (
             <div className="mb-4">
-              <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
+              <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading || isConvertingFile} />
             </div>
           )}
 
@@ -1298,7 +1313,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 type="button"
                 variant="outline"
                 onClick={handleReset}
-                disabled={isLoading}
+                disabled={isLoading || isConvertingFile}
                 className="w-full sm:w-auto order-3 sm:order-1"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
@@ -1347,6 +1362,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               type="submit"
               disabled={
                 isLoading ||
+                isConvertingFile ||
                 !originalText.trim() ||
                 isOverCharacterLimit
               }

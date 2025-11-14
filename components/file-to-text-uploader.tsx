@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface FileToTextUploaderProps {
   onTextExtracted: (text: string) => void;
   isPremium: boolean;
+  onConversionStateChange?: (isConverting: boolean) => void;
 }
 
 const FREE_FORMATS = ["pdf", "docx", "txt", "html"];
@@ -16,7 +17,7 @@ const PREMIUM_FORMATS = ["pdf", "docx", "xlsx", "pptx", "txt", "html", "csv", "x
 const FREE_MAX_SIZE_MB = 10;
 const PREMIUM_MAX_SIZE_MB = 50;
 
-export function FileToTextUploader({ onTextExtracted, isPremium }: FileToTextUploaderProps) {
+export function FileToTextUploader({ onTextExtracted, isPremium, onConversionStateChange }: FileToTextUploaderProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const { toast } = useToast();
@@ -60,6 +61,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium }: FileToTextUpl
 
     setIsConverting(true);
     setUploadedFileName(file.name);
+    onConversionStateChange?.(true);
 
     try {
       // Get Supabase session
@@ -107,6 +109,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium }: FileToTextUpl
       setUploadedFileName(null);
     } finally {
       setIsConverting(false);
+      onConversionStateChange?.(false);
     }
   };
 
