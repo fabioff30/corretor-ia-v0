@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker";
 
 // Environment variables
 const MARKITDOWN_API_URL =
@@ -282,6 +283,24 @@ export async function POST(request: NextRequest) {
 
     const isPremium = plan === "pro" || plan === "admin";
 
+    // Check file upload limits for free users
+    if (!isPremium) {
+      const limitCheck = await canUserPerformOperation(userId, 'file_upload');
+
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: "Limite atingido",
+            message: limitCheck.reason || "Você atingiu o limite de uploads diários. Faça upgrade para Premium para uploads ilimitados!",
+            upgrade_required: true,
+            limit: limitCheck.limit,
+            remaining: limitCheck.remaining || 0,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -340,6 +359,11 @@ export async function POST(request: NextRequest) {
 
       // Log successful conversion
       await logConversion(userId, filename, fileSize, result, true);
+
+      // Increment usage counter for file uploads (only for non-premium users)
+      if (!isPremium) {
+        await incrementUserUsage(userId, 'file_upload');
+      }
 
       const processingTime = Date.now() - startTime;
       console.log(

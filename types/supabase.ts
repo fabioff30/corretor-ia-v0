@@ -55,7 +55,7 @@ export interface Database {
           user_id: string
           original_text: string
           corrected_text: string
-          operation_type: 'correct' | 'rewrite' | 'ai_analysis'
+          operation_type: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
           tone_style: string | null
           evaluation: Json | null
           character_count: number
@@ -66,7 +66,7 @@ export interface Database {
           user_id: string
           original_text: string
           corrected_text: string
-          operation_type: 'correct' | 'rewrite' | 'ai_analysis'
+          operation_type: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
           tone_style?: string | null
           evaluation?: Json | null
           character_count: number
@@ -77,7 +77,7 @@ export interface Database {
           user_id?: string
           original_text?: string
           corrected_text?: string
-          operation_type?: 'correct' | 'rewrite' | 'ai_analysis'
+          operation_type?: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
           tone_style?: string | null
           evaluation?: Json | null
           character_count?: number
@@ -92,6 +92,7 @@ export interface Database {
           corrections_used: number
           rewrites_used: number
           ai_analyses_used: number
+          file_uploads_used: number
           last_reset: string
         }
         Insert: {
@@ -101,6 +102,7 @@ export interface Database {
           corrections_used?: number
           rewrites_used?: number
           ai_analyses_used?: number
+          file_uploads_used?: number
           last_reset?: string
         }
         Update: {
@@ -110,6 +112,7 @@ export interface Database {
           corrections_used?: number
           rewrites_used?: number
           ai_analyses_used?: number
+          file_uploads_used?: number
           last_reset?: string
         }
       }
@@ -121,6 +124,7 @@ export interface Database {
           corrections_per_day: number
           rewrites_per_day: number
           ai_analyses_per_day: number
+          file_uploads_per_day: number
           show_ads: boolean
           updated_by: string | null
           updated_at: string
@@ -133,6 +137,7 @@ export interface Database {
           corrections_per_day: number
           rewrites_per_day: number
           ai_analyses_per_day: number
+          file_uploads_per_day: number
           show_ads: boolean
           updated_by?: string | null
           updated_at?: string
@@ -145,6 +150,7 @@ export interface Database {
           corrections_per_day?: number
           rewrites_per_day?: number
           ai_analyses_per_day?: number
+          file_uploads_per_day?: number
           show_ads?: boolean
           updated_by?: string | null
           updated_at?: string

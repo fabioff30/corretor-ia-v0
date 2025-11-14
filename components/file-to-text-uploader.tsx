@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload, FileText, Loader2, X, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -124,6 +125,8 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
 
   const clearFile = () => {
     setUploadedFileName(null);
+    // Clear text in parent form to allow new file upload
+    onTextExtracted("");
   };
 
   return (
@@ -138,7 +141,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       />
 
       {!uploadedFileName ? (
-        <label htmlFor="file-upload-correction">
+        <label htmlFor="file-upload-correction" className="relative">
           <Button
             type="button"
             variant="outline"
@@ -161,6 +164,12 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
               )}
             </span>
           </Button>
+          <Badge
+            variant="secondary"
+            className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+          >
+            Beta
+          </Badge>
         </label>
       ) : (
         <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-md border border-green-200 dark:border-green-800">

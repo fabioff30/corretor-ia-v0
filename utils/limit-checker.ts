@@ -18,7 +18,7 @@ export interface LimitCheckResult {
  */
 export async function canUserPerformOperation(
   userId: string,
-  operationType: 'correct' | 'rewrite' | 'ai_analysis'
+  operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
 ): Promise<LimitCheckResult> {
   const supabase = await createClient()
 
@@ -78,6 +78,7 @@ export async function canUserPerformOperation(
         corrections_used: 0,
         rewrites_used: 0,
         ai_analyses_used: 0,
+        file_uploads_used: 0,
       })
 
       return {
@@ -127,7 +128,7 @@ export async function canUserPerformOperation(
  */
 export async function incrementUserUsage(
   userId: string,
-  operationType: 'correct' | 'rewrite' | 'ai_analysis'
+  operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
 ): Promise<{ success: boolean; error?: string }> {
   const serviceClient = createServiceRoleClient()
 
@@ -157,7 +158,7 @@ export async function saveCorrection(params: {
   userId: string
   originalText: string
   correctedText: string
-  operationType: 'correct' | 'rewrite' | 'ai_analysis'
+  operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
   toneStyle?: string
   evaluation?: any
 }): Promise<{ success: boolean; error?: string; id?: string }> {
@@ -250,6 +251,7 @@ export async function getUserUsageToday(userId: string) {
         corrections_used: 0,
         rewrites_used: 0,
         ai_analyses_used: 0,
+        file_uploads_used: 0,
         date: today,
       }
     }
@@ -260,6 +262,7 @@ export async function getUserUsageToday(userId: string) {
       corrections_used: data.corrections_used,
       rewrites_used: data.rewrites_used,
       ai_analyses_used: data.ai_analyses_used,
+      file_uploads_used: data.file_uploads_used,
       date: data.date,
     }
   } catch (error) {
@@ -268,6 +271,7 @@ export async function getUserUsageToday(userId: string) {
       corrections_used: 0,
       rewrites_used: 0,
       ai_analyses_used: 0,
+      file_uploads_used: 0,
       date: new Date().toISOString().split('T')[0],
     }
   }
@@ -276,7 +280,7 @@ export async function getUserUsageToday(userId: string) {
 // Helper functions
 function getUsageForOperation(
   usage: any,
-  operationType: 'correct' | 'rewrite' | 'ai_analysis'
+  operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
 ): number {
   switch (operationType) {
     case 'correct':
@@ -285,6 +289,8 @@ function getUsageForOperation(
       return usage.rewrites_used || 0
     case 'ai_analysis':
       return usage.ai_analyses_used || 0
+    case 'file_upload':
+      return usage.file_uploads_used || 0
     default:
       return 0
   }
@@ -292,7 +298,7 @@ function getUsageForOperation(
 
 function getLimitForOperation(
   limits: PlanLimitsConfig,
-  operationType: 'correct' | 'rewrite' | 'ai_analysis'
+  operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'
 ): number {
   switch (operationType) {
     case 'correct':
@@ -301,12 +307,14 @@ function getLimitForOperation(
       return limits.rewrites_per_day
     case 'ai_analysis':
       return limits.ai_analyses_per_day
+    case 'file_upload':
+      return limits.file_uploads_per_day
     default:
       return 0
   }
 }
 
-function getOperationLabel(operationType: 'correct' | 'rewrite' | 'ai_analysis'): string {
+function getOperationLabel(operationType: 'correct' | 'rewrite' | 'ai_analysis' | 'file_upload'): string {
   switch (operationType) {
     case 'correct':
       return 'correções'
@@ -314,6 +322,8 @@ function getOperationLabel(operationType: 'correct' | 'rewrite' | 'ai_analysis')
       return 'reescritas'
     case 'ai_analysis':
       return 'análises de IA'
+    case 'file_upload':
+      return 'uploads de arquivo'
     default:
       return 'operações'
   }

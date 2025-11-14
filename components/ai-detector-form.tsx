@@ -14,6 +14,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import { useUser } from "@/hooks/use-user"
 import { safeJsonParse, extractValidJson, createAIDetectionResponseValidator } from "@/utils/safe-json-fetch"
+import { FileToTextUploader } from "@/components/file-to-text-uploader"
 
 interface AIDetectionResponse {
   result?: {
@@ -78,6 +79,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
   const [error, setError] = useState<string | null>(null)
   const [rateLimitError, setRateLimitError] = useState<{ message: string; resetAt: string } | null>(null)
   const [correctionId, setCorrectionId] = useState<string | null>(null)
+  const [isConvertingFile, setIsConvertingFile] = useState(false)
   const { toast } = useToast()
 
   const charCount = text.length
@@ -232,6 +234,16 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
     setCorrectionId(null)
   }
 
+  const handleFileTextExtracted = (extractedText: string) => {
+    setText(extractedText)
+    if (extractedText) {
+      toast({
+        title: "Arquivo carregado!",
+        description: "O texto foi extraído do arquivo. Clique em 'Analisar Texto' para continuar.",
+      })
+    }
+  }
+
   const formatResetTime = (resetAt: string) => {
     const parts = resetAt.split(" às ")
     if (parts.length === 2) {
@@ -314,12 +326,19 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
               )}
             </div>
             <Textarea
-              placeholder="Cole seu texto aqui..."
+              placeholder="Cole seu texto aqui ou envie um arquivo..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || isConvertingFile}
               className="min-h-[200px] font-mono text-sm"
             />
+            <div className="flex items-center gap-3">
+              <FileToTextUploader
+                onTextExtracted={handleFileTextExtracted}
+                isPremium={resolvedIsPremium}
+                onConversionStateChange={setIsConvertingFile}
+              />
+            </div>
             <div className="flex justify-between items-center text-sm">
               <span className={`${isOverLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 {resolvedIsPremium
@@ -335,7 +354,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleAnalyze} disabled={!canAnalyze || isLoading} className="flex-1">
+            <Button onClick={handleAnalyze} disabled={!canAnalyze || isLoading || isConvertingFile} className="flex-1">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -349,7 +368,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
               )}
             </Button>
             {(text || result) && (
-              <Button onClick={handleReset} variant="outline" disabled={isLoading}>
+              <Button onClick={handleReset} variant="outline" disabled={isLoading || isConvertingFile}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Limpar
               </Button>
