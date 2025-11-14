@@ -1200,8 +1200,22 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           <div className="flex items-center justify-between">
             <FileToTextUploader
               onTextExtracted={(text) => {
-                setOriginalText(text);
-                setCharCount(text.length);
+                // Limitar texto ao caractere limit se necessário
+                const finalText = characterLimit && text.length > characterLimit
+                  ? text.slice(0, characterLimit)
+                  : text;
+
+                setOriginalText(finalText);
+                setCharCount(finalText.length);
+                setIsTyping(finalText.length > 0);
+
+                // Scroll to textarea if on mobile
+                if (isMobile) {
+                  setTimeout(() => {
+                    const textarea = document.querySelector('textarea');
+                    textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }
               }}
               isPremium={isPremium}
             />
