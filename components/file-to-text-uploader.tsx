@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { sendGTMEvent } from "@/utils/gtm-helper";
 
 interface FileToTextUploaderProps {
   onTextExtracted: (text: string) => void;
@@ -49,9 +50,20 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   };
 
   const handleFileSelect = async (file: File) => {
+    const ext = file.name.toLowerCase().split(".").pop() || "";
+    const sizeMB = file.size / 1024 / 1024;
+
     // Validate
     const error = validateFile(file);
     if (error) {
+      // Send analytics event for validation error
+      sendGTMEvent('file_upload_validation_error', {
+        file_type: ext,
+        file_size_mb: sizeMB.toFixed(2),
+        error_reason: error.includes('formato') ? 'invalid_format' : 'file_too_large',
+        plan: isPremium ? 'premium' : 'free',
+      });
+
       toast({
         title: "Arquivo inválido",
         description: error,
@@ -59,6 +71,13 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       });
       return;
     }
+
+    // Send analytics event for upload start
+    sendGTMEvent('file_upload_started', {
+      file_type: ext,
+      file_size_mb: sizeMB.toFixed(2),
+      plan: isPremium ? 'premium' : 'free',
+    });
 
     setIsConverting(true);
     setUploadedFileName(file.name);
@@ -90,6 +109,23 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if it's a rate limit error (429)
+        if (response.status === 429) {
+          sendGTMEvent('file_upload_limit_reached', {
+            file_type: ext,
+            file_size_mb: sizeMB.toFixed(2),
+            plan: isPremium ? 'premium' : 'free',
+            upgrade_required: data.upgrade_required || false,
+          });
+        } else {
+          sendGTMEvent('file_upload_error', {
+            file_type: ext,
+            file_size_mb: sizeMB.toFixed(2),
+            error_status: response.status,
+            error_message: data.message || data.error,
+            plan: isPremium ? 'premium' : 'free',
+          });
+        }
         throw new Error(data.message || data.error || "Conversão falhou");
       }
 
@@ -97,14 +133,37 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       const extractedText = data.plain_text || data.markdown;
       onTextExtracted(extractedText);
 
+      // Send analytics event for successful conversion
+      sendGTMEvent('file_upload_completed', {
+        file_type: ext,
+        file_size_mb: sizeMB.toFixed(2),
+        file_size_bytes: file.size,
+        words_extracted: data.metadata.words,
+        characters_extracted: data.metadata.characters,
+        processing_time_ms: data.processing_time_ms,
+        plan: isPremium ? 'premium' : 'free',
+      });
+
       toast({
         title: "Arquivo convertido!",
         description: `${data.metadata.words} palavras extraídas de ${file.name}`,
       });
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
+
+      // Send analytics event for conversion error (if not already sent above)
+      if (!errorMessage.includes("Limite")) {
+        sendGTMEvent('file_upload_error', {
+          file_type: ext,
+          file_size_mb: sizeMB.toFixed(2),
+          error_message: errorMessage,
+          plan: isPremium ? 'premium' : 'free',
+        });
+      }
+
       toast({
         title: "Erro na conversão",
-        description: err instanceof Error ? err.message : "Erro desconhecido",
+        description: errorMessage,
         variant: "destructive",
       });
       setUploadedFileName(null);
