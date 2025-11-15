@@ -84,25 +84,24 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
     onConversionStateChange?.(true);
 
     try {
-      // Get Supabase session
+      // Get Supabase session (optional - works for guests too)
       const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        throw new Error("Você precisa estar logado para converter documentos");
-      }
-
       // Upload to API
       const formData = new FormData();
       formData.append("file", file);
 
+      const headers: HeadersInit = {};
+      if (session) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch("/api/convert", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
         body: formData,
       });
 
@@ -117,6 +116,36 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
             plan: isPremium ? 'premium' : 'free',
             upgrade_required: data.upgrade_required || false,
           });
+
+          // Show upgrade message with link to premium page
+          const errorMessage = data.message || "Limite de uploads atingido";
+          const upgradeMessage = data.upgrade_message || "Faça upgrade para o plano Premium!";
+
+          toast({
+            title: "Limite atingido",
+            description: (
+              <div className="space-y-2">
+                <p>{errorMessage}</p>
+                <p className="text-sm font-medium text-primary">
+                  {upgradeMessage}
+                </p>
+                <a
+                  href="/premium"
+                  className="inline-block text-sm underline text-primary hover:opacity-80"
+                  onClick={() => sendGTMEvent('upgrade_cta_click', { source: 'file_upload_limit' })}
+                >
+                  Ver planos →
+                </a>
+              </div>
+            ) as any,
+            variant: "destructive",
+            duration: 8000, // Show for longer
+          });
+
+          setUploadedFileName(null);
+          setIsConverting(false);
+          onConversionStateChange?.(false);
+          return; // Exit early to avoid duplicate error handling
         } else {
           sendGTMEvent('file_upload_error', {
             file_type: ext,

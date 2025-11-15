@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker";
+import { dailyRateLimiter } from "@/lib/api/daily-rate-limit";
 
 // Environment variables
 const MARKITDOWN_API_URL =
@@ -61,7 +62,7 @@ async function getUserFromToken(authHeader: string): Promise<{
   error: string | null;
 }> {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return { userId: null, error: "Missing or invalid authorization header" };
+    return { userId: null, error: null }; // Allow guest users
   }
 
   const token = authHeader.replace("Bearer ", "");
@@ -74,15 +75,12 @@ async function getUserFromToken(authHeader: string): Promise<{
     } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      return { userId: null, error: "Invalid token" };
+      return { userId: null, error: null }; // Treat as guest
     }
 
     return { userId: user.id, error: null };
   } catch (error) {
-    return {
-      userId: null,
-      error: `Authentication error: ${error instanceof Error ? error.message : "Unknown error"}`,
-    };
+    return { userId: null, error: null }; // Treat as guest
   }
 }
 
@@ -255,46 +253,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from Authorization header
+    // Get user from Authorization header (optional for guests)
     const authHeader = request.headers.get("authorization") || "";
-    const { userId, error: authError } = await getUserFromToken(authHeader);
+    const { userId } = await getUserFromToken(authHeader);
 
-    if (authError || !userId) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message: authError || "Authentication required",
-        },
-        { status: 401 }
-      );
+    let isPremium = false;
+    let plan: string | null = null;
+
+    // If user is logged in, get their plan
+    if (userId) {
+      const { plan: userPlan, error: planError } = await getUserPlan(userId);
+      if (!planError && userPlan) {
+        plan = userPlan;
+        isPremium = plan === "pro" || plan === "admin";
+      }
     }
 
-    // Get user plan
-    const { plan, error: planError } = await getUserPlan(userId);
-    if (planError || !plan) {
-      return NextResponse.json(
-        {
-          error: "User profile not found",
-          message: planError || "Profile not found",
-        },
-        { status: 404 }
-      );
-    }
-
-    const isPremium = plan === "pro" || plan === "admin";
-
-    // Check file upload limits for free users
-    if (!isPremium) {
+    // Check file upload limits
+    if (userId && !isPremium) {
+      // Logged-in free user: check database limits
       const limitCheck = await canUserPerformOperation(userId, 'file_upload');
 
       if (!limitCheck.allowed) {
         return NextResponse.json(
           {
             error: "Limite atingido",
-            message: limitCheck.reason || "Você atingiu o limite de uploads diários. Faça upgrade para Premium para uploads ilimitados!",
+            message: limitCheck.reason || "Você atingiu o limite de uploads diários.",
+            upgrade_message: "Faça upgrade para o plano Premium e tenha uploads ilimitados!",
             upgrade_required: true,
             limit: limitCheck.limit,
             remaining: limitCheck.remaining || 0,
+          },
+          { status: 429 }
+        );
+      }
+    } else if (!userId) {
+      // Guest user: check IP-based rate limit (1 upload per day)
+      const rateLimitResult = await dailyRateLimiter(request, "file-upload-guest", 1);
+
+      if (rateLimitResult) {
+        // Rate limit exceeded
+        const errorData = await rateLimitResult.json();
+        return NextResponse.json(
+          {
+            error: "Limite atingido",
+            message: "Você atingiu o limite de 1 upload gratuito por dia.",
+            upgrade_message: "Crie uma conta gratuita para ter 1 upload por dia, ou assine o plano Premium para uploads ilimitados!",
+            upgrade_required: true,
+            resetAt: errorData.resetAt,
           },
           { status: 429 }
         );
@@ -337,7 +343,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `[Convert API] Converting ${filename} (${fileSize} bytes) for user ${userId} (${plan})`
+      `[Convert API] Converting ${filename} (${fileSize} bytes) for ${userId ? `user ${userId} (${plan})` : 'guest user'}`
     );
 
     // Convert document
@@ -346,7 +352,9 @@ export async function POST(request: NextRequest) {
 
       if (!result.success) {
         const errorMsg = result.error || "Conversion failed";
-        await logConversion(userId, filename, fileSize, result, false, errorMsg);
+        if (userId) {
+          await logConversion(userId, filename, fileSize, result, false, errorMsg);
+        }
 
         return NextResponse.json(
           {
@@ -357,12 +365,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Log successful conversion
-      await logConversion(userId, filename, fileSize, result, true);
+      // Log successful conversion (only for logged-in users)
+      if (userId) {
+        await logConversion(userId, filename, fileSize, result, true);
 
-      // Increment usage counter for file uploads (only for non-premium users)
-      if (!isPremium) {
-        await incrementUserUsage(userId, 'file_upload');
+        // Increment usage counter for file uploads (only for non-premium users)
+        if (!isPremium) {
+          await incrementUserUsage(userId, 'file_upload');
+        }
       }
 
       const processingTime = Date.now() - startTime;
@@ -389,7 +399,9 @@ export async function POST(request: NextRequest) {
       );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      await logConversion(userId, filename, fileSize, {}, false, errorMsg);
+      if (userId) {
+        await logConversion(userId, filename, fileSize, {}, false, errorMsg);
+      }
 
       return NextResponse.json(
         {
