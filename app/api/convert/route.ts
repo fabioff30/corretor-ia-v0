@@ -228,6 +228,29 @@ async function logConversion(
   }
 }
 
+/**
+ * Sanitizes text extracted from documents to prevent JSON parsing errors.
+ * Removes control characters, zero-width spaces, BOM, and other problematic characters.
+ */
+function sanitizeForJson(text: string): string {
+  if (!text) return text;
+
+  return text
+    // Remove control characters (except newline, tab, carriage return)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove zero-width spaces and other invisible characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Replace line/paragraph separators with newlines
+    .replace(/[\u2028\u2029]/g, '\n')
+    // Normalize line breaks
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Remove excessive whitespace while preserving paragraph breaks
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim leading/trailing whitespace
+    .trim();
+}
+
 // GET /api/convert - Health check
 export async function GET() {
   return NextResponse.json({
@@ -380,12 +403,16 @@ export async function POST(request: NextRequest) {
         `[Convert API] Success! Processed in ${processingTime}ms (VPS: ${result.processing_time_ms}ms)`
       );
 
+      // Sanitize extracted text to prevent JSON parsing errors
+      const sanitizedMarkdown = sanitizeForJson(result.markdown);
+      const sanitizedPlainText = sanitizeForJson(result.plain_text);
+
       // Return result
       return NextResponse.json(
         {
           success: true,
-          markdown: result.markdown,
-          plain_text: result.plain_text,
+          markdown: sanitizedMarkdown,
+          plain_text: sanitizedPlainText,
           metadata: result.metadata,
           processing_time_ms: processingTime,
           vps_processing_time_ms: result.processing_time_ms,

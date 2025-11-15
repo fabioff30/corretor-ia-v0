@@ -19,6 +19,29 @@ const PREMIUM_FORMATS = ["pdf", "docx", "xlsx", "pptx", "txt", "html", "csv", "x
 const FREE_MAX_SIZE_MB = 10;
 const PREMIUM_MAX_SIZE_MB = 50;
 
+/**
+ * Sanitizes text extracted from documents to prevent JSON parsing errors.
+ * This is a client-side defense layer in addition to server-side sanitization.
+ */
+function sanitizeExtractedText(text: string): string {
+  if (!text) return text;
+
+  return text
+    // Remove control characters (except newline, tab, carriage return)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove zero-width spaces and other invisible characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Replace line/paragraph separators with newlines
+    .replace(/[\u2028\u2029]/g, '\n')
+    // Normalize line breaks
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Remove excessive whitespace while preserving paragraph breaks
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim leading/trailing whitespace
+    .trim();
+}
+
 export function FileToTextUploader({ onTextExtracted, isPremium, onConversionStateChange }: FileToTextUploaderProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -140,9 +163,10 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
         throw new Error(data.message || data.error || "Conversão falhou");
       }
 
-      // Extract plain text and send to parent
+      // Extract plain text and sanitize before sending to parent
       const extractedText = data.plain_text || data.markdown;
-      onTextExtracted(extractedText);
+      const sanitizedText = sanitizeExtractedText(extractedText);
+      onTextExtracted(sanitizedText);
 
       // Send analytics event for successful conversion
       sendGTMEvent('file_upload_completed', {

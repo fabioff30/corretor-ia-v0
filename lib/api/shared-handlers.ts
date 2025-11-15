@@ -20,15 +20,28 @@ export async function applyRateLimit(request: NextRequest, requestId: string): P
 }
 
 /**
- * Sanitizes text by removing excessive whitespace (frontend-api.md spec)
+ * Sanitizes text by removing excessive whitespace and problematic characters (frontend-api.md spec)
+ * Enhanced to prevent JSON parsing errors from documents with special characters
  * @param text - Text to sanitize
  * @returns Sanitized text
  */
 export function sanitizeText(text: string): string {
   return text
-    .trim() // Remove leading/trailing whitespace
-    .replace(/[ \t]+/g, ' ') // Replace multiple spaces/tabs with single space
-    .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with 2 newlines
+    // Remove control characters (except newline, tab, carriage return)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove zero-width spaces and other invisible characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Replace line/paragraph separators with newlines
+    .replace(/[\u2028\u2029]/g, '\n')
+    // Normalize line breaks
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Replace multiple spaces/tabs with single space
+    .replace(/[ \t]+/g, ' ')
+    // Replace 3+ newlines with 2 newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove leading/trailing whitespace
+    .trim()
 }
 
 /**
