@@ -13,7 +13,8 @@ import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
 function getSafeRedirectUrl(next: string | null, origin: string): URL {
-  const fallback = new URL("/dashboard", origin)
+  // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
+  const fallback = new URL("/", origin)
 
   if (!next) {
     return fallback
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Success - redirect
+    // Success - redirect para home (o TextCorrectionForm detecta automaticamente o plano)
     const redirectUrl = getSafeRedirectUrl(next, requestUrl.origin)
     console.log('[Auth Callback] Login successful! Redirecting to:', redirectUrl.toString())
 

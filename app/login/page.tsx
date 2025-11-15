@@ -34,7 +34,8 @@ export default function LoginPage() {
   // Redirecionar se já estiver autenticado
   useEffect(() => {
     if (user) {
-      router.push('/dashboard')
+      // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
+      router.push('/')
     }
   }, [user, router])
 
@@ -56,10 +57,11 @@ export default function LoginPage() {
 
       toast({
         title: 'Login realizado com sucesso!',
-        description: 'Redirecionando para o dashboard...',
+        description: 'Redirecionando...',
       })
 
-      router.push('/dashboard')
+      // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
+      router.push('/')
     } catch (err: any) {
       console.error('Erro ao fazer login:', err)
       const message =
