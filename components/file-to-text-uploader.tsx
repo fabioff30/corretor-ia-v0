@@ -52,6 +52,11 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   const maxSizeMB = isPremium ? PREMIUM_MAX_SIZE_MB : FREE_MAX_SIZE_MB;
 
   const validateFile = (file: File): string | null => {
+    // Check if file exists and has size
+    if (!file || file.size === 0) {
+      return "Arquivo vazio ou inválido";
+    }
+
     // Check extension
     const ext = file.name.toLowerCase().split(".").pop() || "";
     if (!allowedFormats.includes(ext)) {
@@ -74,6 +79,8 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   };
 
   const handleFileSelect = async (file: File) => {
+    console.log('handleFileSelect: Starting conversion', { name: file.name, size: file.size });
+
     const ext = file.name.toLowerCase().split(".").pop() || "";
     const sizeMB = file.size / 1024 / 1024;
 
@@ -90,12 +97,28 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
 
     try {
       // Get Supabase session (optional - works for guests too)
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      console.log('handleFileSelect: Getting Supabase session');
+
+      let session = null;
+      try {
+        const supabase = createClient();
+
+        // Add timeout to prevent hanging
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session timeout')), 3000)
+        );
+
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        session = data?.session || null;
+        console.log('handleFileSelect: Session retrieved', session ? 'authenticated' : 'guest');
+      } catch (sessionError) {
+        console.warn('handleFileSelect: Failed to get session, continuing as guest', sessionError);
+        // Continue as guest user
+      }
 
       // Upload to API
+      console.log('handleFileSelect: Creating FormData');
       const formData = new FormData();
       formData.append("file", file);
 
@@ -104,11 +127,13 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
         headers.Authorization = `Bearer ${session.access_token}`;
       }
 
+      console.log('handleFileSelect: Sending fetch to /api/convert');
       const response = await fetch("/api/convert", {
         method: "POST",
         headers,
         body: formData,
       });
+      console.log('handleFileSelect: Fetch response received', { status: response.status, ok: response.ok });
 
       const data = await response.json();
 
@@ -212,12 +237,15 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
     const files = e.target.files;
     if (files && files[0]) {
       const file = files[0];
+      console.log('handleChange: File selected', { name: file.name, size: file.size, type: file.type });
 
       // Validate file before setting
       const error = validateFile(file);
       if (error) {
         const ext = file.name.toLowerCase().split(".").pop() || "";
         const sizeMB = file.size / 1024 / 1024;
+
+        console.error('handleChange: Validation failed', error);
 
         sendGTMEvent('file_upload_validation_error', {
           file_type: ext,
@@ -237,6 +265,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       }
 
       // Set selected file (don't upload yet)
+      console.log('handleChange: File validated successfully, setting selectedFile');
       setSelectedFile(file);
       setUploadedFileName(file.name);
     }
@@ -246,7 +275,11 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   };
 
   const handleConvert = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      console.error('handleConvert: No file selected');
+      return;
+    }
+    console.log('handleConvert: Converting file', selectedFile.name);
     await handleFileSelect(selectedFile);
   };
 
