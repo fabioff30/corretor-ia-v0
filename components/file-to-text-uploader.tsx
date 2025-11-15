@@ -22,6 +22,7 @@ const PREMIUM_MAX_SIZE_MB = 50;
 export function FileToTextUploader({ onTextExtracted, isPremium, onConversionStateChange }: FileToTextUploaderProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   const allowedFormats = isPremium ? PREMIUM_FORMATS : FREE_FORMATS;
@@ -52,25 +53,6 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   const handleFileSelect = async (file: File) => {
     const ext = file.name.toLowerCase().split(".").pop() || "";
     const sizeMB = file.size / 1024 / 1024;
-
-    // Validate
-    const error = validateFile(file);
-    if (error) {
-      // Send analytics event for validation error
-      sendGTMEvent('file_upload_validation_error', {
-        file_type: ext,
-        file_size_mb: sizeMB.toFixed(2),
-        error_reason: error.includes('formato') ? 'invalid_format' : 'file_too_large',
-        plan: isPremium ? 'premium' : 'free',
-      });
-
-      toast({
-        title: "Arquivo inválido",
-        description: error,
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Send analytics event for upload start
     sendGTMEvent('file_upload_started', {
@@ -205,14 +187,48 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
-      handleFileSelect(files[0]);
+      const file = files[0];
+
+      // Validate file before setting
+      const error = validateFile(file);
+      if (error) {
+        const ext = file.name.toLowerCase().split(".").pop() || "";
+        const sizeMB = file.size / 1024 / 1024;
+
+        sendGTMEvent('file_upload_validation_error', {
+          file_type: ext,
+          file_size_mb: sizeMB.toFixed(2),
+          error_reason: error.includes('formato') ? 'invalid_format' : 'file_too_large',
+          plan: isPremium ? 'premium' : 'free',
+        });
+
+        toast({
+          title: "Arquivo inválido",
+          description: error,
+          variant: "destructive",
+        });
+
+        e.target.value = "";
+        return;
+      }
+
+      // Set selected file (don't upload yet)
+      setSelectedFile(file);
+      setUploadedFileName(file.name);
     }
+
     // Reset input so the same file can be selected again
     e.target.value = "";
   };
 
+  const handleConvert = async () => {
+    if (!selectedFile) return;
+    await handleFileSelect(selectedFile);
+  };
+
   const clearFile = () => {
     setUploadedFileName(null);
+    setSelectedFile(null);
     // Clear text in parent form to allow new file upload
     onTextExtracted("");
   };
@@ -228,7 +244,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
         disabled={isConverting}
       />
 
-      {!uploadedFileName ? (
+      {!selectedFile ? (
         <label htmlFor="file-upload-correction" className="relative">
           <Button
             type="button"
@@ -239,17 +255,8 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
             asChild
           >
             <span>
-              {isConverting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Convertendo...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Enviar arquivo
-                </>
-              )}
+              <Upload className="mr-2 h-4 w-4" />
+              Selecionar arquivo
             </span>
           </Button>
           <Badge
@@ -260,20 +267,42 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
           </Badge>
         </label>
       ) : (
-        <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-md border border-green-200 dark:border-green-800">
-          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <span className="text-green-700 dark:text-green-300 max-w-[200px] truncate">
-            {uploadedFileName}
-          </span>
-          <button
+        <>
+          <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
+            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-blue-700 dark:text-blue-300 max-w-[200px] truncate">
+              {uploadedFileName}
+            </span>
+            <button
+              type="button"
+              onClick={clearFile}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+              disabled={isConverting}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <Button
             type="button"
-            onClick={clearFile}
-            className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+            size="sm"
+            onClick={handleConvert}
+            disabled={isConverting}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+            {isConverting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Convertendo...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Converter
+              </>
+            )}
+          </Button>
+        </>
       )}
 
       <span className="text-xs text-muted-foreground">
