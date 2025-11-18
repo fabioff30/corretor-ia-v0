@@ -4,6 +4,7 @@ import { FETCH_TIMEOUT, PREMIUM_FETCH_TIMEOUT, AUTH_TOKEN, AI_DETECTOR_TIMEOUT }
 interface WebhookOptions {
   url: string
   fallbackUrl?: string
+  secondaryFallbackUrl?: string // External fallback when primary fallback fails
   text: string
   requestId: string
   additionalData?: Record<string, any>
@@ -31,7 +32,7 @@ function prepareHeaders(requestId: string): WebhookHeaders {
  * Makes a request to the webhook with retry and fallback support
  */
 export async function callWebhook(options: WebhookOptions): Promise<Response> {
-  const { url, fallbackUrl, text, requestId, additionalData = {}, timeout } = options
+  const { url, fallbackUrl, secondaryFallbackUrl, text, requestId, additionalData = {}, timeout } = options
   const headers = prepareHeaders(requestId)
   const webhookUrl = url
 
@@ -75,7 +76,7 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
     // If 401, try fallback immediately
     if (!response.ok && response.status === 401 && fallbackUrl) {
       console.log("API: Status 401 detected, trying fallback automatically", requestId)
-      return callFallbackWebhook(fallbackUrl, text, requestId)
+      return callFallbackWebhook(fallbackUrl, text, requestId, secondaryFallbackUrl)
     }
 
     return response
@@ -85,7 +86,7 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
 
     if (fallbackUrl) {
       console.log("API: Trying fallback webhook", requestId)
-      return callFallbackWebhook(fallbackUrl, text, requestId)
+      return callFallbackWebhook(fallbackUrl, text, requestId, secondaryFallbackUrl)
     }
 
     throw webhookError
@@ -95,7 +96,12 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
 /**
  * Makes a request to the fallback webhook
  */
-async function callFallbackWebhook(fallbackUrl: string, text: string, requestId: string): Promise<Response> {
+async function callFallbackWebhook(
+  fallbackUrl: string,
+  text: string,
+  requestId: string,
+  secondaryFallbackUrl?: string
+): Promise<Response> {
   console.log(`API: Using fallback webhook: ${fallbackUrl}`, requestId)
 
   // Determine timeout for fallback based on endpoint type
@@ -108,8 +114,58 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
     console.log(`API: Using extended timeout for fallback premium endpoint: ${effectiveTimeout}ms`, requestId)
   }
 
+  try {
+    const response = await fetchWithRetry(
+      fallbackUrl,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "X-Request-ID": requestId,
+        },
+        body: JSON.stringify({
+          text,
+          source: "fallback",
+        }),
+      },
+      {
+        maxRetries: 2,
+        timeout: effectiveTimeout,
+        retryDelay: 1000,
+      }
+    )
+
+    console.log(`API: Received response from fallback webhook with status ${response.status}`, requestId)
+    return response
+  } catch (fallbackError) {
+    const fe = fallbackError as Error
+    console.error(`API: Error accessing fallback webhook: ${fe.message}`, requestId)
+
+    // If secondary fallback is provided, try it
+    if (secondaryFallbackUrl) {
+      console.log(`API: Trying secondary fallback webhook: ${secondaryFallbackUrl}`, requestId)
+      return callSecondaryFallbackWebhook(secondaryFallbackUrl, text, requestId)
+    }
+
+    throw fallbackError
+  }
+}
+
+/**
+ * Makes a request to the external secondary fallback webhook
+ */
+async function callSecondaryFallbackWebhook(
+  secondaryFallbackUrl: string,
+  text: string,
+  requestId: string
+): Promise<Response> {
+  console.log(`API: Using secondary fallback webhook: ${secondaryFallbackUrl}`, requestId)
+
+  // Use standard timeout for external fallback
+  const effectiveTimeout = FETCH_TIMEOUT
+
   const response = await fetchWithRetry(
-    fallbackUrl,
+    secondaryFallbackUrl,
     {
       method: "POST",
       headers: {
@@ -118,7 +174,7 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
       },
       body: JSON.stringify({
         text,
-        source: "fallback",
+        source: "secondary-fallback",
       }),
     },
     {
@@ -128,6 +184,6 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
     }
   )
 
-  console.log(`API: Received response from fallback webhook with status ${response.status}`, requestId)
+  console.log(`API: Received response from secondary fallback webhook with status ${response.status}`, requestId)
   return response
 }

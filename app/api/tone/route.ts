@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { REWRITE_WEBHOOK_URL } from "@/utils/constants"
+import { REWRITE_WEBHOOK_URL, EXTERNAL_FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { getWebhookUrl, getFallbackWebhookUrl, getSecondaryFallbackWebhookUrl, WebhookType } from "@/lib/webhook-config"
 import {
   applyRateLimit,
   validateAndSanitizeInput,
@@ -67,9 +68,16 @@ export async function POST(request: NextRequest) {
     console.log(`API: Processing ${isMobile ? "mobile" : "desktop"} text, length: ${text.length}`, requestId)
     console.log(`API: Tone selected: ${tone}`, requestId)
 
+    // Get dynamic webhook URLs (can be changed via admin API)
+    const webhookUrl = await getWebhookUrl(WebhookType.REWRITE, requestId)
+    const fallbackUrl = await getFallbackWebhookUrl(WebhookType.REWRITE, requestId)
+    const secondaryFallbackUrl = await getSecondaryFallbackWebhookUrl(WebhookType.REWRITE, requestId)
+
     // Call webhook using tone as style
     const response = await callWebhook({
-      url: REWRITE_WEBHOOK_URL,
+      url: webhookUrl,
+      fallbackUrl,
+      secondaryFallbackUrl,
       text,
       requestId,
       additionalData: {
