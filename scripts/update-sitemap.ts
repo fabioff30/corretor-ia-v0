@@ -3,8 +3,7 @@
  * This can be run with: npx ts-node -r tsconfig-paths/register scripts/update-sitemap.ts
  */
 
-import fetch from "node-fetch"
-
+// Using native fetch (Node.js 18+, Next.js 15)
 async function updateSitemap() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.corretordetextoonline.com.br"
