@@ -386,3 +386,108 @@
 .dark .julinho-text {
   color: hsl(var(--yellow-100)); /* Text color in dark mode */
 }
+
+/* Loading overlay and blur helpers */
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Separate keyframes for loading text shimmer to avoid conflicts */
+@keyframes loading-text-sheen {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.loading-overlay {
+  position: absolute; /* scoped to the nearest positioned ancestor by default */
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 60;
+}
+
+/* Modifier to make the overlay full-screen when explicitly requested */
+.loading-overlay.fullscreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+}
+
+.dark .loading-overlay {
+  background: rgba(0,0,0,0.35);
+}
+.loading-overlay__box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 8px 28px rgba(4,6,15,0.08);
+  max-width: 420px;
+}
+
+.dark .loading-overlay__box {
+  background: rgba(12,12,14,0.64);
+}
+
+/* Pulsing gradient ball */
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  display: inline-block;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 60%, #06b6d4 100%);
+  box-shadow: 0 6px 14px rgba(59,130,246,0.14), inset 0 -4px 12px rgba(255,255,255,0.06);
+  animation: pulse-scale 1.6s cubic-bezier(.4,0,.2,1) infinite;
+  transform-origin: center;
+}
+
+/* Shimmer for the text */
+.loading-text {
+  position: relative;
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 4px 2px;
+  background: linear-gradient(
+    120deg,
+    hsl(var(--foreground)) 0%,
+    hsl(var(--foreground)) 30%,
+    rgba(var(--primary-rgb), 0.9) 50%,
+    hsl(var(--foreground)) 70%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 200% 100%;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: loading-text-sheen 1.6s ease-in-out infinite;
+}
+
+.loading-blur > *:not(.loading-overlay) {
+  filter: blur(1.5px) saturate(0.98);
+  transition: filter 200ms ease;
+  pointer-events: none;
+  user-select: none;
+}

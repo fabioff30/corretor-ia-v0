@@ -1,7 +1,7 @@
 /**
  * Premium Text Correction Form
  * Formulário de correção de texto para usuários Premium (Pro/Admin)
- * - Até 300.000 caracteres (limite técnico do middleware)
+ * - Sem limite de caracteres
  * - Sem anúncios
  * - Usa webhook premium
  */
@@ -33,6 +33,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
 import { API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
+import LoadingOverlay from "@/components/loading-overlay"
 import { Badge } from "@/components/ui/badge"
 import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 import { sanitizeUserInput } from "@/utils/html-sanitizer"
@@ -94,18 +95,8 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    // Limite de 20k caracteres para usuários premium
-    if (newText.length <= 20000) {
-      setOriginalText(newText)
-    } else {
-      // Truncar no limite de 20k se ultrapassar
-      setOriginalText(newText.slice(0, 20000))
-      toast({
-        title: "Limite atingido",
-        description: "O limite máximo para usuários Premium é de 20.000 caracteres.",
-        variant: "destructive",
-      })
-    }
+    // Sem limite para usuários premium
+    setOriginalText(newText)
   }
 
   const handleToneChange = (tone: string, customInstruction?: string) => {
@@ -150,17 +141,6 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
       toast({
         title: "Texto vazio",
         description: "Por favor, insira um texto para correção.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Verificar tamanho do payload (limite do Vercel: 4.5MB)
-    const sizeInMB = new Blob([originalText]).size / 1024 / 1024
-    if (sizeInMB > 4) {
-      toast({
-        title: "⚠️ Texto muito grande",
-        description: `Seu texto tem ${sizeInMB.toFixed(2)}MB. O limite do Vercel é 4.5MB. Por favor, divida o texto em partes menores.`,
         variant: "destructive",
       })
       return
@@ -227,7 +207,6 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({
           text: textToSend,
           isMobile,
@@ -263,9 +242,9 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         setCorrectionId("")
       }
 
-      // Enviar evento de sucesso para Google Analytics 4
+      // Enviar evento de sucesso
       sendGTMEvent("premium_correction_completed", {
-        charCount: textToSend.length,
+        char_count: textToSend.length,
         score: data.evaluation?.score || 0,
       })
       trackPixelCustomEvent("PremiumCorrectionCompleted", {
@@ -338,12 +317,15 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
         </Badge>
         <Badge variant="outline" className="border-purple-500 text-purple-700">
           <Zap className="h-3 w-3 mr-1" />
-          Até 20.000 caracteres
+          Caracteres Ilimitados
         </Badge>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className={isLoading ? "space-y-2 relative loading-blur" : "space-y-2 relative"}>
+          {isLoading && (
+            <LoadingOverlay message="Processando com IA Premium..." />
+          )}
           <div className="flex justify-between items-center">
             <label htmlFor="originalText" className="text-sm font-medium">
               Texto para Correção Premium
@@ -357,10 +339,9 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
             id="originalText"
             value={originalText}
             onChange={handleTextChange}
-            placeholder="Cole ou digite seu texto aqui... Até 20.000 caracteres! 🚀"
+            placeholder="Cole ou digite seu texto aqui... Sem limites! 🚀"
             className="min-h-[300px] resize-y"
             disabled={isLoading}
-            maxLength={20000}
           />
         </div>
 
@@ -437,13 +418,7 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
             <TabsContent value="result" className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="mb-2 flex justify-end">
-                    <span className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      {result.correctedText.length.toLocaleString()} caracteres
-                    </span>
-                  </div>
-                  <div className="prose max-w-none max-h-[500px] overflow-y-auto pr-2">
+                  <div className="prose max-w-none">
                     <p className="whitespace-pre-wrap">{result.correctedText}</p>
                   </div>
                 </CardContent>

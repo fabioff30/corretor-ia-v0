@@ -22,6 +22,7 @@ import {
   Crown,
   LayoutDashboard,
 } from "lucide-react"
+import LoadingOverlay from "@/components/loading-overlay"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
@@ -32,9 +33,7 @@ import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { useUser } from "@/hooks/use-user"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { ToneAdjuster } from "@/components/tone-adjuster"
-import { AdvancedAIToggle } from "@/components/advanced-ai-toggle"
 import { Badge } from "@/components/ui/badge"
-import { SupabaseConfigNotice } from "@/components/supabase-config-notice"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { RetryButton } from "@/components/ui/retry-button"
@@ -53,14 +52,6 @@ import {
   convertToApiFormat,
   getRewriteStyle,
 } from "@/utils/rewrite-styles"
-
-// Importar componentes de pain banner
-import { PainBanner } from "@/components/pain-banner"
-import { PainBannerData } from "@/lib/api/response-normalizer"
-import { wasPainBannerDismissedThisSession, markPainBannerDismissed } from "@/utils/banner-frequency"
-
-// Importar componente de upload de arquivo
-import { FileToTextUploader } from "@/components/file-to-text-uploader"
 
 // Tipos globais para window.gtag estão em types/global.d.ts
 
@@ -106,7 +97,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [isConvertingFile, setIsConvertingFile] = useState(false)
   const [requestTimer, setRequestTimer] = useState<number | null>(null)
   const lastRequestTime = useRef<number>(0)
   const { toast } = useToast()
@@ -125,7 +115,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     "Padrão" | "Formal" | "Informal" | "Acadêmico" | "Criativo" | "Conciso" | "Romântico" | "Personalizado"
   >("Padrão")
   const [customTone, setCustomTone] = useState<string>("")
-  const [useAdvancedAI, setUseAdvancedAI] = useState(false)
 
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
@@ -136,10 +125,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
   const correctionsDailyLimit = limits?.corrections_per_day ?? 5
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
-
-  // Estado para controlar o pain banner
-  const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
-  const [showPainBanner, setShowPainBanner] = useState(false)
 
   const readFreeCorrectionUsage = () => {
     if (typeof window === "undefined") {
@@ -237,7 +222,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       }
     } else {
       // Se o usuário tentar colar um texto maior que o limite, cortar para o tamanho máximo
-      setOriginalText(newText.slice(0, characterLimit || FREE_CHARACTER_LIMIT))
+      setOriginalText(newText.slice(0, characterLimit))
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
@@ -404,20 +389,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       if (usage.count >= correctionsDailyLimit) {
         const description =
           correctionsDailyLimit === 1
-            ? "Você já realizou a correção gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
-            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
+            ? "Você já realizou a correção gratuita de hoje. Assine o Premium para continuar agora ou aguarde 24 horas."
+            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Assine o Premium para continuar agora ou aguarde 24 horas para renovar o limite.`
 
         toast({
-          title: "Oferta Especial - 50% OFF!",
+          title: "Limite diário atingido",
           description,
           variant: "destructive",
           action: (
             <Link
-              href="/oferta-especial"
+              href="/premium"
               className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
-              onClick={() => sendGTMEvent("special_offer_cta_click", { location: "correction_limit_toast", trigger: "correction_limit" })}
+              onClick={() => sendGTMEvent("premium_cta_click", { location: "daily_limit_toast" })}
             >
-              Ver Oferta →
+              Assinar Premium
             </Link>
           ),
         })
@@ -426,12 +411,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           limit: correctionsDailyLimit,
           usage: usage.count,
         })
-
-        // Redirect to special offer page after 2 seconds
-        setTimeout(() => {
-          window.location.href = "/oferta-especial"
-        }, 2000)
-
         return
       }
     }
@@ -527,8 +506,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       const payload = {
         text: textToSend,
         isMobile: isMobile,
-        ...(operationMode === "correct"
-          ? { tone: currentTone, useAdvancedAI: useAdvancedAI && isPremium }
+        ...(operationMode === "correct" 
+          ? { tone: currentTone } 
           : { style: selectedRewriteStyle }
         ),
       }
@@ -540,7 +519,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify(payload),
         signal,
       })
@@ -631,11 +609,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               toneChanges: data.evaluation.toneChanges || [],
               styleApplied: "",
               changes: [],
-              // Preserve premium and pain banner fields
-              ...(data.evaluation.improvements && { improvements: data.evaluation.improvements }),
-              ...(data.evaluation.analysis && { analysis: data.evaluation.analysis }),
-              ...(data.evaluation.model && { model: data.evaluation.model }),
-              ...(data.evaluation.painBanner && { painBanner: data.evaluation.painBanner }),
             }
           }
         }
@@ -725,20 +698,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         evaluation: processedData.evaluation,
       })
 
-      // Detectar e mostrar pain banner para usuários gratuitos (com delay de 5 segundos)
-      if (!isPremium && operationMode === "correct" && processedData.evaluation.painBanner) {
-        const painBanner = processedData.evaluation.painBanner
-        const alreadyDismissed = wasPainBannerDismissedThisSession(painBanner.id)
-
-        if (!alreadyDismissed) {
-          // Armazenar dados do banner e mostrar modal após 5 segundos
-          setTimeout(() => {
-            setPainBannerData(painBanner)
-            setShowPainBanner(true)
-          }, 5000)
-        }
-      }
-
       // Modificar a parte onde definimos os flags após a correção bem-sucedida
       // Localizar a seção após setResult({...}) e antes do toast
 
@@ -772,18 +731,13 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       // localStorage.setItem("show-ad-banner", "true")
       // window.dispatchEvent(new Event("storage"))
 
-      // Enviar evento para o Google Analytics 4
-      if (operationMode === "correct") {
-        sendGTMEvent("text_corrected", {
-          textLength: originalText.length,
-          correctionScore: processedData.evaluation.score || 0,
-        })
-      } else {
-        sendGTMEvent("rewrite_text", {
-          textLength: originalText.length,
-          rewriteStyle: selectedRewriteStyle,
-        })
-      }
+      // Enviar evento para o GTM
+      sendGTMEvent(operationMode === "correct" ? "text_corrected" : "text_rewritten", {
+        textLength: originalText.length,
+        correctionScore: processedData.evaluation.score || 0,
+        mode: operationMode,
+        ...(operationMode === "correct" ? { tone: selectedTone } : { rewriteStyle: selectedRewriteStyle }),
+      })
 
       // Rastrear evento de correção no Meta Pixel
       trackPixelCustomEvent(operationMode === "correct" ? "TextCorrected" : "TextRewritten", {
@@ -896,19 +850,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     setError(null)
     setIsTyping(false)
     setShowRating(false)
-  }
-
-  // Handlers do pain banner
-  const handlePainBannerClose = () => {
-    if (painBannerData) {
-      markPainBannerDismissed(painBannerData.id)
-    }
-    setShowPainBanner(false)
-  }
-
-  const handlePainBannerCta = () => {
-    setShowPainBanner(false)
-    router.push("/premium")
   }
 
   // Calcular a cor do contador de caracteres
@@ -1065,7 +1006,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                     Desbloqueie todo o poder do CorretorIA Premium
                   </p>
                   <p className="text-foreground/80">
-                    Correções ilimitadas, histórico inteligente, experiência sem anúncios e suporte prioritário. Hoje você usou{" "}
+                    Correções ilimitadas, histórico inteligente e suporte prioritário. Hoje você usou{" "}
                     <strong>{freeCorrectionsCount}</strong> de{" "}
                     <strong>{correctionsDailyLimit}</strong> correções gratuitas.
                   </p>
@@ -1146,18 +1087,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         </Tabs>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Toggle de IA Avançada */}
-          {operationMode === "correct" && (
-            <div className="mb-4">
-              <AdvancedAIToggle
-                isPremium={isPremium}
-                isEnabled={useAdvancedAI}
-                onToggle={setUseAdvancedAI}
-                isLoading={isLoading}
-              />
-            </div>
-          )}
-
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             {isPremium ? (
               <span className="flex items-center gap-2 font-medium text-primary">
@@ -1171,7 +1100,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               </span>
             )}
           </div>
-          <div className="relative">
+          <div className={isLoading ? 'relative loading-blur' : 'relative'}>
+            {isLoading && (
+              <LoadingOverlay message={operationMode === 'correct' ? 'Corrigindo texto...' : 'Reescrevendo texto...'} />
+            )}
             <Textarea
               placeholder={
                 operationMode === "correct"
@@ -1181,7 +1113,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               className="min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground"
               value={originalText}
               onChange={handleTextChange}
-              disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI)}
+              disabled={isLoading}
               maxLength={characterLimit ?? undefined}
               aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
             />
@@ -1196,71 +1128,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               </div>
             </div>
           </div>
-
-          {/* Upload de arquivo para conversão */}
-          <div className="flex items-center justify-between">
-            <FileToTextUploader
-              onTextExtracted={(text) => {
-                // Limitar texto ao caractere limit se necessário
-                const finalText = characterLimit && text.length > characterLimit
-                  ? text.slice(0, characterLimit)
-                  : text;
-
-                setOriginalText(finalText);
-                setCharCount(finalText.length);
-                setIsTyping(finalText.length > 0);
-
-                // Scroll to textarea if on mobile
-                if (isMobile) {
-                  setTimeout(() => {
-                    const textarea = document.querySelector('textarea');
-                    textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 100);
-                }
-              }}
-              onConversionStateChange={(converting) => {
-                setIsConvertingFile(converting);
-              }}
-              isPremium={isPremium}
-            />
-          </div>
-
-          {/* Alerta de conversão em andamento */}
-          {isConvertingFile && (
-            <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-              <AlertTitle className="text-blue-900 dark:text-blue-100">Convertendo documento...</AlertTitle>
-              <AlertDescription className="text-blue-800 dark:text-blue-200">
-                Aguarde enquanto extraímos o texto do seu arquivo. Isso pode levar alguns segundos dependendo do tamanho do documento.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Mensagem quando IA Avançada está ativa para free users */}
-          {!isPremium && useAdvancedAI && (
-            <Alert className="border-primary/30 bg-primary/5">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-primary font-semibold">IA Avançada Ativada</AlertTitle>
-              <AlertDescription>
-                Este recurso é exclusivo para assinantes Premium. Assine agora para desbloquear correções com modelos de IA ultrapoderosos.
-                <div className="mt-3">
-                  <Button
-                    onClick={() => {
-                      sendGTMEvent("premium_cta_click", {
-                        location: "advanced_ai_textarea_blocked",
-                      })
-                      router.push("/premium")
-                    }}
-                    size="sm"
-                    className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                  >
-                    <Crown className="mr-2 h-4 w-4" />
-                    Assinar Premium
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Contador de caracteres */}
           <TooltipProvider>
@@ -1302,7 +1169,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           {/* Adicionar o componente de ajuste de tom */}
           {operationMode === "correct" && (
             <div className="mb-4">
-              <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading || isConvertingFile} />
+              <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading} />
             </div>
           )}
 
@@ -1313,7 +1180,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 type="button"
                 variant="outline"
                 onClick={handleReset}
-                disabled={isLoading || isConvertingFile}
+                disabled={isLoading}
                 className="w-full sm:w-auto order-3 sm:order-1"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
@@ -1362,7 +1229,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               type="submit"
               disabled={
                 isLoading ||
-                isConvertingFile ||
                 !originalText.trim() ||
                 isOverCharacterLimit
               }
@@ -1573,16 +1439,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       onOpenChange={setShowPremiumUpsellModal}
       selectedStyle={pendingPremiumStyle}
     />
-
-    {/* Pain Banner Modal */}
-    {painBannerData && (
-      <PainBanner
-        painBanner={painBannerData}
-        open={showPainBanner}
-        onOpenChange={setShowPainBanner}
-        onCtaClick={handlePainBannerCta}
-      />
-    )}
   </>
   )
 }
