@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { REWRITE_WEBHOOK_URL, PREMIUM_REWRITE_WEBHOOK_URL } from "@/utils/constants"
+import { REWRITE_WEBHOOK_URL, PREMIUM_REWRITE_WEBHOOK_URL, EXTERNAL_FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { getWebhookUrl, getFallbackWebhookUrl, getSecondaryFallbackWebhookUrl, WebhookType } from "@/lib/webhook-config"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -165,13 +166,19 @@ export async function POST(request: NextRequest) {
 
     const apiStyle = styleToApiFormat[rewriteStyle] || rewriteStyle.toUpperCase()
 
-    // Call webhook (use premium webhook for premium users)
-    const webhookUrl = isPremium ? PREMIUM_REWRITE_WEBHOOK_URL : REWRITE_WEBHOOK_URL
+    // Get dynamic webhook URLs (can be changed via admin API)
+    const webhookType = isPremium ? WebhookType.PREMIUM_REWRITE : WebhookType.REWRITE
+    const webhookUrl = await getWebhookUrl(webhookType, requestId)
+    const fallbackUrl = await getFallbackWebhookUrl(webhookType, requestId)
+    const secondaryFallbackUrl = await getSecondaryFallbackWebhookUrl(webhookType, requestId)
+
     console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} rewrite webhook`, requestId)
     console.log(`API: Sending style in API format: ${apiStyle}`, requestId)
 
     const response = await callWebhook({
       url: webhookUrl,
+      fallbackUrl,
+      secondaryFallbackUrl,
       text,
       requestId,
       additionalData: { style: apiStyle },

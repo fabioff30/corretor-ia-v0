@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { HUMANIZAR_WEBHOOK_URL, HUMANIZAR_MAX_TEXT_LENGTH, HUMANIZAR_TIMEOUT } from "@/utils/constants"
+import { HUMANIZAR_WEBHOOK_URL, HUMANIZAR_MAX_TEXT_LENGTH, HUMANIZAR_TIMEOUT, EXTERNAL_FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { getWebhookUrl, getFallbackWebhookUrl, getSecondaryFallbackWebhookUrl, WebhookType } from "@/lib/webhook-config"
 import { parseRequestBody, validateTextLength } from "@/lib/api/shared-handlers"
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
@@ -89,9 +90,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`API: Processing humanization for premium user ${user.id}, text length: ${text.length}, mode: ${mode}`, requestId)
 
+    // Get dynamic webhook URLs (can be changed via admin API)
+    const webhookUrl = await getWebhookUrl(WebhookType.HUMANIZAR, requestId)
+    const fallbackUrl = await getFallbackWebhookUrl(WebhookType.HUMANIZAR, requestId)
+    const secondaryFallbackUrl = await getSecondaryFallbackWebhookUrl(WebhookType.HUMANIZAR, requestId)
+
     // Call webhook with rewriteOnly=true
     const response = await callWebhook({
-      url: HUMANIZAR_WEBHOOK_URL,
+      url: webhookUrl,
+      fallbackUrl,
+      secondaryFallbackUrl,
       text,
       requestId,
       additionalData: {

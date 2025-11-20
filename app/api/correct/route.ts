@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL } from "@/utils/constants"
+import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, EXTERNAL_FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { getWebhookUrl, getFallbackWebhookUrl, getSecondaryFallbackWebhookUrl, WebhookType } from "@/lib/webhook-config"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -147,12 +148,18 @@ export async function POST(request: NextRequest) {
       webhookData.tone = tone
     }
 
-    const webhookUrl = isPremium ? PREMIUM_WEBHOOK_URL : WEBHOOK_URL
+    // Get dynamic webhook URLs (can be changed via admin API)
+    const webhookType = isPremium ? WebhookType.PREMIUM_CORRECT : WebhookType.CORRECT
+    const webhookUrl = await getWebhookUrl(webhookType, requestId)
+    const fallbackUrl = await getFallbackWebhookUrl(webhookType, requestId)
+    const secondaryFallbackUrl = await getSecondaryFallbackWebhookUrl(webhookType, requestId)
+
     console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} webhook`, requestId)
 
     const response = await callWebhook({
       url: webhookUrl,
-      fallbackUrl: FALLBACK_WEBHOOK_URL,
+      fallbackUrl,
+      secondaryFallbackUrl,
       text,
       requestId,
       additionalData: webhookData,

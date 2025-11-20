@@ -1,7 +1,7 @@
 /**
  * Premium Rewrite Form
  * Formulário de reescrita de texto para usuários Premium (Pro/Admin)
- * - Até 300.000 caracteres (limite técnico do middleware)
+ * - Sem limite de caracteres
  * - Sem anúncios
  * - Usa webhook premium
  */
@@ -41,6 +41,7 @@ import { sanitizeUserInput } from "@/utils/html-sanitizer"
 import { RetryButton } from "@/components/ui/retry-button"
 import { RewriteStyleSelector } from "@/components/rewrite/rewrite-style-selector"
 import { RewriteStyleInternal, convertToApiFormat } from "@/utils/rewrite-styles"
+import LoadingOverlay from "@/components/loading-overlay"
 
 interface PremiumRewriteFormProps {
   onTextRewritten?: () => void
@@ -112,18 +113,8 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    // Limite de 20k caracteres para usuários premium
-    if (newText.length <= 20000) {
-      setOriginalText(newText)
-    } else {
-      // Truncar no limite de 20k se ultrapassar
-      setOriginalText(newText.slice(0, 20000))
-      toast({
-        title: "Limite atingido",
-        description: "O limite máximo para usuários Premium é de 20.000 caracteres.",
-        variant: "destructive",
-      })
-    }
+    // Sem limite para usuários premium
+    setOriginalText(newText)
   }
 
   const sanitizeText = (text: string) => {
@@ -178,17 +169,6 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
       return
     }
 
-    // Verificar tamanho do payload (limite do Vercel: 4.5MB)
-    const sizeInMB = new Blob([originalText]).size / 1024 / 1024
-    if (sizeInMB > 4) {
-      toast({
-        title: "⚠️ Texto muito grande",
-        description: `Seu texto tem ${sizeInMB.toFixed(2)}MB. O limite do Vercel é 4.5MB. Por favor, divida o texto em partes menores.`,
-        variant: "destructive",
-      })
-      return
-    }
-
     if (containsSuspiciousContent(originalText)) {
       toast({
         title: "Conteúdo não permitido",
@@ -236,9 +216,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
       const controller = new AbortController()
       const timeoutSignal = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT)
 
-      // Enviar evento de início para Google Analytics 4
+      // Enviar evento de início
       sendGTMEvent("premium_rewrite_started", {
-        charCount: textToSend.length,
+        char_count: textToSend.length,
         style: selectedStyle,
       })
       trackPixelCustomEvent("PremiumRewriteStarted", {
@@ -254,7 +234,6 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({
           text: textToSend,
           isMobile,
@@ -292,9 +271,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         setCorrectionId("")
       }
 
-      // Enviar evento de sucesso para Google Analytics 4
+      // Enviar evento de sucesso
       sendGTMEvent("premium_rewrite_completed", {
-        charCount: textToSend.length,
+        char_count: textToSend.length,
         style: selectedStyle,
       })
       trackPixelCustomEvent("PremiumRewriteCompleted", {
@@ -367,12 +346,13 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
         </Badge>
         <Badge variant="outline" className="border-purple-500 text-purple-700">
           <Zap className="h-3 w-3 mr-1" />
-          Até 20.000 caracteres
+          Caracteres Ilimitados
         </Badge>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className={isLoading ? "space-y-2 relative loading-blur" : "space-y-2 relative"}>
+          {isLoading && <LoadingOverlay message="Reescrevendo com IA Premium..." />}
           <div className="flex justify-between items-center">
             <label htmlFor="originalText" className="text-sm font-medium">
               Texto para Reescrita Premium
@@ -386,10 +366,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
             id="originalText"
             value={originalText}
             onChange={handleTextChange}
-            placeholder="Cole ou digite seu texto aqui para reescrever... Até 20.000 caracteres! 🚀"
+            placeholder="Cole ou digite seu texto aqui para reescrever... Sem limites! 🚀"
             className="min-h-[300px] resize-y"
             disabled={isLoading}
-            maxLength={20000}
           />
         </div>
 
@@ -493,13 +472,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
             <TabsContent value="result" className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="mb-2 flex justify-end">
-                    <span className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      {result.rewrittenText.length.toLocaleString()} caracteres
-                    </span>
-                  </div>
-                  <div className="prose max-w-none max-h-[500px] overflow-y-auto pr-2">
+                  <div className="prose max-w-none">
                     <p className="whitespace-pre-wrap">{result.rewrittenText}</p>
                   </div>
                 </CardContent>

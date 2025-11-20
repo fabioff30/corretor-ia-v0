@@ -41,6 +41,16 @@ export const PREMIUM_REWRITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-rees
 export const ANALYSIS_WEBHOOK_URL = `${WORKERS_API_BASE}/api/analysis-ai`
 export const HUMANIZAR_WEBHOOK_URL = `${WORKERS_API_BASE}/api/humanizar`
 export const FALLBACK_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir` // Mesmo endpoint como fallback
+export const EXTERNAL_FALLBACK_WEBHOOK_URL = "https://auto.ffmedia.com.br/webhook/webapp-tradutor" // Fallback externo secundário
+
+// Dynamic webhook URLs - can be changed via admin API in emergencies (no deployment needed)
+export const WEBHOOK_URL_FALLBACK_EXTERNAL = typeof process !== 'undefined'
+  ? (process.env.WEBHOOK_URL_FALLBACK_EXTERNAL || EXTERNAL_FALLBACK_WEBHOOK_URL)
+  : EXTERNAL_FALLBACK_WEBHOOK_URL
+
+export const WEBHOOK_URL_FALLBACK_EXTERNAL_2 = typeof process !== 'undefined'
+  ? (process.env.WEBHOOK_URL_FALLBACK_EXTERNAL_2 || EXTERNAL_FALLBACK_WEBHOOK_URL)
+  : EXTERNAL_FALLBACK_WEBHOOK_URL
 
 // Authentication - Server-side only
 export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOKEN || "ex5B31uQHm2rPHsWt1RwUo9ct35qFAjczdKqbCIMZh5D1qovSmotGtQUQaRXJtvg") : ""

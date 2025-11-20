@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { ANALYSIS_WEBHOOK_URL, AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT } from "@/utils/constants"
+import { ANALYSIS_WEBHOOK_URL, AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT, EXTERNAL_FALLBACK_WEBHOOK_URL } from "@/utils/constants"
+import { getWebhookUrl, getFallbackWebhookUrl, getSecondaryFallbackWebhookUrl, WebhookType } from "@/lib/webhook-config"
 import { parseRequestBody, validateTextLength } from "@/lib/api/shared-handlers"
 import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
@@ -145,9 +146,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`API: Processing ${isPremium ? 'PREMIUM' : 'regular'} AI detection for text, length: ${text.length}`, requestId)
 
+    // Get dynamic webhook URLs (can be changed via admin API)
+    const webhookUrl = await getWebhookUrl(WebhookType.ANALYSIS, requestId)
+    const fallbackUrl = await getFallbackWebhookUrl(WebhookType.ANALYSIS, requestId)
+    const secondaryFallbackUrl = await getSecondaryFallbackWebhookUrl(WebhookType.ANALYSIS, requestId)
+
     // Call webhook
     const response = await callWebhook({
-      url: ANALYSIS_WEBHOOK_URL,
+      url: webhookUrl,
+      fallbackUrl,
+      secondaryFallbackUrl,
       text,
       requestId,
       additionalData: {},

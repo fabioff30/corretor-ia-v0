@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Search, RotateCcw, AlertCircle, Clock, Sparkles, Crown } from "lucide-react"
+import LoadingOverlay from "@/components/loading-overlay"
 import { useToast } from "@/hooks/use-toast"
 import { RetryButton } from "@/components/ui/retry-button"
 import { AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT } from "@/utils/constants"
@@ -14,7 +15,6 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import { useUser } from "@/hooks/use-user"
 import { safeJsonParse, extractValidJson, createAIDetectionResponseValidator } from "@/utils/safe-json-fetch"
-import { FileToTextUploader } from "@/components/file-to-text-uploader"
 
 interface AIDetectionResponse {
   result?: {
@@ -79,7 +79,6 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
   const [error, setError] = useState<string | null>(null)
   const [rateLimitError, setRateLimitError] = useState<{ message: string; resetAt: string } | null>(null)
   const [correctionId, setCorrectionId] = useState<string | null>(null)
-  const [isConvertingFile, setIsConvertingFile] = useState(false)
   const { toast } = useToast()
 
   const charCount = text.length
@@ -113,7 +112,6 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({ text, isPremium: resolvedIsPremium }),
       })
 
@@ -234,16 +232,6 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
     setCorrectionId(null)
   }
 
-  const handleFileTextExtracted = (extractedText: string) => {
-    setText(extractedText)
-    if (extractedText) {
-      toast({
-        title: "Arquivo carregado!",
-        description: "O texto foi extraído do arquivo. Clique em 'Analisar Texto' para continuar.",
-      })
-    }
-  }
-
   const formatResetTime = (resetAt: string) => {
     const parts = resetAt.split(" às ")
     if (parts.length === 2) {
@@ -325,18 +313,14 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
                 </span>
               )}
             </div>
-            <Textarea
-              placeholder="Cole seu texto aqui ou envie um arquivo..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={isLoading || isConvertingFile}
-              className="min-h-[200px] font-mono text-sm"
-            />
-            <div className="flex items-center gap-3">
-              <FileToTextUploader
-                onTextExtracted={handleFileTextExtracted}
-                isPremium={resolvedIsPremium}
-                onConversionStateChange={setIsConvertingFile}
+            <div className={isLoading ? 'relative loading-blur' : 'relative'}>
+              {isLoading && <LoadingOverlay message="Analisando texto..." />}
+              <Textarea
+                placeholder="Cole seu texto aqui..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={isLoading}
+                className="min-h-[200px] font-mono text-sm"
               />
             </div>
             <div className="flex justify-between items-center text-sm">
@@ -354,7 +338,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleAnalyze} disabled={!canAnalyze || isLoading || isConvertingFile} className="flex-1">
+            <Button onClick={handleAnalyze} disabled={!canAnalyze || isLoading} className="flex-1">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -368,7 +352,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
               )}
             </Button>
             {(text || result) && (
-              <Button onClick={handleReset} variant="outline" disabled={isLoading || isConvertingFile}>
+              <Button onClick={handleReset} variant="outline" disabled={isLoading}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Limpar
               </Button>
@@ -426,8 +410,6 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
           brazilianism={result.brazilianism}
           grammarSummary={result.grammarSummary}
           metadata={result.metadata || {}}
-          originalText={text}
-          isPremium={resolvedIsPremium}
         />
       )}
 
