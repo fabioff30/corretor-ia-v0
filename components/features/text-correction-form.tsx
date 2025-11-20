@@ -84,8 +84,15 @@ const SSE_THRESHOLD_CHARS = 5000 // Use SSE streaming for texts > 5000 chars
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {
-  styleApplied: string
-  changes: string[]
+  strengths: string[]
+  weaknesses: string[]
+  suggestions: string[]
+  score: number
+  toneChanges: string[]
+  styleApplied?: string
+  changes?: string[]
+  toneApplied?: string
+  painBanner?: PainBannerData
 }
 
 export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false }: TextCorrectionFormProps) {
@@ -94,16 +101,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [charCount, setCharCount] = useState(0)
   const [result, setResult] = useState<{
     correctedText: string
-    evaluation: {
-      strengths: string[]
-      weaknesses: string[]
-      suggestions: string[]
-      score: number
-      toneChanges: string[]
-      styleApplied?: string
-      changes?: string[]
-      toneApplied?: string
-    }
+    evaluation: RewriteEvaluation
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,7 +113,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const { profile } = useUser()
+  const { user, profile } = useUser()
   const { limits, loading: limitsLoading, error: limitsError } = usePlanLimits()
 
   // Hook para SSE streaming (usado para textos grandes)
@@ -1244,20 +1242,70 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 </span>
               )}
             </div>
-            <div className="relative">
+            <div className="relative group">
               <Textarea
                 placeholder={
-                  operationMode === "correct"
-                    ? "Digite ou cole seu texto aqui para correção..."
-                    : "Digite ou cole seu texto aqui para reescrita..."
+                  !user && originalText === ""
+                    ? "" // Placeholder handled by overlay for non-logged users
+                    : operationMode === "correct"
+                      ? "Digite ou cole seu texto aqui para correção..."
+                      : "Digite ou cole seu texto aqui para reescrita..."
                 }
-                className="min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground"
+                className={`min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground ${(!isPremium && useAdvancedAI) || isOverCharacterLimit ? "opacity-20 pointer-events-none" : ""
+                  }`}
                 value={originalText}
                 onChange={handleTextChange}
-                disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI)}
+                disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI) || isOverCharacterLimit}
                 maxLength={characterLimit ?? undefined}
                 aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
               />
+
+              {/* Overlay for Non-Logged Users (Custom Placeholder) */}
+              {!user && originalText === "" && !((!isPremium && useAdvancedAI) || isOverCharacterLimit) && (
+                <div className="absolute inset-0 p-4 pointer-events-none flex items-start z-[5]">
+                  <span className="text-muted-foreground text-base">
+                    Cole, digite seu texto ou{" "}
+                    <Link href="/login" className="text-primary hover:underline pointer-events-auto font-medium">
+                      faça login
+                    </Link>{" "}
+                    para começar
+                  </span>
+                </div>
+              )}
+
+              {/* Overlay for Locked States (Advanced AI or Limit Exceeded) */}
+              {((!isPremium && useAdvancedAI) || isOverCharacterLimit) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-lg border border-primary/20 p-4 text-center z-10">
+                  <div className="bg-background/95 p-6 rounded-xl shadow-lg border border-border max-w-sm w-full space-y-4">
+                    <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Crown className="h-6 w-6 text-primary animate-pulse" />
+                    </div>
+                    <h3 className="font-bold text-lg">
+                      {isOverCharacterLimit ? "Limite de caracteres excedido" : "Recurso Premium"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isOverCharacterLimit
+                        ? "Você atingiu o limite de caracteres do plano gratuito."
+                        : "A IA Avançada é exclusiva para membros Premium."}
+                      <br />
+                      Faça login ou assine para continuar.
+                    </p>
+                    <div className="flex flex-col gap-2 pt-2">
+                      <Button asChild className="w-full font-semibold shadow-md">
+                        <Link href="/premium">
+                          Ver planos Premium
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild className="w-full">
+                        <Link href="/login">
+                          Já sou assinante (Login)
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="absolute top-3 right-3">
                 <div
                   className={`transition-opacity duration-300 ${isTyping ? "opacity-0" : "opacity-100"

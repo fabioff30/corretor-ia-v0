@@ -136,6 +136,8 @@ export function MobileHero({
             selectedStyleLabel={selectedStyleLabel}
             onStyleClick={onStyleClick}
             showAIToggle={showAIToggle}
+            isLoggedIn={!!user}
+            isPremium={isPremium}
           />
         </div>
       </motion.div>

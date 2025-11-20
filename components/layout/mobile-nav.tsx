@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, ScanSearch, FileText, Crown, Menu, MessageCircle, LogIn, LogOut, PenTool } from "lucide-react"
+import { Home, ScanSearch, FileText, Crown, Menu, MessageCircle, LogIn, LogOut, PenTool, History, Settings, Moon, Sun, CreditCard } from "lucide-react"
+import { useTheme } from "next-themes"
 import Image from "next/image"
 import { cn } from "@/utils/classnames"
 import { useState } from "react"
@@ -15,6 +16,7 @@ export function MobileNav() {
     const pathname = usePathname()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const { theme, setTheme } = useTheme()
 
     const isActive = (path: string) => {
         if (path === "/" && pathname === "/") return true
@@ -160,12 +162,56 @@ export function MobileNav() {
                                 <span className="text-[10px] font-medium">Menu</span>
                             </button>
                         </SheetTrigger>
-                        <SheetContent side="bottom" className="h-[80vh] rounded-t-[20px] px-0">
+                        <SheetContent side="bottom" className="h-[85vh] rounded-t-[20px] px-0 flex flex-col">
                             <SheetHeader className="px-6 mb-4">
                                 <SheetTitle>Menu</SheetTitle>
                             </SheetHeader>
-                            <div className="px-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+                            <div className="px-6 overflow-y-auto flex-1">
                                 <div className="grid gap-4 py-4">
+                                    {/* Histórico */}
+                                    <Link
+                                        href={user ? "/dashboard" : "/login"}
+                                        onClick={() => setIsOpen(false)}
+                                        className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent"
+                                    >
+                                        <History className="h-5 w-5 text-primary" />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Histórico</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {user ? "Seus textos corrigidos" : "Faça login para acessar"}
+                                            </span>
+                                        </div>
+                                    </Link>
+
+                                    {/* Configurações */}
+                                    <Link
+                                        href={user ? "/dashboard/settings" : "/login"}
+                                        onClick={() => setIsOpen(false)}
+                                        className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent"
+                                    >
+                                        <Settings className="h-5 w-5 text-primary" />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Configurações</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {user ? "Preferências da conta" : "Faça login para acessar"}
+                                            </span>
+                                        </div>
+                                    </Link>
+
+                                    {/* Preços */}
+                                    <Link
+                                        href="/premium"
+                                        onClick={() => setIsOpen(false)}
+                                        className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent"
+                                    >
+                                        <CreditCard className="h-5 w-5 text-primary" />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Preços</span>
+                                            <span className="text-xs text-muted-foreground">Planos e assinaturas</span>
+                                        </div>
+                                    </Link>
+
+                                    {/* Blog */}
                                     <Link
                                         href="/blog"
                                         onClick={() => setIsOpen(false)}
@@ -177,6 +223,25 @@ export function MobileNav() {
                                             <span className="text-xs text-muted-foreground">Dicas e tutoriais</span>
                                         </div>
                                     </Link>
+
+                                    {/* Dark Mode Toggle */}
+                                    <button
+                                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                                        className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent w-full text-left"
+                                    >
+                                        {theme === "dark" ? (
+                                            <Sun className="h-5 w-5 text-primary" />
+                                        ) : (
+                                            <Moon className="h-5 w-5 text-primary" />
+                                        )}
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Modo Escuro</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {theme === "dark" ? "Desativar modo escuro" : "Ativar modo escuro"}
+                                            </span>
+                                        </div>
+                                    </button>
+
                                     <Link
                                         href="/sobre"
                                         onClick={() => setIsOpen(false)}
@@ -199,8 +264,11 @@ export function MobileNav() {
                                     </Link>
 
                                     <div className="mt-4 pt-4 border-t">
-                                        <p className="text-xs text-muted-foreground text-center mb-4">
+                                        <p className="text-xs text-muted-foreground text-center mb-2">
                                             © {new Date().getFullYear()} CorretorIA
+                                        </p>
+                                        <p className="text-xs text-muted-foreground text-center font-medium">
+                                            Projeto orgulhosamente criado no Nordeste Brasileiro, em Natal/RN ❤️
                                         </p>
                                     </div>
                                 </div>

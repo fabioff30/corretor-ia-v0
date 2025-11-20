@@ -50,21 +50,8 @@ export function MobileCorrectionWrapper({
   }, [isPremium])
 
   const handleAIToggle = (enabled: boolean) => {
-    if (!isPremium && enabled) {
-      toast({
-        title: "Recurso Premium",
-        description: "A IA Avançada usa modelos mais poderosos e é exclusiva para assinantes Premium.",
-        action: (
-          <Link
-            href="/premium"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
-          >
-            Ver Planos
-          </Link>
-        ),
-      })
-      return // Não permite marcar para free users
-    }
+    // Permite marcar o toggle mesmo para usuários free
+    // O bloqueio visual será feito pelo overlay no input
     setAIEnabled(enabled)
   }
 
