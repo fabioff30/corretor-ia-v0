@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { MobileHero } from "./mobile-hero"
 import { MobileFAB } from "./mobile-fab"
-import { MobileBottomDrawer } from "./mobile-bottom-drawer"
 import { MobileCorrectionLoading } from "./mobile-correction-loading"
 import { MobileCorrectionResult } from "./mobile-correction-result"
-import { AnimatePresence } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
@@ -28,7 +27,6 @@ export function MobileCorrectionWrapper({
   onFileUpload,
   isLoading: propIsLoading = false
 }: MobileCorrectionWrapperProps) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [aiEnabled, setAIEnabled] = useState(false)
   const [viewState, setViewState] = useState<"INPUT" | "LOADING" | "RESULT">("INPUT")
   const [result, setResult] = useState<any>(null)
@@ -44,21 +42,30 @@ export function MobileCorrectionWrapper({
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
   const characterLimit = isUnlimited ? null : resolvedCharacterLimit
 
-  const handleSettingsClick = () => {
-    setIsDrawerOpen(true)
-  }
-
-  const handleDrawerClose = () => {
-    setIsDrawerOpen(false)
-  }
+  // Set default AI toggle for premium users
+  useEffect(() => {
+    if (isPremium) {
+      setAIEnabled(true)
+    }
+  }, [isPremium])
 
   const handleAIToggle = (enabled: boolean) => {
+    if (!isPremium && enabled) {
+      toast({
+        title: "Recurso Premium",
+        description: "A IA Avançada usa modelos mais poderosos e é exclusiva para assinantes Premium.",
+        action: (
+          <Link
+            href="/premium"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
+          >
+            Ver Planos
+          </Link>
+        ),
+      })
+      return // Não permite marcar para free users
+    }
     setAIEnabled(enabled)
-  }
-
-  const handleToneSelect = (tone: string) => {
-    console.log('Tone selected:', tone)
-    // TODO: Implement tone adjustment logic
   }
 
   const handleHelpClick = () => {
@@ -170,26 +177,11 @@ export function MobileCorrectionWrapper({
 
       {/* Floating Action Button */}
       <MobileFAB
-        onSettingsClick={handleSettingsClick}
         onFileUpload={onFileUpload}
         onAIToggle={() => handleAIToggle(!aiEnabled)}
         onHistoryClick={handleHistoryClick}
         onHelpClick={handleHelpClick}
       />
-
-      {/* Bottom Drawer */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <MobileBottomDrawer
-            isOpen={isDrawerOpen}
-            onClose={handleDrawerClose}
-            onAIToggle={handleAIToggle}
-            onToneSelect={handleToneSelect}
-            onFileUpload={onFileUpload}
-            aiEnabled={aiEnabled}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }

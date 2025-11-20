@@ -3,7 +3,15 @@
 import { Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
 
-export function MobileCorrectionLoading() {
+interface MobileCorrectionLoadingProps {
+    title?: string
+    description?: string
+}
+
+export function MobileCorrectionLoading({
+    title = "Fazendo as melhores correções",
+    description = "Nossa IA está analisando seu texto para garantir gramática, ortografia e estilo perfeitos."
+}: MobileCorrectionLoadingProps) {
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center space-y-6">
             <motion.div
@@ -23,10 +31,10 @@ export function MobileCorrectionLoading() {
                 className="space-y-2"
             >
                 <h3 className="text-xl font-semibold text-foreground">
-                    Fazendo as melhores correções
+                    {title}
                 </h3>
                 <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                    Nossa IA está analisando seu texto para garantir gramática, ortografia e estilo perfeitos.
+                    {description}
                 </p>
             </motion.div>
         </div>

@@ -2,19 +2,19 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, ScanSearch, FileText, Crown, Menu, MessageCircle } from "lucide-react"
+import { Home, ScanSearch, FileText, Crown, Menu, MessageCircle, LogIn, LogOut, PenTool } from "lucide-react"
 import Image from "next/image"
 import { cn } from "@/utils/classnames"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Header } from "@/components/layout/header"
 import { useUser } from "@/hooks/use-user"
-import { LogIn, LayoutDashboard, PenTool } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export function MobileNav() {
     const pathname = usePathname()
     const [isOpen, setIsOpen] = useState(false)
+    const [isLoggingOut, setIsLoggingOut] = useState(false)
 
     const isActive = (path: string) => {
         if (path === "/" && pathname === "/") return true
@@ -22,7 +22,30 @@ export function MobileNav() {
         return false
     }
 
-    const { user } = useUser()
+    const { user, signOut } = useUser()
+    const { toast } = useToast()
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true)
+        const { error } = await signOut()
+
+        if (error) {
+            toast({
+                title: "Erro ao sair",
+                description: error.message,
+                variant: "destructive",
+            })
+            setIsLoggingOut(false)
+            return
+        }
+
+        toast({
+            title: "Logout realizado",
+            description: "Você saiu da sua conta.",
+        })
+
+        window.location.href = '/'
+    }
 
     const navItems = [
         {
@@ -47,10 +70,11 @@ export function MobileNav() {
             isJulinho: true,
         },
         {
-            href: user ? "/dashboard" : "/login",
-            label: user ? "Dashboard" : "Entrar",
-            icon: user ? LayoutDashboard : LogIn,
-            highlight: !user, // Highlight "Entrar" if not logged in
+            href: "/login",
+            label: user ? "Logout" : "Entrar",
+            icon: user ? LogOut : LogIn,
+            highlight: !user,
+            isLogout: !!user,
         },
     ]
 
@@ -88,6 +112,28 @@ export function MobileNav() {
                         }
 
                         const Icon = item.icon
+
+                        // Handle logout as button
+                        if (item.isLogout) {
+                            return (
+                                <button
+                                    key="logout"
+                                    onClick={handleLogout}
+                                    disabled={isLoggingOut}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center gap-1 min-w-[64px] h-full px-1 transition-colors",
+                                        "text-muted-foreground hover:text-foreground",
+                                        isLoggingOut && "opacity-50"
+                                    )}
+                                >
+                                    <Icon className="h-5 w-5" />
+                                    <span className="text-[10px] font-medium">
+                                        {isLoggingOut ? "Saindo..." : item.label}
+                                    </span>
+                                </button>
+                            )
+                        }
+
                         return (
                             <Link
                                 key={item.href}

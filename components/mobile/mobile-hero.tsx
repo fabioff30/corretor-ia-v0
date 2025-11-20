@@ -18,6 +18,16 @@ interface MobileHeroProps {
   badges?: Array<{ text: string; icon: string; color: string }>
   placeholder?: string
   showStats?: boolean
+  // Custom button text
+  submitButtonText?: string
+  loadingButtonText?: string
+  // Style selector props
+  showStyleSelector?: boolean
+  selectedStyle?: string
+  selectedStyleLabel?: string
+  onStyleClick?: () => void
+  // Control AI toggle visibility
+  showAIToggle?: boolean
 }
 
 export function MobileHero({
@@ -35,6 +45,13 @@ export function MobileHero({
   ],
   placeholder = "Cole ou digite seu texto aqui...",
   showStats = true,
+  submitButtonText,
+  loadingButtonText,
+  showStyleSelector,
+  selectedStyle,
+  selectedStyleLabel,
+  onStyleClick,
+  showAIToggle,
 }: MobileHeroProps) {
   const [text, setText] = useState("")
   const { user, profile } = useUser()
@@ -112,6 +129,13 @@ export function MobileHero({
             placeholder={placeholder}
             onAIToggle={onAIToggle}
             aiEnabled={aiEnabled}
+            submitButtonText={submitButtonText}
+            loadingButtonText={loadingButtonText}
+            showStyleSelector={showStyleSelector}
+            selectedStyle={selectedStyle}
+            selectedStyleLabel={selectedStyleLabel}
+            onStyleClick={onStyleClick}
+            showAIToggle={showAIToggle}
           />
         </div>
       </motion.div>

@@ -55,14 +55,15 @@ export function MobileDetectorWrapper({
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT)
 
-            const response = await fetch("/api/detect", {
+            const response = await fetch("/api/ai-detector", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                credentials: "include",
                 body: JSON.stringify({
                     text,
-                    isMobile: true
+                    isPremium
                 }),
                 signal: controller.signal
             })
@@ -105,7 +106,12 @@ export function MobileDetectorWrapper({
     }
 
     if (viewState === "LOADING") {
-        return <MobileCorrectionLoading />
+        return (
+            <MobileCorrectionLoading
+                title="Checando se o texto é de humano ou de robô 🤖"
+                description="Nossa IA está analisando padrões de escrita para determinar a origem do texto."
+            />
+        )
     }
 
     if (viewState === "RESULT" && result) {
@@ -128,12 +134,15 @@ export function MobileDetectorWrapper({
                 title="Detector de IA"
                 subtitle="Identifique se um texto foi escrito por humanos ou inteligência artificial."
                 badges={[
-                    { text: "Gratuito", icon: "✓", color: "text-green-500" },
+                    { text: "1/dia grátis", icon: "🎁", color: "text-green-500" },
                     { text: "Preciso", icon: "🎯", color: "text-blue-500" },
                     { text: "Rápido", icon: "⚡", color: "text-yellow-500" },
                 ]}
                 placeholder="Cole o texto para analisar..."
                 showStats={false}
+                submitButtonText="Detectar IA"
+                loadingButtonText="Detectando..."
+                showAIToggle={false}
             />
 
             <MobileFAB

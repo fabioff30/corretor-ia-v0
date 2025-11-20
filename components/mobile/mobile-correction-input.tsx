@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Loader2, Upload, Sparkles } from "lucide-react"
+import { Loader2, Upload, Sparkles, ChevronRight, Crown } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useCorrectionHaptic } from "@/hooks/use-haptic"
@@ -19,6 +19,16 @@ interface MobileCorrectionInputProps {
   placeholder?: string
   onAIToggle?: (enabled: boolean) => void
   aiEnabled?: boolean
+  // Custom button text
+  submitButtonText?: string
+  loadingButtonText?: string
+  // Style selector (replaces AI toggle for rewrite)
+  showStyleSelector?: boolean
+  selectedStyle?: string
+  selectedStyleLabel?: string
+  onStyleClick?: () => void
+  // Control AI toggle visibility
+  showAIToggle?: boolean
 }
 
 export function MobileCorrectionInput({
@@ -31,6 +41,13 @@ export function MobileCorrectionInput({
   placeholder = "Cole ou digite seu texto aqui...",
   onAIToggle,
   aiEnabled = false,
+  submitButtonText = "Corrigir Agora",
+  loadingButtonText = "Corrigindo...",
+  showStyleSelector = false,
+  selectedStyle,
+  selectedStyleLabel,
+  onStyleClick,
+  showAIToggle = true,
 }: MobileCorrectionInputProps) {
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -66,21 +83,42 @@ export function MobileCorrectionInput({
 
   return (
     <div className="w-full space-y-3">
-      {/* AI Toggle */}
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className={cn("h-4 w-4", aiEnabled ? "text-primary" : "text-muted-foreground")} />
-          <Label htmlFor="ai-mode" className="text-sm font-medium">
-            IA Avançada
-          </Label>
+      {/* AI Toggle or Style Selector */}
+      {showStyleSelector ? (
+        <button
+          type="button"
+          onClick={onStyleClick}
+          className="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Estilo de Reescrita</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <span className="text-sm">{selectedStyleLabel || "Selecionar"}</span>
+            <ChevronRight className="h-4 w-4" />
+          </div>
+        </button>
+      ) : showAIToggle ? (
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className={cn("h-4 w-4", aiEnabled ? "text-primary" : "text-muted-foreground")} />
+            <Label htmlFor="ai-mode" className="text-sm font-medium">
+              IA Avançada
+            </Label>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Crown className="h-2.5 w-2.5" />
+              Premium
+            </span>
+          </div>
+          <Switch
+            id="ai-mode"
+            checked={aiEnabled}
+            onCheckedChange={onAIToggle}
+            className="data-[state=checked]:bg-primary"
+          />
         </div>
-        <Switch
-          id="ai-mode"
-          checked={aiEnabled}
-          onCheckedChange={onAIToggle}
-          className="data-[state=checked]:bg-primary"
-        />
-      </div>
+      ) : null}
 
       {/* Textarea Container */}
       <div className="relative">
@@ -138,10 +176,10 @@ export function MobileCorrectionInput({
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Corrigindo...
+            {loadingButtonText}
           </>
         ) : (
-          'Corrigir Agora'
+          submitButtonText
         )}
       </Button>
 

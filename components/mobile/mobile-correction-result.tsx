@@ -4,10 +4,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/features/text-evaluation"
+import { StarRating } from "@/components/star-rating"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Copy, Check, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 
 interface MobileCorrectionResultProps {
     originalText: string
@@ -24,6 +26,15 @@ export function MobileCorrectionResult({
 }: MobileCorrectionResultProps) {
     const { toast } = useToast()
     const [copied, setCopied] = useState(false)
+    const [showRating, setShowRating] = useState(true)
+
+    const handleRatingSubmit = (rating: number) => {
+        sendGTMEvent("mobile_correction_rated", {
+            rating,
+            text_length: originalText.length
+        })
+        setShowRating(false)
+    }
 
     const handleCopy = async () => {
         try {
@@ -95,6 +106,22 @@ export function MobileCorrectionResult({
                         </motion.div>
                     </TabsContent>
                 </Tabs>
+
+                {/* User Rating */}
+                {showRating && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="px-4 pb-4"
+                    >
+                        <StarRating
+                            onRatingSubmit={handleRatingSubmit}
+                            correctionId={`mobile-${Date.now()}`}
+                            textLength={originalText.length}
+                        />
+                    </motion.div>
+                )}
             </div>
 
             {/* Bottom Action */}

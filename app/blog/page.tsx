@@ -6,8 +6,9 @@ import { AdminRefreshButton } from "@/components/admin-refresh-button"
 export const dynamic = "force-dynamic"
 export const revalidate = 900 // 15 minutes in seconds
 
-export function generateMetadata({ searchParams }: { searchParams: { page?: string } }) {
-  const pageParam = searchParams.page ? `?page=${searchParams.page}` : ""
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams
+  const pageParam = page ? `?page=${page}` : ""
   const canonicalUrl = `https://www.corretordetextoonline.com.br/blog${pageParam}`
 
   return {
@@ -19,12 +20,13 @@ export function generateMetadata({ searchParams }: { searchParams: { page?: stri
   }
 }
 
-export default function BlogPage({
+export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
-  const page = searchParams.page ? Number.parseInt(searchParams.page) : 1
+  const resolvedParams = await searchParams
+  const page = resolvedParams.page ? Number.parseInt(resolvedParams.page) : 1
 
   return (
     <>

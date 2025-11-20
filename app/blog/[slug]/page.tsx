@@ -5,8 +5,9 @@ import { BlogPostContent } from "@/components/blog/blog-post-content"
 export const dynamic = "force-dynamic" // Forçar renderização dinâmica
 export const revalidate = 900 // 15 minutes in seconds
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
 
   if (!post) {
     return {
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
   const excerpt = extractExcerpt(post.excerpt.rendered)
   const featuredImage = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || ""
-  const canonicalUrl = `https://www.corretordetextoonline.com.br/blog/${params.slug}`
+  const canonicalUrl = `https://www.corretordetextoonline.com.br/blog/${slug}`
 
   return {
     title: `${post.title.rendered} | CorretorIA`,
@@ -52,8 +53,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = await getPostBySlug(params.slug)
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
 
   if (!post) {
     notFound()

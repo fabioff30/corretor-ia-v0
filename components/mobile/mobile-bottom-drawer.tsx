@@ -14,8 +14,10 @@ interface MobileBottomDrawerProps {
   onFileUpload?: () => void
   aiEnabled?: boolean
   children?: React.ReactNode
-  toneOptions?: Array<{ id: string; label: string; icon: string }>
+  toneOptions?: Array<{ id: string; label: string; icon: string; isPremium?: boolean }>
   toneLabel?: string
+  hideAIToggle?: boolean
+  hideFileUpload?: boolean
 }
 
 const DRAG_THRESHOLD = 50 // pixels to drag before closing
@@ -34,7 +36,9 @@ export function MobileBottomDrawer({
     { id: 'professional', label: 'Profissional', icon: '💼' },
     { id: 'friendly', label: 'Amigável', icon: '👋' },
   ],
-  toneLabel = "Tom do Texto"
+  toneLabel = "Tom do Texto",
+  hideAIToggle = false,
+  hideFileUpload = false
 }: MobileBottomDrawerProps) {
   const haptic = useHaptic()
   const y = useMotionValue(0)
@@ -121,35 +125,37 @@ export function MobileBottomDrawer({
         {/* Content */}
         <div className="px-6 py-4 max-h-[60vh] overflow-y-auto space-y-6">
           {/* AI Toggle */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className={cn(
-                  "h-5 w-5 transition-colors",
-                  aiEnabled ? "text-primary" : "text-muted-foreground"
-                )} />
-                <div>
-                  <p className="font-medium text-sm">IA Avançada</p>
-                  <p className="text-xs text-muted-foreground">
-                    {aiEnabled ? "GPT-4 ativado" : "GPT-3.5 padrão"}
-                  </p>
+          {!hideAIToggle && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className={cn(
+                    "h-5 w-5 transition-colors",
+                    aiEnabled ? "text-primary" : "text-muted-foreground"
+                  )} />
+                  <div>
+                    <p className="font-medium text-sm">IA Avançada</p>
+                    <p className="text-xs text-muted-foreground">
+                      {aiEnabled ? "GPT-4 ativado" : "GPT-3.5 padrão"}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={handleAIToggle}
+                  className={cn(
+                    "relative w-14 h-8 rounded-full transition-colors",
+                    aiEnabled ? "bg-primary" : "bg-muted"
+                  )}
+                >
+                  <motion.div
+                    className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"
+                    animate={{ x: aiEnabled ? 24 : 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                </button>
               </div>
-              <button
-                onClick={handleAIToggle}
-                className={cn(
-                  "relative w-14 h-8 rounded-full transition-colors",
-                  aiEnabled ? "bg-primary" : "bg-muted"
-                )}
-              >
-                <motion.div
-                  className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"
-                  animate={{ x: aiEnabled ? 24 : 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              </button>
             </div>
-          </div>
+          )}
 
           {/* Tone Options */}
           <div className="space-y-3">
@@ -180,7 +186,7 @@ export function MobileBottomDrawer({
           </div>
 
           {/* File Upload */}
-          {onFileUpload && (
+          {onFileUpload && !hideFileUpload && (
             <button
               onClick={handleFileUpload}
               className={cn(

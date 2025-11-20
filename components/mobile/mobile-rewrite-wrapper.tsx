@@ -30,7 +30,7 @@ export function MobileRewriteWrapper({
     const [result, setResult] = useState<any>(null)
     const [originalText, setOriginalText] = useState("")
     const [isLoading, setIsLoading] = useState(propIsLoading)
-    const [selectedTone, setSelectedTone] = useState("formal")
+    const [selectedTone, setSelectedTone] = useState("humanized")
 
     const { toast } = useToast()
     const { profile } = useUser()
@@ -92,9 +92,9 @@ export function MobileRewriteWrapper({
                 },
                 body: JSON.stringify({
                     text,
-                    mode: selectedTone,
+                    style: selectedTone,
                     isMobile: true,
-                    useAdvancedAI: aiEnabled && isPremium
+                    isPremium
                 }),
                 signal: controller.signal
             })
@@ -141,15 +141,32 @@ export function MobileRewriteWrapper({
     }
 
     const rewriteStyles = [
-        { id: 'formal', label: 'Formal', icon: '👔' },
-        { id: 'casual', label: 'Humanizado', icon: '😊' },
+        // Free styles
+        { id: 'formal', label: 'Formal', icon: '💼' },
+        { id: 'humanized', label: 'Humanizado', icon: '❤️' },
         { id: 'academic', label: 'Acadêmico', icon: '🎓' },
         { id: 'creative', label: 'Criativo', icon: '🎨' },
-        { id: 'childish', label: 'Infantil', icon: '🧸' },
+        { id: 'childlike', label: 'Como uma Criança', icon: '👶' },
+        // Premium styles
+        { id: 'technical', label: 'Técnico', icon: '💻' },
+        { id: 'journalistic', label: 'Jornalístico', icon: '📰' },
+        { id: 'advertising', label: 'Publicitário', icon: '📈' },
+        { id: 'blog_post', label: 'Blog Post', icon: '📖' },
+        { id: 'reels_script', label: 'Roteiro Reels', icon: '⚡' },
+        { id: 'youtube_script', label: 'Roteiro YouTube', icon: '▶️' },
+        { id: 'presentation', label: 'Apresentação', icon: '🎤' },
+        { id: 'legal', label: 'Jurídico', icon: '⚖️' },
     ]
 
+    const selectedStyleLabel = rewriteStyles.find(s => s.id === selectedTone)?.label || "Humanizado"
+
     if (viewState === "LOADING") {
-        return <MobileCorrectionLoading />
+        return (
+            <MobileCorrectionLoading
+                title="Reescrevendo seu texto da melhor forma"
+                description="Nossa IA está reescrevendo seu texto com o estilo selecionado."
+            />
+        )
     }
 
     if (viewState === "RESULT" && result) {
@@ -169,8 +186,6 @@ export function MobileRewriteWrapper({
                 onSubmit={handleRewrite}
                 onFileUpload={onFileUpload}
                 isLoading={isLoading}
-                onAIToggle={handleAIToggle}
-                aiEnabled={aiEnabled}
                 title="Reescrever Texto IA"
                 subtitle="Reescreva textos em diferentes estilos mantendo o significado original."
                 badges={[
@@ -179,12 +194,17 @@ export function MobileRewriteWrapper({
                     { text: "Rápido", icon: "⚡", color: "text-yellow-500" },
                 ]}
                 placeholder="Cole seu texto para reescrever..."
+                submitButtonText="Reescrever"
+                loadingButtonText="Reescrevendo..."
+                showStyleSelector={true}
+                selectedStyle={selectedTone}
+                selectedStyleLabel={selectedStyleLabel}
+                onStyleClick={handleSettingsClick}
             />
 
             <MobileFAB
                 onSettingsClick={handleSettingsClick}
                 onFileUpload={onFileUpload}
-                onAIToggle={() => handleAIToggle(!aiEnabled)}
                 onHistoryClick={handleHistoryClick}
                 onHelpClick={handleHelpClick}
             />
@@ -194,12 +214,11 @@ export function MobileRewriteWrapper({
                     <MobileBottomDrawer
                         isOpen={isDrawerOpen}
                         onClose={handleDrawerClose}
-                        onAIToggle={handleAIToggle}
                         onToneSelect={handleToneSelect}
-                        onFileUpload={onFileUpload}
-                        aiEnabled={aiEnabled}
                         toneOptions={rewriteStyles}
                         toneLabel="Estilo de Reescrita"
+                        hideAIToggle={true}
+                        hideFileUpload={true}
                     />
                 )}
             </AnimatePresence>
