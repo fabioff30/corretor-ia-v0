@@ -170,7 +170,7 @@ export function MobileNav() {
                                 <div className="grid gap-4 py-4">
                                     {/* Histórico */}
                                     <Link
-                                        href={user ? "/dashboard" : "/login"}
+                                        href={user ? "/dashboard/textos" : "/login"}
                                         onClick={() => setIsOpen(false)}
                                         className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent"
                                     >
@@ -185,7 +185,7 @@ export function MobileNav() {
 
                                     {/* Configurações */}
                                     <Link
-                                        href={user ? "/dashboard/settings" : "/login"}
+                                        href={user ? "/dashboard/configuracoes" : "/login"}
                                         onClick={() => setIsOpen(false)}
                                         className="flex items-center gap-3 rounded-lg border p-4 hover:bg-accent"
                                     >
