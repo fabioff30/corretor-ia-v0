@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import TextCorrectionForm from "@/components/text-correction-form"
+import TextCorrectionForm from "@/components/features/text-correction-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Script from "next/script"
@@ -22,6 +22,7 @@ import {
   Lightbulb,
   ArrowRight
 } from "lucide-react"
+import { MobileRewriteWrapper } from "@/components/mobile/mobile-rewrite-wrapper"
 
 export const metadata: Metadata = {
   title: "Reescrever Texto Online com IA - Ferramenta Gratuita de Reescrita | CorretorIA",
@@ -196,7 +197,11 @@ export default function RewriteTextPage() {
         }}
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+      <div className="block md:hidden">
+        <MobileRewriteWrapper />
+      </div>
+
+      <div className="hidden md:block min-h-screen bg-gradient-to-br from-background to-secondary/20">
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-12">
           <div className="max-w-6xl mx-auto text-center">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
-import { BlogPostContent } from "@/components/blog-post-content"
+import { BlogPostContent } from "@/components/blog/blog-post-content"
 export const dynamic = "force-dynamic" // Forçar renderização dinâmica
 export const revalidate = 900 // 15 minutes in seconds
 
@@ -34,13 +34,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       type: "article",
       images: featuredImage
         ? [
-            {
-              url: featuredImage,
-              width: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.width || 1200,
-              height: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.height || 630,
-              alt: post.title.rendered,
-            },
-          ]
+          {
+            url: featuredImage,
+            width: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.width || 1200,
+            height: post._embedded?.["wp:featuredmedia"]?.[0]?.media_details?.height || 630,
+            alt: post.title.rendered,
+          },
+        ]
         : [],
     },
     twitter: {

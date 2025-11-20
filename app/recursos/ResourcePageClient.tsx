@@ -7,7 +7,7 @@ import { ArrowRight, CheckCircle, Search, Shield, Zap } from "lucide-react"
 import { ToolComparison } from "@/components/tool-comparison"
 import { ExampleUseCases } from "@/components/example-use-cases"
 import { FAQSection } from "@/components/faq-section"
-import TextCorrectionForm from "@/components/text-correction-form"
+import TextCorrectionForm from "@/components/features/text-correction-form"
 import { motion } from "framer-motion"
 
 export default function ResourcePageClient() {

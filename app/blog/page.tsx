@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { BackgroundGradient } from "@/components/background-gradient"
-import { BlogPostList } from "@/components/blog-post-list"
-import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
+import { BlogPostList } from "@/components/blog/blog-post-list"
+import { BlogPageSkeleton } from "@/components/blog/blog-page-skeleton"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
 export const dynamic = "force-dynamic"
 export const revalidate = 900 // 15 minutes in seconds

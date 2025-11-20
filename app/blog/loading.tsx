@@ -1,5 +1,5 @@
 import { BackgroundGradient } from "@/components/background-gradient"
-import { BlogPageSkeleton } from "@/components/blog-page-skeleton"
+import { BlogPageSkeleton } from "@/components/blog/blog-page-skeleton"
 
 export default function BlogLoading() {
   return (

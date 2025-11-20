@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TextDiff } from "@/components/text-diff"
-import { TextEvaluation } from "@/components/text-evaluation"
+import { TextEvaluation } from "@/components/features/text-evaluation"
 import {
   Loader2,
   Send,
@@ -161,7 +161,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
   const handleRetry = () => {
     setError(null)
     const syntheticEvent = {
-      preventDefault: () => {},
+      preventDefault: () => { },
     } as React.FormEvent
     handleSubmit(syntheticEvent)
   }

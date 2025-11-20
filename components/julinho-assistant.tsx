@@ -350,7 +350,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   // Hide the widget on the chat page
   const shouldHideWidget = pathname === "/chat/julinho"
 
-  if (shouldHideWidget) {
+  if (shouldHideWidget || isMobile) {
     return null
   }
 
@@ -373,11 +373,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                 <Button
                   onClick={handleOpenChat}
                   size="icon"
-                  className={`${isMobile ? "h-14 w-14" : "h-12 w-12"} rounded-full shadow-lg ${
-                    JULINHO_DISABLED
+                  className={`${isMobile ? "h-14 w-14" : "h-12 w-12"} rounded-full shadow-lg ${JULINHO_DISABLED
                       ? "bg-gray-400 hover:bg-gray-500 cursor-not-allowed"
                       : "bg-green-500 hover:bg-green-600"
-                  } text-white p-0 overflow-hidden flex items-center justify-center`}
+                    } text-white p-0 overflow-hidden flex items-center justify-center`}
                   aria-label={JULINHO_DISABLED ? "Julinho está indisponível" : "Falar com Julinho no WhatsApp"}
                   disabled={JULINHO_DISABLED}
                 >
@@ -390,9 +389,8 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                       className={`w-full h-full object-cover ${JULINHO_DISABLED ? "grayscale" : ""}`}
                     />
                     <div
-                      className={`absolute bottom-0 right-0 ${
-                        JULINHO_DISABLED ? "bg-gray-600" : "bg-green-600"
-                      } rounded-full p-0.5 shadow-sm`}
+                      className={`absolute bottom-0 right-0 ${JULINHO_DISABLED ? "bg-gray-600" : "bg-green-600"
+                        } rounded-full p-0.5 shadow-sm`}
                     >
                       {JULINHO_DISABLED ? (
                         <AlertCircle className="h-4 w-4 text-white" />
@@ -428,9 +426,8 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         </motion.div>
 
         <DialogContent
-          className={`${
-            isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
-          } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
+          className={`${isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
+            } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
         >
           <DialogHeader className={`p-4 border-b ${JULINHO_DISABLED ? "bg-gray-500" : "bg-green-500"} text-white`}>
             <div className="flex items-center justify-between">
@@ -479,11 +476,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
                   </div>
                 )}
                 <div
-                  className={`max-w-[75%] rounded-lg p-3 ${
-                    message.role === "user"
+                  className={`max-w-[75%] rounded-lg p-3 ${message.role === "user"
                       ? `${JULINHO_DISABLED ? "bg-gray-500" : "bg-green-500"} text-white rounded-tr-none`
                       : "bg-white text-gray-900 border border-gray-200 shadow-sm rounded-tl-none"
-                  }`}
+                    }`}
                 >
                   <div className="julinho-text">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -545,18 +541,16 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={JULINHO_DISABLED ? "Julinho está em manutenção..." : "Digite sua dúvida sobre português..."}
-              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-${
-                JULINHO_DISABLED ? "gray" : "green"
-              }-500 bg-background border border-input text-foreground placeholder:text-muted-foreground`}
+              className={`flex-1 px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-${JULINHO_DISABLED ? "gray" : "green"
+                }-500 bg-background border border-input text-foreground placeholder:text-muted-foreground`}
               disabled={isLoading || JULINHO_DISABLED}
             />
             <Button
               type="submit"
               size="icon"
               disabled={isLoading || !input.trim() || JULINHO_DISABLED}
-              className={`${
-                JULINHO_DISABLED ? "bg-gray-500 hover:bg-gray-600" : "bg-green-500 hover:bg-green-600"
-              } text-white min-w-[40px] h-[40px] flex-shrink-0`}
+              className={`${JULINHO_DISABLED ? "bg-gray-500 hover:bg-gray-600" : "bg-green-500 hover:bg-green-600"
+                } text-white min-w-[40px] h-[40px] flex-shrink-0`}
             >
               <Send className="h-4 w-4" />
             </Button>

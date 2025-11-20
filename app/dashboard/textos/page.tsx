@@ -41,8 +41,8 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TextDiff } from "@/components/text-diff"
-import { TextEvaluation } from "@/components/text-evaluation"
-import { AIDetectionResult } from "@/components/ai-detection-result"
+import { TextEvaluation } from "@/components/features/text-evaluation"
+import { AIDetectionResult } from "@/components/features/ai-detection-result"
 import { useToast } from "@/hooks/use-toast"
 import type { UserCorrection } from "@/types/supabase"
 
@@ -198,20 +198,19 @@ export default function CorrectionsHistoryPage() {
     (correction: UserCorrection) => {
       try {
         const isAi = correction.operation_type === "ai_analysis"
-        const filename = `corretor-${correction.operation_type}-${format(new Date(correction.created_at), "yyyyMMdd-HHmm")}.${
-          isAi ? "json" : "txt"
-        }`
+        const filename = `corretor-${correction.operation_type}-${format(new Date(correction.created_at), "yyyyMMdd-HHmm")}.${isAi ? "json" : "txt"
+          }`
 
         const payload = isAi
           ? JSON.stringify(
-              {
-                summary: getAiSummary(correction.corrected_text),
-                evaluation: correction.evaluation,
-                originalText: correction.original_text,
-              },
-              null,
-              2,
-            )
+            {
+              summary: getAiSummary(correction.corrected_text),
+              evaluation: correction.evaluation,
+              originalText: correction.original_text,
+            },
+            null,
+            2,
+          )
           : correction.corrected_text
 
         const blob = new Blob([payload], { type: isAi ? "application/json" : "text/plain;charset=utf-8" })
@@ -414,93 +413,93 @@ export default function CorrectionsHistoryPage() {
                       <TableRow key={`skeleton-${index}`} data-testid="history-row-skeleton">
                         <TableCell>
                           <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="ml-auto h-4 w-12" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="ml-auto h-8 w-32" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                  {!loading && corrections.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-10 text-center">
+                        <div className="mx-auto max-w-lg space-y-3 text-muted-foreground">
+                          <Sparkles className="mx-auto h-6 w-6" />
+                          <p className="text-sm">
+                            Nenhum texto encontrado para os filtros selecionados. Correções, reescritas e análises premium serão
+                            exibidas aqui automaticamente.
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {corrections.map((correction) => (
+                    <TableRow key={correction.id}>
+                      <TableCell className="font-medium">{formatDate(correction.created_at)}</TableCell>
+                      <TableCell>{getTypeBadge(correction.operation_type)}</TableCell>
+                      <TableCell className="text-right">{correction.character_count.toLocaleString("pt-BR")}</TableCell>
+                      <TableCell>
+                        <div className="max-w-xl truncate text-sm text-muted-foreground">{formatPreview(correction)}</div>
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-24" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="ml-auto h-4 w-12" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="ml-auto h-8 w-32" />
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleViewDetails(correction)}
+                            aria-label="Ver detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleCopy(correction)}
+                            aria-label="Copiar resultado"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDownload(correction)}
+                            aria-label="Baixar"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon" aria-label="Excluir">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover este registro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. O texto será removido definitivamente do seu histórico.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(correction)}>Remover</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
-
-                {!loading && corrections.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center">
-                      <div className="mx-auto max-w-lg space-y-3 text-muted-foreground">
-                        <Sparkles className="mx-auto h-6 w-6" />
-                        <p className="text-sm">
-                          Nenhum texto encontrado para os filtros selecionados. Correções, reescritas e análises premium serão
-                          exibidas aqui automaticamente.
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-
-                {corrections.map((correction) => (
-                  <TableRow key={correction.id}>
-                    <TableCell className="font-medium">{formatDate(correction.created_at)}</TableCell>
-                    <TableCell>{getTypeBadge(correction.operation_type)}</TableCell>
-                    <TableCell className="text-right">{correction.character_count.toLocaleString("pt-BR")}</TableCell>
-                    <TableCell>
-                      <div className="max-w-xl truncate text-sm text-muted-foreground">{formatPreview(correction)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleViewDetails(correction)}
-                          aria-label="Ver detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleCopy(correction)}
-                          aria-label="Copiar resultado"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDownload(correction)}
-                          aria-label="Baixar"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon" aria-label="Excluir">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover este registro?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. O texto será removido definitivamente do seu histórico.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(correction)}>Remover</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
                 </TableBody>
               </Table>
             </div>

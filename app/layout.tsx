@@ -3,15 +3,16 @@ import "@/app/globals.css"
 import type { Metadata } from "next"
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
+import { MobileNav } from "@/components/layout/mobile-nav"
 import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
 import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
-import { AdSenseLoaderWithRoutes } from "@/components/adsense-loader-with-routes"
+import { AdSenseLoaderWithRoutes } from "@/components/ads/adsense-loader-with-routes"
 import { GoogleOneTap } from "@/components/google-one-tap"
 import { CleverWebServerLoader } from "@/components/clever-webserver-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     "Corrija textos em português com inteligência artificial. Identifica erros gramaticais, ortográficos e de pontuação automaticamente.",
   keywords:
     "corretor de texto, corretor ortográfico, correção gramatical, português, inteligência artificial, IA, corretor online, corretor grátis",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default async function RootLayout({
@@ -56,13 +57,14 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="facebook-domain-verification" content="hprarr6g4519byzssy18zrs0vqdzta" />
         <link
           rel="icon"
           href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/corretoria-DfN4vmv8uKDAmhlXjQNEQ2EACGGRep.png"
           type="image/png"
         />
+        <link rel="manifest" href="/manifest.json" />
         <Script id="canonical-url" strategy="beforeInteractive">
           {`
             // Set canonical URL dynamically
@@ -193,6 +195,7 @@ export default async function RootLayout({
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />
+              <MobileNav />
             </div>
             <Toaster />
             <CookieConsent />

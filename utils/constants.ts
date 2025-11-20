@@ -53,3 +53,6 @@ export const DISABLE_ADS = true // Set to true to disable all ads
 
 // Use env-config.ts for environment configuration
 // Import { getPublicConfig, getServerConfig } from './env-config' where needed
+
+// Premium Plan
+export const PREMIUM_PLAN_PRICE = 19.90 // Preço mensal do plano Premium

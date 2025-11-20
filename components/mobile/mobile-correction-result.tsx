@@ -1,0 +1,109 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { TextDiff } from "@/components/text-diff"
+import { TextEvaluation } from "@/components/features/text-evaluation"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, Copy, Check, RotateCcw } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { motion } from "framer-motion"
+
+interface MobileCorrectionResultProps {
+    originalText: string
+    correctedText: string
+    evaluation: any
+    onReset: () => void
+}
+
+export function MobileCorrectionResult({
+    originalText,
+    correctedText,
+    evaluation,
+    onReset
+}: MobileCorrectionResultProps) {
+    const { toast } = useToast()
+    const [copied, setCopied] = useState(false)
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(correctedText)
+            setCopied(true)
+            toast({
+                title: "Texto copiado!",
+                description: "O texto corrigido foi copiado para a área de transferência.",
+            })
+            setTimeout(() => setCopied(false), 2000)
+        } catch (err) {
+            toast({
+                title: "Erro ao copiar",
+                description: "Não foi possível copiar o texto.",
+                variant: "destructive",
+            })
+        }
+    }
+
+    return (
+        <div className="flex flex-col min-h-[100dvh] bg-background pb-24">
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-3 flex items-center justify-between">
+                <Button variant="ghost" size="icon" onClick={onReset} className="-ml-2">
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="font-semibold text-lg">Resultado</h2>
+                <Button variant="ghost" size="icon" onClick={handleCopy}>
+                    {copied ? <Check className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
+                </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+                <Tabs defaultValue="corrected" className="w-full">
+                    <div className="px-4 pt-4">
+                        <TabsList className="w-full grid grid-cols-3 mb-4">
+                            <TabsTrigger value="corrected">Corrigido</TabsTrigger>
+                            <TabsTrigger value="diff">Comparação</TabsTrigger>
+                            <TabsTrigger value="analysis">Análise</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="corrected" className="mt-0 px-4 pb-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-card border rounded-xl p-4 shadow-sm min-h-[300px] whitespace-pre-wrap text-lg leading-relaxed"
+                        >
+                            {correctedText}
+                        </motion.div>
+                    </TabsContent>
+
+                    <TabsContent value="diff" className="mt-0 px-4 pb-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-card border rounded-xl overflow-hidden shadow-sm"
+                        >
+                            <TextDiff original={originalText} corrected={correctedText} />
+                        </motion.div>
+                    </TabsContent>
+
+                    <TabsContent value="analysis" className="mt-0 px-4 pb-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <TextEvaluation evaluation={evaluation} />
+                        </motion.div>
+                    </TabsContent>
+                </Tabs>
+            </div>
+
+            {/* Bottom Action */}
+            <div className="fixed bottom-[80px] left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-10">
+                <Button onClick={onReset} className="w-full h-12 rounded-xl shadow-lg text-base font-medium">
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Corrigir Outro Texto
+                </Button>
+            </div>
+        </div>
+    )
+}

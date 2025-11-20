@@ -6,7 +6,7 @@
 'use client'
 
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { AIDetectorForm } from '@/components/ai-detector-form'
+import { AIDetectorForm } from "@/components/features/ai-detector-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useUser } from '@/hooks/use-user'
 import { useUsageLimits } from '@/hooks/use-usage-limits'

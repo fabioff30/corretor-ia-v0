@@ -17,7 +17,7 @@ jest.mock("@/components/ui/tabs", () => {
   const React = require("react")
   const TabsContext = React.createContext({
     value: "all",
-    onValueChange: (value: string) => {},
+    onValueChange: (value: string) => { },
   })
 
   const Tabs = ({ value, onValueChange, children }: any) => (
@@ -67,13 +67,13 @@ jest.mock("@/components/text-diff", () => ({
   ),
 }))
 
-jest.mock("@/components/text-evaluation", () => ({
+jest.mock("@/components/features/text-evaluation", () => ({
   TextEvaluation: ({ evaluation }: { evaluation: any }) => (
     <div data-testid="evaluation">{JSON.stringify(evaluation)}</div>
   ),
 }))
 
-jest.mock("@/components/ai-detection-result", () => ({
+jest.mock("@/components/features/ai-detection-result", () => ({
   AIDetectionResult: ({ result }: { result: any }) => (
     <div data-testid="ai-result">{result.verdict}</div>
   ),
