@@ -201,7 +201,7 @@ export default async function RootLayout({
             <CookieConsent />
             <JulinhoAssistant />
             <GoogleOneTap />
-            <CleverWebServerLoader />
+            {/* <CleverWebServerLoader /> */}
             <GoogleAnalyticsWrapper />
           </ThemeProvider>
         </UserProvider>      </body>
