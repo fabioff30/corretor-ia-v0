@@ -238,8 +238,9 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
 
       // Enviar evento de início para Google Analytics 4
       sendGTMEvent("premium_rewrite_started", {
-        charCount: textToSend.length,
+        text_length: textToSend.length,
         style: selectedStyle,
+        is_mobile: isMobile,
       })
       trackPixelCustomEvent("PremiumRewriteStarted", {
         charCount: textToSend.length,
@@ -294,8 +295,12 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
 
       // Enviar evento de sucesso para Google Analytics 4
       sendGTMEvent("premium_rewrite_completed", {
-        charCount: textToSend.length,
+        text_length: textToSend.length,
+        output_length: (data.correctedText || data.rewrittenText || "").length,
         style: selectedStyle,
+        style_applied: data.evaluation?.styleApplied || selectedStyle,
+        changes_count: data.evaluation?.changes?.length || 0,
+        is_mobile: isMobile,
       })
       trackPixelCustomEvent("PremiumRewriteCompleted", {
         charCount: textToSend.length,

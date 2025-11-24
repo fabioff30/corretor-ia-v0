@@ -215,8 +215,10 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
 
       // Enviar evento de início
       sendGTMEvent("premium_correction_started", {
-        char_count: textToSend.length,
+        text_length: textToSend.length,
         tone: selectedTone,
+        is_custom_tone: selectedTone === "Personalizado",
+        is_mobile: isMobile,
       })
       trackPixelCustomEvent("PremiumCorrectionStarted", {
         charCount: textToSend.length,
@@ -265,11 +267,18 @@ export default function PremiumTextCorrectionForm({ onTextCorrected }: PremiumTe
 
       // Enviar evento de sucesso para Google Analytics 4
       sendGTMEvent("premium_correction_completed", {
-        charCount: textToSend.length,
+        text_length: textToSend.length,
         score: data.evaluation?.score || 0,
+        tone: selectedTone,
+        tone_applied: data.evaluation?.toneApplied || selectedTone,
+        strengths_count: data.evaluation?.strengths?.length || 0,
+        weaknesses_count: data.evaluation?.weaknesses?.length || 0,
+        suggestions_count: data.evaluation?.suggestions?.length || 0,
+        is_mobile: isMobile,
       })
       trackPixelCustomEvent("PremiumCorrectionCompleted", {
         charCount: textToSend.length,
+        score: data.evaluation?.score || 0,
       })
 
       if (onTextCorrected) {

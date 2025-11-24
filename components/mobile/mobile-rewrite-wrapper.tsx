@@ -114,11 +114,10 @@ export function MobileRewriteWrapper({
             })
             setViewState("RESULT")
 
-            sendGTMEvent("rewrite_success", {
-                is_mobile: true,
+            sendGTMEvent("rewrite_text", {
+                text_length: text.length,
+                style: selectedTone,
                 is_premium: isPremium,
-                char_count: text.length,
-                style: selectedTone
             })
 
         } catch (error: any) {

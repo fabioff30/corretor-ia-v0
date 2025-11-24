@@ -14,19 +14,25 @@ Este documento lista todos os eventos customizados enviados para o Google Analyt
 ### 1. Correção de Texto
 
 #### `text_corrected`
-**Descrição**: Disparado quando um texto é corrigido com sucesso (usuário free ou premium)
+**Descrição**: Disparado quando um texto é corrigido com sucesso (usuário free ou premium, desktop ou mobile)
 
 **Parâmetros**:
-- `textLength` (number): Tamanho do texto em caracteres
-- `correctionScore` (number): Pontuação da correção (0-100)
+- `text_length` (number): Tamanho do texto em caracteres
+- `score` (number): Pontuação da correção (0-100)
+- `is_premium` (boolean): Se o usuário é premium
+- `tone` (string): Tom aplicado na correção
 
-**Localização**: `components/text-correction-form.tsx:742`
+**Localizações**:
+- `components/features/text-correction-form.tsx:898`
+- `components/mobile/mobile-correction-wrapper.tsx:113`
 
 **Exemplo**:
 ```javascript
 sendGTMEvent("text_corrected", {
-  textLength: 1234,
-  correctionScore: 85
+  text_length: 1234,
+  score: 85,
+  is_premium: false,
+  tone: "Padrão"
 })
 ```
 
@@ -35,19 +41,23 @@ sendGTMEvent("text_corrected", {
 ### 2. Reescrita de Texto
 
 #### `rewrite_text`
-**Descrição**: Disparado quando um texto é reescrito com sucesso
+**Descrição**: Disparado quando um texto é reescrito com sucesso (desktop ou mobile)
 
 **Parâmetros**:
-- `textLength` (number): Tamanho do texto em caracteres
-- `rewriteStyle` (string): Estilo de reescrita selecionado
+- `text_length` (number): Tamanho do texto em caracteres
+- `style` (string): Estilo de reescrita selecionado
+- `is_premium` (boolean): Se o usuário é premium
 
-**Localização**: `components/text-correction-form.tsx:747`
+**Localizações**:
+- `components/features/text-correction-form.tsx:905`
+- `components/mobile/mobile-rewrite-wrapper.tsx:117`
 
 **Exemplo**:
 ```javascript
 sendGTMEvent("rewrite_text", {
-  textLength: 1234,
-  rewriteStyle: "Formal"
+  text_length: 1234,
+  style: "formal",
+  is_premium: false
 })
 ```
 
@@ -180,16 +190,63 @@ sendGTMEvent("logout", {
 
 ---
 
-### 7. Premium - Reescrita
+### 7. Premium - Correção
+
+#### `premium_correction_started`
+**Descrição**: Disparado quando um usuário premium inicia uma correção
+
+**Parâmetros**:
+- `text_length` (number): Tamanho do texto em caracteres
+- `tone` (string): Tom selecionado para correção
+- `is_custom_tone` (boolean): Se é tom personalizado
+- `is_mobile` (boolean): Se é dispositivo móvel
+
+**Localização**: `components/dashboard/PremiumTextCorrectionForm.tsx:217`
+
+---
+
+#### `premium_correction_completed`
+**Descrição**: Disparado quando uma correção premium é concluída
+
+**Parâmetros**:
+- `text_length` (number): Tamanho do texto em caracteres
+- `score` (number): Pontuação da correção (0-100)
+- `tone` (string): Tom selecionado
+- `tone_applied` (string): Tom efetivamente aplicado
+- `strengths_count` (number): Quantidade de pontos fortes identificados
+- `weaknesses_count` (number): Quantidade de pontos fracos identificados
+- `suggestions_count` (number): Quantidade de sugestões
+- `is_mobile` (boolean): Se é dispositivo móvel
+
+**Localização**: `components/dashboard/PremiumTextCorrectionForm.tsx:269`
+
+**Exemplo**:
+```javascript
+sendGTMEvent("premium_correction_completed", {
+  text_length: 5000,
+  score: 85,
+  tone: "Formal",
+  tone_applied: "Formal",
+  strengths_count: 3,
+  weaknesses_count: 2,
+  suggestions_count: 4,
+  is_mobile: false
+})
+```
+
+---
+
+### 8. Premium - Reescrita
 
 #### `premium_rewrite_started`
 **Descrição**: Disparado quando um usuário premium inicia uma reescrita
 
 **Parâmetros**:
-- `charCount` (number): Tamanho do texto em caracteres
+- `text_length` (number): Tamanho do texto em caracteres
 - `style` (string): Estilo de reescrita selecionado
+- `is_mobile` (boolean): Se é dispositivo móvel
 
-**Localização**: `components/dashboard/PremiumRewriteForm.tsx:219`
+**Localização**: `components/dashboard/PremiumRewriteForm.tsx:240`
 
 ---
 
@@ -197,23 +254,26 @@ sendGTMEvent("logout", {
 **Descrição**: Disparado quando uma reescrita premium é concluída
 
 **Parâmetros**:
-- `charCount` (number): Tamanho do texto em caracteres
-- `style` (string): Estilo de reescrita aplicado
+- `text_length` (number): Tamanho do texto original em caracteres
+- `output_length` (number): Tamanho do texto reescrito em caracteres
+- `style` (string): Estilo selecionado
+- `style_applied` (string): Estilo efetivamente aplicado
+- `changes_count` (number): Quantidade de mudanças identificadas
+- `is_mobile` (boolean): Se é dispositivo móvel
 
-**Localização**: `components/dashboard/PremiumRewriteForm.tsx:274`
+**Localização**: `components/dashboard/PremiumRewriteForm.tsx:297`
 
----
-
-### 8. Premium - Correção
-
-#### `premium_correction_completed`
-**Descrição**: Disparado quando uma correção premium é concluída
-
-**Parâmetros**:
-- `charCount` (number): Tamanho do texto em caracteres
-- `score` (number): Pontuação da correção (0-100)
-
-**Localização**: `components/dashboard/PremiumTextCorrectionForm.tsx:245`
+**Exemplo**:
+```javascript
+sendGTMEvent("premium_rewrite_completed", {
+  text_length: 3000,
+  output_length: 3200,
+  style: "formal",
+  style_applied: "formal",
+  changes_count: 5,
+  is_mobile: false
+})
+```
 
 ---
 
@@ -287,9 +347,9 @@ O script do GA4 é carregado em `app/layout.tsx` com verificação de consentime
 
 4. **Nomenclatura**: Os eventos seguem a convenção:
    - Nome do evento: snake_case (ex: `text_corrected`, `login_attempt`)
-   - Parâmetros: camelCase (ex: `textLength`, `correctionScore`)
+   - Parâmetros: snake_case (ex: `text_length`, `is_premium`)
 
 ---
 
-**Última atualização**: 2025-01-26
-**Versão**: 1.0.0
+**Última atualização**: 2025-11-23
+**Versão**: 1.1.0

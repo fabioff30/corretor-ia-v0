@@ -256,6 +256,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         title: "Processamento concluído!",
         description: "Seu texto foi corrigido com sucesso.",
       })
+
+      // Evento GA4 enviado no useEffect quando SSE completa
     } else if (sseCorrection.status === 'error' && sseCorrection.error) {
       console.error('SSE error:', sseCorrection.error)
       setError(sseCorrection.error)
@@ -411,6 +413,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     } as React.FormEvent
     handleSubmit(syntheticEvent)
   }
+
+  // Função removida - eventos agora são enviados diretamente após sucesso
+  // para evitar duplicação de eventos no GA4
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -653,7 +658,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       console.log("Cliente: Resposta JSON processada com sucesso", data)
 
       // Verificar se a resposta tem o formato esperado e criar estrutura padrão se necessário
-      const processedData = {
+      const processedData: {
+        correctedText: string
+        evaluation: RewriteEvaluation
+      } = {
         correctedText: "",
         evaluation: {
           strengths: [],
@@ -797,6 +805,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         evaluation: processedData.evaluation,
       })
 
+      // Evento GA4 enviado após processamento da resposta (abaixo)
+
       // Detectar e mostrar pain banner para usuários gratuitos (com delay de 5 segundos)
       if (!isPremium && operationMode === "correct" && processedData.evaluation.painBanner) {
         const painBanner = processedData.evaluation.painBanner
@@ -847,13 +857,16 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       // Enviar evento para o Google Analytics 4
       if (operationMode === "correct") {
         sendGTMEvent("text_corrected", {
-          textLength: originalText.length,
-          correctionScore: processedData.evaluation.score || 0,
+          text_length: originalText.length,
+          score: processedData.evaluation.score || 0,
+          is_premium: isPremium,
+          tone: currentTone,
         })
       } else {
         sendGTMEvent("rewrite_text", {
-          textLength: originalText.length,
-          rewriteStyle: selectedRewriteStyle,
+          text_length: originalText.length,
+          style: selectedRewriteStyle,
+          is_premium: isPremium,
         })
       }
 
@@ -864,22 +877,6 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         mode: operationMode,
         ...(operationMode === "correct" ? { tone: selectedTone } : { rewrite_style: selectedRewriteStyle }),
       })
-
-      // Adicionar evento específico para Google Analytics quando for reescrita
-      if (operationMode === "rewrite") {
-        // Verificar se o objeto window.gtag existe
-        if (typeof window !== "undefined" && window.gtag) {
-          window.gtag("event", "rewrite_text", {
-            event_category: "text_processing",
-            event_label: "Text Rewrite",
-            rewrite_style: selectedRewriteStyle,
-            applied_style: processedData.evaluation.styleApplied || selectedRewriteStyle,
-            text_length: originalText.length,
-          })
-
-          console.log("GA event sent: rewrite_text with style:", selectedRewriteStyle)
-        }
-      }
 
       toast({
         title: operationMode === "correct" ? "Texto corrigido com sucesso!" : "Texto reescrito com sucesso!",

@@ -110,10 +110,11 @@ export function MobileCorrectionWrapper({
       })
       setViewState("RESULT")
 
-      sendGTMEvent("correction_success", {
-        is_mobile: true,
+      sendGTMEvent("text_corrected", {
+        text_length: text.length,
+        score: data.evaluation?.score || 0,
         is_premium: isPremium,
-        char_count: text.length
+        tone: "Padrão",
       })
 
     } catch (error: any) {
