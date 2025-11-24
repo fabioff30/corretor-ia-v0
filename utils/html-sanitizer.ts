@@ -1,9 +1,9 @@
-import DOMPurify from 'isomorphic-dompurify'
+import sanitizeHtmlLib from 'sanitize-html'
 
 /**
  * HTML Sanitization Utility
  * Provides secure HTML sanitization for user-generated and external content
- * Uses isomorphic-dompurify which works on both client and server
+ * Uses sanitize-html which is CommonJS compatible and works on Vercel serverless
  */
 
 /**
@@ -12,50 +12,46 @@ import DOMPurify from 'isomorphic-dompurify'
 export const SANITIZE_CONFIG = {
   // Strict: Only basic formatting allowed
   STRICT: {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'b', 'i'],
-    ALLOWED_ATTR: [] as string[],
-    KEEP_CONTENT: true,
+    allowedTags: ['p', 'br', 'strong', 'em', 'u', 'b', 'i'],
+    allowedAttributes: {},
   },
 
   // Blog content: More permissive for blog posts
   BLOG: {
-    ALLOWED_TAGS: [
+    allowedTags: [
       'p', 'br', 'strong', 'em', 'u', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'span', 'div',
-      'figure', 'figcaption', 'iframe', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'hr', 'pre', 'code'
+      'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'hr', 'pre', 'code'
     ],
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'id', 'target', 'rel'],
-    KEEP_CONTENT: true,
+    allowedAttributes: {
+      'a': ['href', 'target', 'rel'],
+      'img': ['src', 'alt', 'class'],
+      'div': ['class', 'id'],
+      'span': ['class', 'id'],
+      'p': ['class'],
+      'h1': ['class', 'id'],
+      'h2': ['class', 'id'],
+      'h3': ['class', 'id'],
+      'h4': ['class', 'id'],
+      'h5': ['class', 'id'],
+      'h6': ['class', 'id'],
+      'pre': ['class'],
+      'code': ['class'],
+      'table': ['class'],
+      'figure': ['class'],
+      'blockquote': ['class'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
   },
 
   // Default: Balanced security and functionality
   DEFAULT: {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 'ul', 'ol', 'li', 'a'],
-    ALLOWED_ATTR: ['href'],
-    KEEP_CONTENT: true,
+    allowedTags: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 'ul', 'ol', 'li', 'a'],
+    allowedAttributes: {
+      'a': ['href'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
   }
-}
-
-// Initialize hooks once
-let hooksInitialized = false
-
-const initializeHooks = () => {
-  if (hooksInitialized) return
-
-  // Remove dangerous attributes
-  DOMPurify.addHook('beforeSanitizeElements', (node: Element) => {
-    if (node.attributes) {
-      const attrs = node.attributes
-      for (let i = attrs.length - 1; i >= 0; i--) {
-        const attr = attrs[i]
-        if (attr.name.startsWith('data-') || attr.name.startsWith('on')) {
-          node.removeAttribute(attr.name)
-        }
-      }
-    }
-  })
-
-  hooksInitialized = true
 }
 
 /**
@@ -70,9 +66,8 @@ export function sanitizeHtml(
   }
 
   try {
-    initializeHooks()
     const sanitizeConfig = SANITIZE_CONFIG[config]
-    return DOMPurify.sanitize(html, sanitizeConfig)
+    return sanitizeHtmlLib(html, sanitizeConfig)
   } catch (error) {
     console.error('HTML sanitization error:', error)
     return ''
@@ -102,10 +97,9 @@ export function stripHtml(html: string): string {
   }
 
   try {
-    const stripped = DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: [],
-      ALLOWED_ATTR: [],
-      KEEP_CONTENT: true,
+    const stripped = sanitizeHtmlLib(html, {
+      allowedTags: [],
+      allowedAttributes: {},
     })
     return stripped.replace(/\s+/g, ' ').trim()
   } catch (error) {
