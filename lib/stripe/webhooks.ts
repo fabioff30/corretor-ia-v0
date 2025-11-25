@@ -486,8 +486,41 @@ export async function handleLifetimePaymentCompleted(
   const userId = session.metadata?.userId
   const guestEmail = session.metadata?.guestEmail
   const isGuestCheckout = session.metadata?.isGuestCheckout === 'true'
-  const promoCode = session.metadata?.promoCode || 'BLACKFRIDAY2024'
+  const promoCode = session.metadata?.promoCode || 'BLACKFRIDAY2025'
   const paymentIntentId = session.payment_intent as string
+
+  // Check if this payment was already processed (Stripe may retry webhooks)
+  const { data: existingPurchase } = await supabase
+    .from('lifetime_purchases')
+    .select('id, status, user_id')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .single()
+
+  if (existingPurchase) {
+    console.log('[Stripe Webhook] Lifetime purchase already exists:', existingPurchase.id)
+
+    // If already completed, nothing to do
+    if (existingPurchase.status === 'completed') {
+      console.log('[Stripe Webhook] Purchase already completed, skipping')
+      return
+    }
+
+    // If pending and has a user, try to activate
+    if (existingPurchase.status === 'pending' && existingPurchase.user_id) {
+      console.log('[Stripe Webhook] Activating existing pending purchase')
+      const { error: activateError } = await supabase.rpc('activate_lifetime_plan', {
+        p_user_id: existingPurchase.user_id,
+        p_purchase_id: existingPurchase.id,
+      })
+
+      if (activateError) {
+        console.error('[Stripe Webhook] Error activating lifetime plan:', activateError)
+      } else {
+        console.log('[Stripe Webhook] Lifetime plan activated for user:', existingPurchase.user_id)
+      }
+    }
+    return
+  }
 
   // For guest checkouts, we need to handle differently
   if (isGuestCheckout && guestEmail && !userId) {
