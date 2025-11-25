@@ -229,7 +229,7 @@ See `SUPABASE_SETUP.md` for complete database setup instructions.
   - **Google Tag Manager**: Enhanced event tracking and tag management
   - **Meta Pixel**: Facebook conversion tracking with consent management
   - **Hotjar**: User behavior analytics and heatmaps
-- **Monetization**: Google AdSense with consent management, CleverWebServer script integration
+- **Monetization**: Google AdSense with consent management
 - **Advertisement**: Smart banner system with engagement tracking and frequency control
 - **Email**: React Email components for notifications
 - **Content Management**: WordPress API integration for blog content with automatic revalidation
