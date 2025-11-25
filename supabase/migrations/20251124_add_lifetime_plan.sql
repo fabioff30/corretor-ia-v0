@@ -97,9 +97,7 @@ BEGIN
   UPDATE public.profiles
   SET
     plan_type = 'lifetime',
-    subscription_status = 'active',
-    subscription_expires_at = NULL, -- Never expires
-    is_pro = TRUE,
+    subscription_status = 'lifetime',
     updated_at = NOW()
   WHERE id = p_user_id;
 
