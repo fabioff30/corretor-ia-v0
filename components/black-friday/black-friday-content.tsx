@@ -216,7 +216,7 @@ export function BlackFridayContent() {
           />
           <FaqItem
             question="Ate quando vale essa promocao?"
-            answer="Essa oferta e exclusiva de Black Friday e termina em 28 de novembro de 2024 as 23:59. Apos isso, o preco volta ao normal."
+            answer="Essa oferta e exclusiva de Black Friday e termina em 28 de novembro de 2025 as 23:59. Apos isso, o preco volta ao normal."
           />
         </div>
       </div>
