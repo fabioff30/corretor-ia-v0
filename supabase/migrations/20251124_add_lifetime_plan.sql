@@ -16,6 +16,19 @@ ALTER TABLE plan_limits_config
   CHECK (plan_type IN ('free', 'pro', 'lifetime'));
 
 -- ============================================================================
+-- 1.1 UPDATE PROFILES CONSTRAINT TO ALLOW 'lifetime'
+-- ============================================================================
+
+-- Remove existing constraint from profiles table
+ALTER TABLE profiles
+  DROP CONSTRAINT IF EXISTS profiles_plan_type_check;
+
+-- Add new constraint including 'lifetime'
+ALTER TABLE profiles
+  ADD CONSTRAINT profiles_plan_type_check
+  CHECK (plan_type IN ('free', 'pro', 'admin', 'lifetime'));
+
+-- ============================================================================
 -- 2. ADD LIFETIME TO PLAN_LIMITS_CONFIG
 -- ============================================================================
 
