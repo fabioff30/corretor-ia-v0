@@ -223,10 +223,12 @@ export function BlackFridayContent() {
 
       {/* Register Dialog */}
       <RegisterForPixDialog
-        open={showRegister}
-        onOpenChange={setShowRegister}
-        onRegisterSuccess={handleRegisterSuccess}
+        isOpen={showRegister}
+        onClose={() => setShowRegister(false)}
+        onSuccess={handleRegisterSuccess}
         planType="monthly"
+        planPrice={BLACK_FRIDAY_CONFIG.PRICE}
+        paymentMethod="card"
       />
     </div>
   )

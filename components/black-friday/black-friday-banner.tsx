@@ -12,9 +12,9 @@ import { BLACK_FRIDAY_CONFIG, isBlackFridayActive } from "@/utils/constants"
 const BANNER_PAGES = ['/', '/reescrever', '/detector-ia']
 
 interface TimeLeft {
+  days: number
   hours: number
   minutes: number
-  seconds: number
 }
 
 export function BlackFridayBanner() {
@@ -22,7 +22,7 @@ export function BlackFridayBanner() {
   const { profile, loading } = useUser()
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ hours: 0, minutes: 0, seconds: 0 })
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0 })
   const [mounted, setMounted] = useState(false)
 
   // Check if user is free or not logged in
@@ -69,14 +69,13 @@ export function BlackFridayBanner() {
 
       if (diff <= 0) {
         setIsVisible(false)
-        return { hours: 0, minutes: 0, seconds: 0 }
+        return { days: 0, hours: 0, minutes: 0 }
       }
 
-      const totalHours = Math.floor(diff / (1000 * 60 * 60))
       return {
-        hours: totalHours,
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
         minutes: Math.floor((diff / 1000 / 60) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
       }
     }
 
@@ -105,22 +104,20 @@ export function BlackFridayBanner() {
       {/* Spacer to push content down when banner is visible */}
       <div className="h-10 sm:h-10" />
       {/* Fixed banner */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 text-white py-2 px-4 shadow-lg">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black text-white py-2 px-4 shadow-lg">
         <div className="container mx-auto flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 animate-pulse" />
+              <Zap className="h-5 w-5 animate-pulse text-yellow-400" />
               <span className="font-bold text-sm sm:text-base">BLACK FRIDAY:</span>
             </div>
             <span className="text-sm sm:text-base">
-              Licenca <strong>VITALICIA</strong> por R$ 99,90!
+              Licenca <strong className="text-yellow-400">VITALICIA</strong> por R$ 99,90!
             </span>
-            <div className="hidden sm:flex items-center gap-1 text-xs sm:text-sm bg-black/20 rounded px-2 py-1">
+            <div className="hidden sm:flex items-center gap-1 text-xs sm:text-sm bg-white/10 rounded px-2 py-1">
               <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="font-mono font-bold">
-                {String(timeLeft.hours).padStart(2, '0')}:
-                {String(timeLeft.minutes).padStart(2, '0')}:
-                {String(timeLeft.seconds).padStart(2, '0')}
+                {timeLeft.days}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
               </span>
             </div>
           </div>
@@ -128,8 +125,7 @@ export function BlackFridayBanner() {
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              variant="secondary"
-              className="bg-white text-orange-600 hover:bg-white/90 font-semibold text-xs sm:text-sm"
+              className="bg-yellow-400 text-black hover:bg-yellow-300 font-semibold text-xs sm:text-sm"
               asChild
             >
               <Link href="/black-friday">Ver oferta</Link>
