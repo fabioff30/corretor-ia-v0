@@ -56,3 +56,20 @@ export const DISABLE_ADS = true // Set to true to disable all ads
 
 // Premium Plan
 export const PREMIUM_PLAN_PRICE = 19.90 // Preço mensal do plano Premium
+
+// Black Friday Configuration
+export const BLACK_FRIDAY_CONFIG = {
+  END_DATE: new Date('2024-11-29T02:59:00Z'), // 28/11 23:59 BRT (UTC-3)
+  PRICE: 99.90,
+  ORIGINAL_PRICE: 299.00, // Preço "de" para mostrar desconto
+  INSTALLMENT_PRICE: 9.90,
+  INSTALLMENTS: 10,
+  STRIPE_PRODUCT_ID: 'prod_TU7ypXVwPaSvkH',
+  STRIPE_PRICE_ID: 'price_1SX9iCAaDWyHAlqlcLPoTjZy',
+  PROMO_CODE: 'BLACKFRIDAY2024',
+}
+
+// Helper function to check if Black Friday is active
+export const isBlackFridayActive = (): boolean => {
+  return new Date() < BLACK_FRIDAY_CONFIG.END_DATE
+}

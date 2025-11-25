@@ -17,6 +17,14 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export const STRIPE_PRICES = {
   MONTHLY: 'price_1SKPXfAaDWyHAlqlOF5UHXPK', // R$ 29,90/mês (Production)
   ANNUAL: 'price_1SKPXfAaDWyHAlqlcmk9Zcfx',  // R$ 299/ano (Production)
+  LIFETIME: 'price_1SX9iCAaDWyHAlqlcLPoTjZy', // R$ 99,90 Black Friday (Production)
+} as const
+
+// Lifetime (Black Friday) product configuration
+export const STRIPE_LIFETIME = {
+  PRODUCT_ID: 'prod_TU7ypXVwPaSvkH',
+  PRICE_ID: 'price_1SX9iCAaDWyHAlqlcLPoTjZy',
+  AMOUNT: 9990, // R$ 99,90 in cents
 } as const
 
 /**
@@ -276,4 +284,62 @@ export async function createSubscriptionAfterPixPayment(
   })
 
   return subscription
+}
+
+/**
+ * Create a Checkout Session for lifetime purchase (one-time payment)
+ * Used for Black Friday promotion
+ */
+export async function createLifetimeCheckoutSession(
+  userId: string | null,
+  email: string,
+  successUrl: string,
+  cancelUrl: string,
+  isGuestCheckout: boolean = false
+): Promise<Stripe.Checkout.Session> {
+  // Get or create customer
+  const customerId = await getOrCreateStripeCustomer(userId, email)
+
+  // Prepare metadata
+  const metadata = userId
+    ? { userId, purchaseType: 'lifetime', promoCode: 'BLACKFRIDAY2024' }
+    : { guestEmail: email, isGuestCheckout: 'true', purchaseType: 'lifetime', promoCode: 'BLACKFRIDAY2024' }
+
+  // Create checkout session for one-time payment
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    customer: customerId,
+    mode: 'payment', // One-time payment, not subscription
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: STRIPE_LIFETIME.PRICE_ID,
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata,
+    payment_intent_data: {
+      metadata,
+    },
+    billing_address_collection: 'auto',
+    // Enable installments for Brazilian cards
+    payment_method_options: {
+      card: {
+        installments: {
+          enabled: true,
+        },
+      },
+    },
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionConfig)
+
+  console.log('[Stripe] Lifetime checkout session created:', {
+    sessionId: session.id,
+    isGuest: isGuestCheckout,
+    email,
+  })
+
+  return session
 }

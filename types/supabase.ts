@@ -20,7 +20,7 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
-          plan_type: 'free' | 'pro' | 'admin'
+          plan_type: 'free' | 'pro' | 'lifetime' | 'admin' | 'lifetime'
           subscription_status: 'active' | 'inactive' | 'past_due' | 'cancelled'
           subscription_expires_at: string | null
           created_at: string
@@ -119,7 +119,7 @@ export interface Database {
       plan_limits_config: {
         Row: {
           id: string
-          plan_type: 'free' | 'pro'
+          plan_type: 'free' | 'pro' | 'lifetime'
           max_characters: number
           corrections_per_day: number
           rewrites_per_day: number
@@ -132,7 +132,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          plan_type: 'free' | 'pro'
+          plan_type: 'free' | 'pro' | 'lifetime'
           max_characters: number
           corrections_per_day: number
           rewrites_per_day: number
@@ -289,6 +289,50 @@ export interface Database {
           created_at?: string
         }
       }
+      lifetime_purchases: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_payment_intent_id: string | null
+          stripe_checkout_session_id: string | null
+          amount: number
+          currency: string
+          payment_method: 'stripe_card' | 'stripe_pix'
+          status: 'pending' | 'completed' | 'failed' | 'refunded'
+          promo_code: string | null
+          purchased_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount: number
+          currency?: string
+          payment_method?: 'stripe_card' | 'stripe_pix'
+          status?: 'pending' | 'completed' | 'failed' | 'refunded'
+          promo_code?: string | null
+          purchased_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount?: number
+          currency?: string
+          payment_method?: 'stripe_card' | 'stripe_pix'
+          status?: 'pending' | 'completed' | 'failed' | 'refunded'
+          promo_code?: string | null
+          purchased_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -334,6 +378,13 @@ export interface Database {
         Args: Record<string, never>
         Returns: number
       }
+      activate_lifetime_plan: {
+        Args: {
+          p_user_id: string
+          p_purchase_id: string
+        }
+        Returns: void
+      }
     }
     Enums: {
       [_ in never]: never
@@ -349,3 +400,4 @@ export type PlanLimitsConfig = Database['public']['Tables']['plan_limits_config'
 export type LimitsChangeHistory = Database['public']['Tables']['limits_change_history']['Row']
 export type Subscription = Database['public']['Tables']['subscriptions']['Row']
 export type PaymentTransaction = Database['public']['Tables']['payment_transactions']['Row']
+export type LifetimePurchase = Database['public']['Tables']['lifetime_purchases']['Row']

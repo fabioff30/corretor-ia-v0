@@ -37,8 +37,8 @@ export async function canUserPerformOperation(
       }
     }
 
-    // Pro e Admin têm acesso ilimitado
-    if (profile.plan_type === 'pro' || profile.plan_type === 'admin') {
+    // Pro, Admin e Lifetime têm acesso ilimitado
+    if (profile.plan_type === 'pro' || profile.plan_type === 'admin' || profile.plan_type === 'lifetime') {
       return {
         allowed: true,
         remaining: -1, // Ilimitado
@@ -210,8 +210,8 @@ export async function getUserLimits(userId: string): Promise<PlanLimitsConfig | 
 
     if (profileError || !profile) return null
 
-    // Admin usa limites de Pro
-    const planType = profile.plan_type === 'admin' ? 'pro' : profile.plan_type
+    // Admin e Lifetime usam limites de Pro (ilimitado)
+    const planType = (profile.plan_type === 'admin' || profile.plan_type === 'lifetime') ? 'pro' : profile.plan_type
 
     // Buscar limites do plano
     const { data: limits, error: limitsError } = await supabase

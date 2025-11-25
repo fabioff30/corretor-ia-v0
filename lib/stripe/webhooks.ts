@@ -16,6 +16,12 @@ export async function handleCheckoutCompleted(
 ) {
   console.log('[Stripe Webhook] checkout.session.completed', session.id)
 
+  // Check if this is a lifetime purchase (Black Friday)
+  const purchaseType = session.metadata?.purchaseType
+  if (purchaseType === 'lifetime') {
+    return handleLifetimePaymentCompleted(session)
+  }
+
   const supabase = createServiceRoleClient()
   const userId = session.metadata?.userId
   const guestEmail = session.metadata?.guestEmail
@@ -464,5 +470,114 @@ export async function handlePixPaymentFailed(
     console.log('[Stripe Webhook] PIX payment marked as failed')
   } catch (error) {
     console.error('[Stripe Webhook] Error updating failed PIX payment:', error)
+  }
+}
+
+/**
+ * Handle lifetime purchase (Black Friday promotion)
+ * Called when customer completes one-time lifetime checkout
+ */
+export async function handleLifetimePaymentCompleted(
+  session: Stripe.Checkout.Session
+) {
+  console.log('[Stripe Webhook] Lifetime payment completed', session.id)
+
+  const supabase = createServiceRoleClient()
+  const userId = session.metadata?.userId
+  const guestEmail = session.metadata?.guestEmail
+  const isGuestCheckout = session.metadata?.isGuestCheckout === 'true'
+  const promoCode = session.metadata?.promoCode || 'BLACKFRIDAY2024'
+  const paymentIntentId = session.payment_intent as string
+
+  // For guest checkouts, we need to handle differently
+  if (isGuestCheckout && guestEmail && !userId) {
+    console.log('[Stripe Webhook] Guest lifetime purchase detected:', guestEmail)
+
+    // Store in a pending state - will be linked when user registers
+    const { error: insertError } = await supabase
+      .from('lifetime_purchases')
+      .insert({
+        user_id: null, // Will be linked later
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        amount: (session.amount_total || 9990) / 100,
+        currency: session.currency?.toUpperCase() || 'BRL',
+        payment_method: 'stripe_card',
+        status: 'pending', // Pending until linked to user
+        promo_code: promoCode,
+      })
+
+    if (insertError) {
+      console.error('[Stripe Webhook] Error inserting guest lifetime purchase:', insertError)
+    }
+
+    console.log('[Stripe Webhook] Guest lifetime purchase saved. Will be activated when user registers.')
+    return
+  }
+
+  // Authenticated user checkout
+  if (!userId) {
+    console.error('[Stripe Webhook] Missing userId for authenticated lifetime checkout')
+    return
+  }
+
+  try {
+    // Create lifetime purchase record
+    const { data: purchase, error: insertError } = await supabase
+      .from('lifetime_purchases')
+      .insert({
+        user_id: userId,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        amount: (session.amount_total || 9990) / 100,
+        currency: session.currency?.toUpperCase() || 'BRL',
+        payment_method: 'stripe_card',
+        status: 'pending',
+        promo_code: promoCode,
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('[Stripe Webhook] Error inserting lifetime purchase:', insertError)
+      throw insertError
+    }
+
+    // Activate lifetime plan
+    const { error: activateError } = await supabase.rpc('activate_lifetime_plan', {
+      p_user_id: userId,
+      p_purchase_id: purchase.id,
+    })
+
+    if (activateError) {
+      console.error('[Stripe Webhook] Error activating lifetime plan:', activateError)
+      throw activateError
+    }
+
+    console.log('[Stripe Webhook] Lifetime plan activated for user:', userId)
+
+    // Send upgrade email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .single()
+
+    if (profile?.email) {
+      try {
+        await sendPremiumUpgradeEmail({
+          to: { email: profile.email, name: profile.full_name },
+          name: profile.full_name,
+        })
+        console.log('[Stripe Webhook] Lifetime upgrade email sent to:', profile.email)
+      } catch (emailError) {
+        console.error('[Stripe Webhook] Failed to send lifetime upgrade email:', emailError)
+      }
+    }
+
+    console.log('[Stripe Webhook] Lifetime purchase completed successfully')
+  } catch (error) {
+    console.error('[Stripe Webhook] Error processing lifetime payment:', error)
+    throw error
   }
 }

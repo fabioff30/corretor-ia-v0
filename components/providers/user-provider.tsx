@@ -49,6 +49,7 @@ interface UserContextValue {
   isPro: boolean
   isAdmin: boolean
   isFree: boolean
+  isLifetime: boolean
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined)
@@ -458,9 +459,10 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       refreshProfile,
       signOut,
       isAuthenticated: !!user,
-      isPro: profile?.plan_type === "pro" || profile?.plan_type === "admin",
+      isPro: profile?.plan_type === "pro" || profile?.plan_type === "admin" || profile?.plan_type === "lifetime",
       isAdmin: profile?.plan_type === "admin",
       isFree: profile?.plan_type === "free",
+      isLifetime: profile?.plan_type === "lifetime",
     }),
     [error, loading, profile, refreshProfile, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, user]
   )
