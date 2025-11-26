@@ -6,10 +6,13 @@ import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/features/text-evaluation"
 import { StarRating } from "@/components/star-rating"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Copy, Check, RotateCcw } from "lucide-react"
+import { ArrowLeft, Copy, Check, RotateCcw, Zap } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useUser } from "@/hooks/use-user"
 import { motion } from "framer-motion"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { isBlackFridayActive } from "@/utils/constants"
+import Link from "next/link"
 
 interface MobileCorrectionResultProps {
     originalText: string
@@ -25,15 +28,15 @@ export function MobileCorrectionResult({
     onReset
 }: MobileCorrectionResultProps) {
     const { toast } = useToast()
+    const { isPro } = useUser()
     const [copied, setCopied] = useState(false)
-    const [showRating, setShowRating] = useState(true)
 
     const handleRatingSubmit = (rating: number) => {
         sendGTMEvent("mobile_correction_rated", {
             rating,
             text_length: originalText.length
         })
-        setShowRating(false)
+        // Não esconder - deixar o componente mostrar feedback e depoimentos
     }
 
     const handleCopy = async () => {
@@ -108,18 +111,41 @@ export function MobileCorrectionResult({
                 </Tabs>
 
                 {/* User Rating */}
-                {showRating && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="px-4 pb-4"
+                >
+                    <StarRating
+                        onRatingSubmit={handleRatingSubmit}
+                        correctionId={`mobile-${Date.now()}`}
+                        textLength={originalText.length}
+                    />
+                </motion.div>
+
+                {/* Black Friday Promo - apenas para usuários free */}
+                {isBlackFridayActive() && !isPro && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
+                        transition={{ delay: 0.5 }}
                         className="px-4 pb-4"
                     >
-                        <StarRating
-                            onRatingSubmit={handleRatingSubmit}
-                            correctionId={`mobile-${Date.now()}`}
-                            textLength={originalText.length}
-                        />
+                        <Link href="/black-friday?utm_source=mobile&utm_medium=correction_result&utm_campaign=blackfriday2025">
+                            <div className="bg-black text-white rounded-xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Zap className="h-5 w-5 text-yellow-400" />
+                                    <div>
+                                        <p className="font-bold text-sm">Black Friday</p>
+                                        <p className="text-xs text-gray-300">Licença vitalícia por R$ 99,90</p>
+                                    </div>
+                                </div>
+                                <span className="bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full">
+                                    Ver oferta
+                                </span>
+                            </div>
+                        </Link>
                     </motion.div>
                 )}
             </div>
