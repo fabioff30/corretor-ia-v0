@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { MobileHero } from "./mobile-hero"
 import { MobileFAB } from "./mobile-fab"
@@ -11,6 +11,8 @@ import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT } from "@/utils/constants"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+
+const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
 
 interface MobileCorrectionWrapperProps {
   onCorrect?: (text: string) => void
@@ -32,12 +34,48 @@ export function MobileCorrectionWrapper({
   const [result, setResult] = useState<any>(null)
   const [originalText, setOriginalText] = useState("")
   const [isLoading, setIsLoading] = useState(propIsLoading)
+  const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
 
   const { toast } = useToast()
   const { profile } = useUser()
   const { limits } = usePlanLimits()
 
-  const isPremium = profile?.plan_type === "pro" || profile?.plan_type === "admin"
+  const isPremium = profile?.plan_type === "pro" || profile?.plan_type === "admin" || profile?.plan_type === "lifetime"
+  const correctionsDailyLimit = limits?.corrections_per_day ?? 3
+
+  // Função para ler o uso de correções gratuitas do localStorage
+  const readFreeCorrectionUsage = useCallback(() => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = new Date().toISOString().split("T")[0]
+
+    try {
+      const raw = window.localStorage.getItem(FREE_CORRECTIONS_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
+    const initialValue = { date: today, count: 0 }
+    window.localStorage.setItem(FREE_CORRECTIONS_STORAGE_KEY, JSON.stringify(initialValue))
+    return initialValue
+  }, [])
+
+  // Carregar uso ao montar o componente
+  useEffect(() => {
+    if (isPremium) {
+      setFreeCorrectionsCount(0)
+      return
+    }
+    const usage = readFreeCorrectionUsage()
+    setFreeCorrectionsCount(usage.count)
+  }, [isPremium, readFreeCorrectionUsage])
   const resolvedCharacterLimit = isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
   const characterLimit = isUnlimited ? null : resolvedCharacterLimit
@@ -110,6 +148,19 @@ export function MobileCorrectionWrapper({
       })
       setViewState("RESULT")
 
+      // Incrementar contagem de correções gratuitas se for usuário free
+      if (!isPremium) {
+        const usage = readFreeCorrectionUsage()
+        const newCount = usage.count + 1
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            FREE_CORRECTIONS_STORAGE_KEY,
+            JSON.stringify({ date: usage.date, count: newCount })
+          )
+        }
+        setFreeCorrectionsCount(newCount)
+      }
+
       sendGTMEvent("text_corrected", {
         text_length: text.length,
         score: data.evaluation?.score || 0,
@@ -161,6 +212,8 @@ export function MobileCorrectionWrapper({
         isLoading={isLoading}
         onAIToggle={handleAIToggle}
         aiEnabled={aiEnabled}
+        usageCount={freeCorrectionsCount}
+        usageLimit={correctionsDailyLimit}
       />
 
       {/* Floating Action Button */}

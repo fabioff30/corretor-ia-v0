@@ -28,6 +28,9 @@ interface MobileHeroProps {
   onStyleClick?: () => void
   // Control AI toggle visibility
   showAIToggle?: boolean
+  // Usage tracking props
+  usageCount?: number
+  usageLimit?: number
 }
 
 export function MobileHero({
@@ -52,16 +55,14 @@ export function MobileHero({
   selectedStyleLabel,
   onStyleClick,
   showAIToggle,
+  usageCount = 0,
+  usageLimit = 3,
 }: MobileHeroProps) {
   const [text, setText] = useState("")
   const { user, profile } = useUser()
 
-  const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
+  const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin' || profile?.plan_type === 'lifetime'
   const characterLimit = isPremium ? PREMIUM_CHARACTER_LIMIT : FREE_CHARACTER_LIMIT
-
-  // Usage stats (mock for now - can be connected to real data later)
-  const usageCount = 0
-  const usageLimit = 3
 
   const handleSubmit = () => {
     if (onSubmit && text.trim()) {
