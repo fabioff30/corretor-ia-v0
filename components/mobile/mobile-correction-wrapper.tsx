@@ -35,6 +35,8 @@ export function MobileCorrectionWrapper({
   const [originalText, setOriginalText] = useState("")
   const [isLoading, setIsLoading] = useState(propIsLoading)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
+  const [selectedTone, setSelectedTone] = useState<string>("Padrão")
+  const [customTone, setCustomTone] = useState<string>("")
 
   const { toast } = useToast()
   const { profile } = useUser()
@@ -93,6 +95,13 @@ export function MobileCorrectionWrapper({
     setAIEnabled(enabled)
   }
 
+  const handleToneChange = (tone: string, customInstruction?: string) => {
+    setSelectedTone(tone)
+    if (tone === "Personalizado" && customInstruction) {
+      setCustomTone(customInstruction)
+    }
+  }
+
   const handleHelpClick = () => {
     // TODO: Navigate to help page or show help dialog
     console.log('Help clicked')
@@ -119,10 +128,16 @@ export function MobileCorrectionWrapper({
         throw new Error(`O texto excede o limite de ${characterLimit} caracteres.`)
       }
 
+      // Determinar tom atual
+      const currentTone = selectedTone === "Personalizado" ? customTone : selectedTone
+
+      // Escolher endpoint baseado no tom
+      const endpoint = currentTone !== "Padrão" ? "/api/tone" : "/api/correct"
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT)
 
-      const response = await fetch("/api/correct", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,7 +145,7 @@ export function MobileCorrectionWrapper({
         body: JSON.stringify({
           text,
           isMobile: true,
-          tone: "Padrão", // Default tone for now
+          tone: currentTone,
           useAdvancedAI: aiEnabled && isPremium
         }),
         signal: controller.signal
@@ -145,10 +160,18 @@ export function MobileCorrectionWrapper({
 
       const data = await response.json()
 
-      setResult({
-        correctedText: data.correctedText,
-        evaluation: data.evaluation
-      })
+      // Processar resposta (diferente para /api/tone)
+      if (endpoint === "/api/tone") {
+        setResult({
+          correctedText: data.adjustedText,
+          evaluation: data.evaluation
+        })
+      } else {
+        setResult({
+          correctedText: data.correctedText,
+          evaluation: data.evaluation
+        })
+      }
       setViewState("RESULT")
 
       // Incrementar contagem de correções gratuitas se for usuário free
@@ -168,7 +191,7 @@ export function MobileCorrectionWrapper({
         text_length: text.length,
         score: data.evaluation?.score || 0,
         is_premium: isPremium,
-        tone: "Padrão",
+        tone: currentTone,
       })
 
     } catch (error: any) {
@@ -217,6 +240,7 @@ export function MobileCorrectionWrapper({
         aiEnabled={aiEnabled}
         usageCount={freeCorrectionsCount}
         usageLimit={correctionsDailyLimit}
+        onToneChange={handleToneChange}
       />
 
       {/* Floating Action Button */}

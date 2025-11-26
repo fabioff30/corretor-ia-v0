@@ -31,6 +31,9 @@ interface MobileHeroProps {
   // Usage tracking props
   usageCount?: number
   usageLimit?: number
+  // Tone adjustment props
+  onToneChange?: (tone: string, customInstruction?: string) => void
+  showToneAdjuster?: boolean
 }
 
 export function MobileHero({
@@ -57,6 +60,8 @@ export function MobileHero({
   showAIToggle,
   usageCount = 0,
   usageLimit = 3,
+  onToneChange,
+  showToneAdjuster = true,
 }: MobileHeroProps) {
   const [text, setText] = useState("")
   const { user, profile } = useUser()
@@ -141,6 +146,8 @@ export function MobileHero({
             isPremium={isPremium}
             usageCount={usageCount}
             usageLimit={usageLimit}
+            onToneChange={onToneChange}
+            showToneAdjuster={showToneAdjuster}
           />
         </div>
       </motion.div>

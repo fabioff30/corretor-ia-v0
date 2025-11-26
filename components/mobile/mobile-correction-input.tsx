@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useCorrectionHaptic } from "@/hooks/use-haptic"
 import { cn } from "@/lib/utils"
+import { ToneAdjuster } from "@/components/tone-adjuster"
 
 interface MobileCorrectionInputProps {
   value: string
@@ -36,6 +37,9 @@ interface MobileCorrectionInputProps {
   // Daily usage tracking
   usageCount?: number
   usageLimit?: number
+  // Tone adjustment
+  onToneChange?: (tone: string, customInstruction?: string) => void
+  showToneAdjuster?: boolean
 }
 
 export function MobileCorrectionInput({
@@ -59,6 +63,8 @@ export function MobileCorrectionInput({
   isPremium = false,
   usageCount = 0,
   usageLimit = 3,
+  onToneChange,
+  showToneAdjuster = true,
 }: MobileCorrectionInputProps) {
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -234,6 +240,14 @@ export function MobileCorrectionInput({
           </button>
         )}
       </div>
+
+      {/* Tone Adjuster - antes do botão */}
+      {showToneAdjuster && !showStyleSelector && (
+        <ToneAdjuster
+          onToneChange={onToneChange}
+          disabled={isLoading || isAtDailyLimit}
+        />
+      )}
 
       {/* Action Button */}
       <Button
