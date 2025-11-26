@@ -106,6 +106,9 @@ export function MobileCorrectionWrapper({
   const handleCorrect = async (text: string) => {
     if (!text.trim()) return
 
+    // Scroll para o topo ao iniciar correção
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+
     setOriginalText(text)
     setViewState("LOADING")
     setIsLoading(true)
