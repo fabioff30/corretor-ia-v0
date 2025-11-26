@@ -139,6 +139,8 @@ export function MobileHero({
             showAIToggle={showAIToggle}
             isLoggedIn={!!user}
             isPremium={isPremium}
+            usageCount={usageCount}
+            usageLimit={usageLimit}
           />
         </div>
       </motion.div>

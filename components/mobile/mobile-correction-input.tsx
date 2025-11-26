@@ -33,6 +33,9 @@ interface MobileCorrectionInputProps {
   // User state for conditional rendering
   isLoggedIn?: boolean
   isPremium?: boolean
+  // Daily usage tracking
+  usageCount?: number
+  usageLimit?: number
 }
 
 export function MobileCorrectionInput({
@@ -54,6 +57,8 @@ export function MobileCorrectionInput({
   showAIToggle = true,
   isLoggedIn = true,
   isPremium = false,
+  usageCount = 0,
+  usageLimit = 3,
 }: MobileCorrectionInputProps) {
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -62,6 +67,7 @@ export function MobileCorrectionInput({
   const charCount = value.length
   const isOverLimit = characterLimit !== null && characterLimit !== undefined && charCount > characterLimit
   const isUnlimited = characterLimit === null || characterLimit === -1
+  const isAtDailyLimit = !isPremium && usageLimit > 0 && usageCount >= usageLimit
 
   // Auto-focus ao montar
   useEffect(() => {
@@ -85,7 +91,7 @@ export function MobileCorrectionInput({
     onSubmit()
   }
 
-  const canSubmit = value.trim().length > 0 && !isOverLimit && !isLoading
+  const canSubmit = value.trim().length > 0 && !isOverLimit && !isLoading && !isAtDailyLimit
 
   return (
     <div className="w-full space-y-3">
@@ -133,18 +139,18 @@ export function MobileCorrectionInput({
           value={value}
           onChange={handleChange}
           placeholder={!isLoggedIn && value === "" ? "" : placeholder}
-          disabled={isLoading || (!isPremium && aiEnabled) || isOverLimit}
+          disabled={isLoading || (!isPremium && aiEnabled) || isOverLimit || isAtDailyLimit}
           className={cn(
             "min-h-[60vh] text-lg leading-relaxed resize-none",
             "rounded-2xl p-6 shadow-lg",
             "border-2 focus-visible:ring-2 transition-all",
             isOverLimit && "border-destructive focus-visible:ring-destructive",
-            ((!isPremium && aiEnabled) || isOverLimit) && "opacity-20 pointer-events-none"
+            ((!isPremium && aiEnabled) || isOverLimit || isAtDailyLimit) && "opacity-20 pointer-events-none"
           )}
         />
 
         {/* Overlay for Non-Logged Users (Custom Placeholder) */}
-        {!isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && (
+        {!isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit && (
           <div className="absolute inset-0 p-6 pointer-events-none flex items-start z-[5]">
             <span className="text-muted-foreground text-lg">
               Cole, digite seu texto ou{" "}
@@ -156,34 +162,44 @@ export function MobileCorrectionInput({
           </div>
         )}
 
-        {/* Overlay for Locked States (Advanced AI or Limit Exceeded) */}
-        {((!isPremium && aiEnabled) || isOverLimit) && (
+        {/* Overlay for Locked States (Advanced AI, Limit Exceeded, or Daily Limit Reached) */}
+        {((!isPremium && aiEnabled) || isOverLimit || isAtDailyLimit) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-2xl border border-primary/20 p-6 text-center z-10">
             <div className="bg-background/95 p-6 rounded-xl shadow-lg border border-border max-w-sm w-full space-y-4">
               <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Crown className="h-6 w-6 text-primary animate-pulse" />
               </div>
               <h3 className="font-bold text-lg">
-                {isOverLimit ? "Limite de caracteres excedido" : "Recurso Premium"}
+                {isAtDailyLimit
+                  ? "Limite diário atingido"
+                  : isOverLimit
+                    ? "Limite de caracteres excedido"
+                    : "Recurso Premium"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {isOverLimit
-                  ? "Você atingiu o limite de caracteres do plano gratuito."
-                  : "A IA Avançada é exclusiva para membros Premium."}
+                {isAtDailyLimit
+                  ? `Você usou suas ${usageLimit} correções gratuitas de hoje.`
+                  : isOverLimit
+                    ? "Você atingiu o limite de caracteres do plano gratuito."
+                    : "A IA Avançada é exclusiva para membros Premium."}
                 <br />
-                Faça login ou compre um plano para continuar.
+                {isAtDailyLimit
+                  ? "Faça upgrade para correções ilimitadas!"
+                  : "Faça login ou compre um plano para continuar."}
               </p>
               <div className="flex flex-col gap-2 pt-2">
                 <Button asChild className="w-full font-semibold shadow-md">
                   <Link href="/premium">
-                    Ver planos Premium
+                    {isAtDailyLimit ? "Liberar correções ilimitadas" : "Ver planos Premium"}
                   </Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild className="w-full">
-                  <Link href="/login">
-                    Fazer login
-                  </Link>
-                </Button>
+                {!isAtDailyLimit && (
+                  <Button variant="ghost" size="sm" asChild className="w-full">
+                    <Link href="/login">
+                      Fazer login
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
