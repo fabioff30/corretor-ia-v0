@@ -20,6 +20,17 @@ export async function middleware(request: NextRequest) {
     ? developmentCSP(request)
     : securityHeadersMiddleware(request)
 
+  // 3.1 Persist país para front-end de ads (ex.: Clever) usando header do edge
+  const countryHeader = request.headers.get('x-vercel-ip-country') || request.geo?.country || ''
+  const country = countryHeader.toUpperCase()
+  if (country) {
+    responseWithHeaders.cookies.set('country', country, {
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+      sameSite: 'lax',
+      path: '/',
+    })
+  }
+
   // 4. Copy cookies from supabaseResponse to final response
   // This ensures refreshed tokens are sent to the client
   supabaseResponse.cookies.getAll().forEach(cookie => {

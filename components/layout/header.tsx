@@ -6,7 +6,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ModeToggle } from "@/components/mode-toggle"
 import { Shield, LogOut, LogIn, LayoutDashboard, Crown, Sparkles } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { useUser } from "@/hooks/use-user"
@@ -201,7 +200,7 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <ModeToggle />
+
 
           {/* User Auth Button - Desktop */}
           <div className="hidden md:flex">

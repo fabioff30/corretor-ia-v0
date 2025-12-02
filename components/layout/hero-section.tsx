@@ -10,6 +10,7 @@ import Link from "next/link"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { MobileCorrectionWrapper } from "@/components/mobile/mobile-correction-wrapper"
+import { PremiumBadge } from "@/components/premium-badge"
 
 export function HeroSection() {
   const isMobile = useIsMobile()
@@ -40,10 +41,18 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-balance gradient-text"
+            className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
           >
-            Corretor de Texto Online Gratuito
+            Reescrever Texto com IA
           </motion.h1>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+          >
+            <PremiumBadge />
+          </motion.div>
 
           {/* Subtítulo */}
           <motion.p
@@ -66,7 +75,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="w-full"
           >
-            <TextCorrectionForm />
+            <TextCorrectionForm initialMode="correct" />
           </motion.div>
 
           {/* Ícones de Recursos */}
