@@ -152,7 +152,6 @@ export function CleverWebServerLoader() {
 
     const scheduleLoad = () => {
       loadScript('CleverCoreLoader94925', 'https://scripts.cleverwebserver.com/5e874cbae3c8b61578de0cb6869547be.js')
-      loadScript('CleverCoreLoader98062', 'https://scripts.cleverwebserver.com/b8d248675a18e7de6ab7db3a10e83a10.js')
     }
 
     if ('requestIdleCallback' in window) {
@@ -161,12 +160,10 @@ export function CleverWebServerLoader() {
       setTimeout(scheduleLoad, 0)
     }
 
-    // Cleanup: remover scripts quando componente desmontar ou shouldLoad mudar
+    // Cleanup: remover script quando componente desmontar ou shouldLoad mudar
     return () => {
-      const script1 = document.getElementById('CleverCoreLoader94925')
-      const script2 = document.getElementById('CleverCoreLoader98062')
-      script1?.remove()
-      script2?.remove()
+      const script = document.getElementById('CleverCoreLoader94925')
+      script?.remove()
     }
   }, [shouldLoad])
 
@@ -175,11 +172,6 @@ export function CleverWebServerLoader() {
     return null
   }
 
-  // Renderizar os containers de anúncios
-  return (
-    <>
-      <div className="clever-core-ads-94925" />
-      <div className="clever-core-ads-98062" />
-    </>
-  )
+  // Renderizar o container de anúncios
+  return <div className="clever-core-ads" />
 }
