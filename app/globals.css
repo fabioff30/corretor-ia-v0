@@ -515,3 +515,12 @@
 .touch-ripple:active::after {
   animation: ripple 0.6s ease-out;
 }
+
+/* Fix para scroll travado do Radix UI Dialog em mobile */
+/* Quando múltiplos dialogs são abertos/fechados em sequência, o Radix pode */
+/* deixar o body com scroll travado. Este override resolve o problema. */
+/* Ref: https://github.com/shadcn-ui/ui/issues/6988 */
+body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+}

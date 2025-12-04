@@ -311,16 +311,11 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   }
 
   // Helper para fechar modal de seleção e processar pagamento com delay
-  // Isso evita conflito de scroll entre os modais do Radix UI
+  // Delay necessário para evitar conflito entre modais do Radix UI
+  // O CSS fix em globals.css (body[data-scroll-locked]) resolve o scroll travado
   const handlePlanSelection = (planType: PlanType, paymentMethod: 'card' | 'pix') => {
     setIsPlanSelectionOpen(false)
 
-    // Forçar restauração do scroll do body (Radix UI pode não limpar corretamente)
-    document.body.style.overflow = ''
-    document.body.style.pointerEvents = ''
-
-    // Pequeno delay para permitir que o modal feche completamente
-    // antes de abrir o próximo diálogo (evita scroll travado)
     setTimeout(() => {
       if (paymentMethod === 'card') {
         handleSubscribe(planType)
@@ -867,12 +862,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       {/* Register Dialog for Payment (Forces account creation for both PIX and Card) */}
       <RegisterForPixDialog
         isOpen={isRegisterDialogOpen}
-        onClose={() => {
-          setIsRegisterDialogOpen(false)
-          // Forçar restauração do scroll do body
-          document.body.style.overflow = ''
-          document.body.style.pointerEvents = ''
-        }}
+        onClose={() => setIsRegisterDialogOpen(false)}
         onSuccess={handlePixAfterRegister}
         planType={pendingPlanType || 'monthly'}
         planPrice={pendingPlanType === 'monthly' ? monthlyPriceWithDiscount : annualPriceWithDiscount}
