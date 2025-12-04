@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
 import { RegisterForPixDialog } from "@/components/premium/register-for-pix-dialog"
+import { InlineRegisterForm } from "@/components/premium/inline-register-form"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 type PlanType = 'monthly' | 'annual'
@@ -33,6 +34,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'card' | null>(null)
   const [justRegistered, setJustRegistered] = useState(false)
   const [isPlanSelectionOpen, setIsPlanSelectionOpen] = useState(false) // Modal de seleção de plano (mobile)
+  const [showInlineRegister, setShowInlineRegister] = useState(false) // Formulário de registro inline (mobile)
   const pixGeneratedRef = useRef(false) // Prevent multiple PIX generations
   const stripeCheckoutRef = useRef(false) // Prevent multiple Stripe checkouts
   const router = useRouter()
@@ -310,12 +312,20 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     resetPixPayment()
   }
 
-  // Helper para fechar modal de seleção e processar pagamento com delay
-  // Delay necessário para evitar conflito entre modais do Radix UI
-  // O CSS fix em globals.css (body[data-scroll-locked]) resolve o scroll travado
+  // Helper para fechar modal de seleção e processar pagamento
+  // No mobile, se não logado, mostra formulário inline em vez de dialog
   const handlePlanSelection = (planType: PlanType, paymentMethod: 'card' | 'pix') => {
     setIsPlanSelectionOpen(false)
 
+    // Se não logado no mobile, mostrar formulário inline
+    if (!user && isMobile) {
+      setPendingPlanType(planType)
+      setPendingPaymentMethod(paymentMethod)
+      setShowInlineRegister(true)
+      return
+    }
+
+    // Usuário logado ou desktop - processar normalmente
     setTimeout(() => {
       if (paymentMethod === 'card') {
         handleSubscribe(planType)
@@ -325,10 +335,35 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     }, 200)
   }
 
+  // Callback quando registro inline é bem sucedido
+  const handleInlineRegisterSuccess = () => {
+    setShowInlineRegister(false)
+    setJustRegistered(true)
+
+    // Salvar no localStorage para o useEffect pegar
+    if (pendingPaymentMethod === 'pix') {
+      localStorage.setItem('pendingPixPlan', pendingPlanType || 'monthly')
+    } else {
+      localStorage.setItem('pendingCardPlan', pendingPlanType || 'monthly')
+    }
+
+    toast({
+      title: "Conta criada com sucesso!",
+      description: pendingPaymentMethod === 'pix' ? "Gerando seu QR Code PIX..." : "Redirecionando para pagamento...",
+    })
+  }
+
+  // Callback quando usuário cancela registro inline
+  const handleInlineRegisterCancel = () => {
+    setShowInlineRegister(false)
+    setPendingPlanType(null)
+    setPendingPaymentMethod(null)
+  }
+
   return (
     <div className="py-8">
-      {/* Mobile: Card único com 12x R$19,90 */}
-      {isMobile ? (
+      {/* Mobile: Card único com 12x R$19,90 (esconde quando formulário inline visível) */}
+      {isMobile && !showInlineRegister && (
         <div className="max-w-md mx-auto pt-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -402,8 +437,10 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
             </Card>
           </motion.div>
         </div>
-      ) : (
-        /* Desktop: 2 cards (mensal e anual) */
+      )}
+
+      {/* Desktop: 2 cards (mensal e anual) */}
+      {!isMobile && (
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
           {/* Monthly Plan */}
           <motion.div
@@ -655,7 +692,8 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         </div>
       )}
 
-      {/* Guarantee Notice */}
+      {/* Guarantee Notice (esconde quando formulário inline visível no mobile) */}
+      {!(isMobile && showInlineRegister) && (
       <div className="max-w-5xl mx-auto mt-8">
         <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-start">
           <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
@@ -668,7 +706,10 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
           </div>
         </div>
       </div>
+      )}
 
+      {/* Tabs de Benefícios e Suporte (esconde quando formulário inline visível no mobile) */}
+      {!(isMobile && showInlineRegister) && (
       <div className="max-w-5xl mx-auto mt-12">
         <Tabs defaultValue="benefits" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:max-w-md mx-auto bg-muted/50 p-1 rounded-lg">
@@ -746,6 +787,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
           </TabsContent>
         </Tabs>
       </div>
+      )}
 
       {/* Mobile Plan Selection Modal */}
       <Dialog open={isPlanSelectionOpen} onOpenChange={setIsPlanSelectionOpen}>
@@ -859,9 +901,20 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         </DialogContent>
       </Dialog>
 
-      {/* Register Dialog for Payment (Forces account creation for both PIX and Card) */}
+      {/* Inline Register Form (Mobile only - avoids scroll lock from multiple dialogs) */}
+      {showInlineRegister && isMobile && (
+        <InlineRegisterForm
+          planType={pendingPlanType || 'monthly'}
+          planPrice={pendingPlanType === 'monthly' ? monthlyPriceWithDiscount : annualPriceWithDiscount}
+          paymentMethod={pendingPaymentMethod || 'pix'}
+          onSuccess={handleInlineRegisterSuccess}
+          onCancel={handleInlineRegisterCancel}
+        />
+      )}
+
+      {/* Register Dialog for Payment (Desktop only - Forces account creation for both PIX and Card) */}
       <RegisterForPixDialog
-        isOpen={isRegisterDialogOpen}
+        isOpen={isRegisterDialogOpen && !isMobile}
         onClose={() => setIsRegisterDialogOpen(false)}
         onSuccess={handlePixAfterRegister}
         planType={pendingPlanType || 'monthly'}
