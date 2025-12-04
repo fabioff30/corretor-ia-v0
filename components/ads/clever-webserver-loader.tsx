@@ -25,7 +25,7 @@ export function CleverWebServerLoader() {
   const [shouldLoad, setShouldLoad] = useState(false)
   const [hasConsent, setHasConsent] = useState(false)
   const [isBrazil, setIsBrazil] = useState(false)
-  const { isPro, profile, isAuthenticated } = useUser()
+  const { isPro, profile } = useUser()
 
   // feature flag to kill switch quickly if Google flags again
   const isFeatureEnabled = useMemo(() => {
@@ -88,19 +88,21 @@ export function CleverWebServerLoader() {
     })
 
     // Se for usuário premium ou admin, não carregar
-    const isPremiumUser = isPro || profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
-    const isFreeUser = profile?.plan_type === 'free'
+    const isPremiumUser = isPro || profile?.plan_type === 'pro' || profile?.plan_type === 'admin' || profile?.plan_type === 'lifetime'
 
+    // Mostrar para:
+    // - Visitantes não logados (isAuthenticated === false)
+    // - Usuários logados com plano free
+    // NÃO mostrar para usuários premium/admin/lifetime
     const allow =
       isFeatureEnabled &&
       isBrazil &&
       hasConsent &&
-      isFreeUser &&
-      isAuthenticated &&
+      !isPremiumUser &&
       !isBlocked
 
     setShouldLoad(allow)
-  }, [pathname, isPro, profile?.plan_type, isAuthenticated, isFeatureEnabled, isBrazil, hasConsent])
+  }, [pathname, isPro, profile?.plan_type, isFeatureEnabled, isBrazil, hasConsent])
 
   // Carregar scripts quando shouldLoad mudar para true
   useEffect(() => {
