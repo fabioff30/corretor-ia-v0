@@ -330,14 +330,14 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     <div className="py-8">
       {/* Mobile: Card único com 12x R$19,90 */}
       {isMobile ? (
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md mx-auto pt-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <Card className="border-primary shadow-lg relative overflow-hidden">
+            <Card className="border-primary shadow-lg relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold rounded-full z-10">
                 MAIS POPULAR
               </div>
