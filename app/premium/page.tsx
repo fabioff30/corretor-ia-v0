@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { PremiumPlan } from "@/components/premium-plan"
 import { BackgroundGradient } from "@/components/background-gradient"
+import { SocialProofStats } from "@/components/social-proof-stats"
+import { TestimonialsReal } from "@/components/testimonials-real"
+import { RotatingTestimonial } from "@/components/rotating-testimonial"
 import { Button } from "@/components/ui/button"
 import { Building2, Plug, ShieldCheck, Headset, ArrowRight } from "lucide-react"
 
@@ -26,7 +29,22 @@ export default function PremiumPage() {
             </p>
           </div>
 
+          {/* Social Proof Statistics - Desktop Only */}
+          <div className="mb-8 hidden md:block">
+            <SocialProofStats />
+          </div>
+
+          {/* Rotating Testimonial */}
+          <div className="mb-8">
+            <RotatingTestimonial />
+          </div>
+
           <PremiumPlan />
+
+          {/* Testimonials from Real Users */}
+          <div className="mt-16">
+            <TestimonialsReal />
+          </div>
           <section className="mt-16 rounded-3xl border border-primary/15 bg-primary/5 p-8 sm:p-12 shadow-sm">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
