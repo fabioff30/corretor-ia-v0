@@ -310,6 +310,22 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     resetPixPayment()
   }
 
+  // Helper para fechar modal de seleção e processar pagamento com delay
+  // Isso evita conflito de scroll entre os modais do Radix UI
+  const handlePlanSelection = (planType: PlanType, paymentMethod: 'card' | 'pix') => {
+    setIsPlanSelectionOpen(false)
+
+    // Pequeno delay para permitir que o modal feche completamente
+    // antes de abrir o próximo diálogo (evita scroll travado)
+    setTimeout(() => {
+      if (paymentMethod === 'card') {
+        handleSubscribe(planType)
+      } else {
+        handlePixPayment(planType)
+      }
+    }, 150)
+  }
+
   return (
     <div className="py-8">
       {/* Mobile: Card único com 12x R$19,90 */}
@@ -762,10 +778,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
-                  onClick={() => {
-                    setIsPlanSelectionOpen(false)
-                    handleSubscribe('annual')
-                  }}
+                  onClick={() => handlePlanSelection('annual', 'card')}
                   disabled={isLoading !== null || pixLoadingPlan !== null}
                 >
                   {isLoading === 'annual' ? (
@@ -781,10 +794,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                   size="sm"
                   variant="outline"
                   className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                  onClick={() => {
-                    setIsPlanSelectionOpen(false)
-                    handlePixPayment('annual')
-                  }}
+                  onClick={() => handlePlanSelection('annual', 'pix')}
                   disabled={isLoading !== null || pixLoadingPlan !== null}
                 >
                   {pixLoadingPlan === 'annual' ? (
@@ -812,10 +822,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-                  onClick={() => {
-                    setIsPlanSelectionOpen(false)
-                    handleSubscribe('monthly')
-                  }}
+                  onClick={() => handlePlanSelection('monthly', 'card')}
                   disabled={isLoading !== null || pixLoadingPlan !== null}
                 >
                   {isLoading === 'monthly' ? (
@@ -831,10 +838,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                   size="sm"
                   variant="outline"
                   className="border-primary text-primary hover:bg-primary/10"
-                  onClick={() => {
-                    setIsPlanSelectionOpen(false)
-                    handlePixPayment('monthly')
-                  }}
+                  onClick={() => handlePlanSelection('monthly', 'pix')}
                   disabled={isLoading !== null || pixLoadingPlan !== null}
                 >
                   {pixLoadingPlan === 'monthly' ? (
