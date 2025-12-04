@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast"
 import { sendGA4Event } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
 import { obfuscateIdentifier } from "@/utils/analytics"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface PixPaymentData {
   paymentId: string
@@ -57,6 +58,7 @@ export function PremiumPixModal({
   const [activationError, setActivationError] = useState<string | null>(null)
   const { toast } = useToast()
   const router = useRouter()
+  const isMobile = useIsMobile()
   const statusRef = useRef(status)
   const redirectTimeoutRef = useRef<number | null>(null)
 
@@ -105,23 +107,30 @@ export function PremiumPixModal({
 
     redirectTimeoutRef.current = window.setTimeout(() => {
       onSuccess?.()
-      const query = new URLSearchParams({
-        paymentId: paymentData.paymentId,
-        plan: paymentData.planType,
-        amount: paymentData.amount.toString(),
-      })
 
-      if (paymentData.payerEmail) {
-        query.set('email', paymentData.payerEmail)
+      // Mobile + logged in: redirect to home
+      if (isMobile && !paymentData.isGuest) {
+        router.push('/')
+      } else {
+        // Desktop or guest: current behavior (success page)
+        const query = new URLSearchParams({
+          paymentId: paymentData.paymentId,
+          plan: paymentData.planType,
+          amount: paymentData.amount.toString(),
+        })
+
+        if (paymentData.payerEmail) {
+          query.set('email', paymentData.payerEmail)
+        }
+
+        if (paymentData.isGuest) {
+          query.set('guest', '1')
+        }
+
+        router.push(`/premium/pix-sucesso?${query.toString()}`)
       }
-
-      if (paymentData.isGuest) {
-        query.set('guest', '1')
-      }
-
-      router.push(`/premium/pix-sucesso?${query.toString()}`)
     }, 2000)
-  }, [onSuccess, paymentData, router, toast])
+  }, [onSuccess, paymentData, router, toast, isMobile])
 
   // Timer countdown
   useEffect(() => {
