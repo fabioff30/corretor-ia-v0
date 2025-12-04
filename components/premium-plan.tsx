@@ -306,17 +306,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   }
 
   return (
-    <div className="py-12">
-      <div className="text-center mb-10">
-        <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-          Versão Premium
-        </span>
-        <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">Desbloqueie Todo o Potencial</h2>
-        <p className="text-foreground/80 max-w-[700px] mx-auto">
-          Aprimore sua experiência com recursos exclusivos e sem limitações
-        </p>
-      </div>
-
+    <div className="py-8">
       <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
         {/* Monthly Plan */}
         <motion.div
