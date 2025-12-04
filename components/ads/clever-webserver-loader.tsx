@@ -20,6 +20,23 @@ const BLOCKED_ROUTES = [
   '/cadastro',
 ]
 
+// Padrões de user agent de bots conhecidos
+const BOT_PATTERNS = [
+  'googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'slurp', 'baiduspider',
+  'facebookexternalhit', 'twitterbot', 'linkedinbot', 'whatsapp', 'telegrambot',
+  'applebot', 'petalbot', 'semrushbot', 'ahrefsbot', 'mj12bot', 'dotbot',
+  'rogerbot', 'embedly', 'quora link preview', 'showyoubot', 'outbrain',
+  'pinterest', 'slackbot', 'vkshare', 'w3c_validator', 'redditbot',
+  'sogou', 'exabot', 'facebot', 'ia_archiver', 'crawler', 'spider', 'bot/'
+]
+
+// Detecta se o user agent é um bot
+function isBot(): boolean {
+  if (typeof window === 'undefined' || !navigator?.userAgent) return false
+  const ua = navigator.userAgent.toLowerCase()
+  return BOT_PATTERNS.some(pattern => ua.includes(pattern))
+}
+
 export function CleverWebServerLoader() {
   const pathname = usePathname()
   const [shouldLoad, setShouldLoad] = useState(false)
@@ -93,13 +110,14 @@ export function CleverWebServerLoader() {
     // Mostrar para:
     // - Visitantes não logados (isAuthenticated === false)
     // - Usuários logados com plano free
-    // NÃO mostrar para usuários premium/admin/lifetime
+    // NÃO mostrar para usuários premium/admin/lifetime ou bots
     const allow =
       isFeatureEnabled &&
       isBrazil &&
       hasConsent &&
       !isPremiumUser &&
-      !isBlocked
+      !isBlocked &&
+      !isBot()
 
     setShouldLoad(allow)
   }, [pathname, isPro, profile?.plan_type, isFeatureEnabled, isBrazil, hasConsent])
