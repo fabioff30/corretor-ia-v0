@@ -34,12 +34,12 @@ export default function PremiumPage() {
             <SocialProofStats />
           </div>
 
+          <PremiumPlan />
+
           {/* Rotating Testimonial */}
-          <div className="mb-8">
+          <div className="mt-8">
             <RotatingTestimonial />
           </div>
-
-          <PremiumPlan />
 
           {/* Testimonials from Real Users */}
           <div className="mt-8">
