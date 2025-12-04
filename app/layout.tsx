@@ -13,6 +13,7 @@ import { CookieConsent } from "@/components/cookie-consent"
 import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
 import { AdSenseLoaderWithRoutes } from "@/components/ads/adsense-loader-with-routes"
+import { CleverWebServerLoader } from "@/components/ads/clever-webserver-loader"
 import { GoogleOneTap } from "@/components/google-one-tap"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
@@ -203,6 +204,7 @@ export default async function RootLayout({
             <JulinhoAssistant />
             <GoogleOneTap />
             <GoogleAnalyticsWrapper />
+            <CleverWebServerLoader />
           </ThemeProvider>
         </UserProvider>      </body>
     </html>
