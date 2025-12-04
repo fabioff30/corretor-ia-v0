@@ -42,9 +42,10 @@ export default function PremiumPage() {
           <PremiumPlan />
 
           {/* Testimonials from Real Users */}
-          <div className="mt-16">
+          <div className="mt-8">
             <TestimonialsReal />
           </div>
+
           <section className="mt-16 rounded-3xl border border-primary/15 bg-primary/5 p-8 sm:p-12 shadow-sm">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
