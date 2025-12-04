@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const customerId = await getOrCreateStripeCustomer(userId, userEmail)
 
     // Calculate amount based on plan type
-    const amount = planType === 'monthly' ? 2990 : 29900 // in cents (R$ 29.90 or R$ 299.00)
+    const amount = planType === 'monthly' ? 2990 : 23880 // in cents (R$ 29.90 or R$ 238.80)
     const description = planType === 'monthly'
       ? 'CorretorIA Premium - Plano Mensal'
       : 'CorretorIA Premium - Plano Anual'

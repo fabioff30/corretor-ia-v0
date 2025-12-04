@@ -407,8 +407,8 @@ export async function createProSubscription(
     annual: {
       frequency: 12,
       frequency_type: 'months' as const,
-      transaction_amount: 299.00,
-      reason: 'Plano Premium Anual - CorretorIA',
+      transaction_amount: 238.80,
+      reason: 'Plano Premium Anual - CorretorIA (12x R$19,90)',
     },
   }
 

@@ -16,7 +16,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // Price IDs from Stripe Dashboard (Production Mode)
 export const STRIPE_PRICES = {
   MONTHLY: 'price_1SKPXfAaDWyHAlqlOF5UHXPK', // R$ 29,90/mês (Production)
-  ANNUAL: 'price_1SKPXfAaDWyHAlqlcmk9Zcfx',  // R$ 299/ano (Production)
+  ANNUAL: 'price_1SacDvAaDWyHAlql5FHTMJzI',  // R$ 238,80/ano - 12x R$19,90 (Production)
   LIFETIME: 'price_1SX9iCAaDWyHAlqlcLPoTjZy', // R$ 99,90 Black Friday (Production)
 } as const
 

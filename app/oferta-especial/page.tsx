@@ -107,7 +107,7 @@ export default function OfertaEspecialPage() {
                 <h3 className="text-lg font-medium mb-2">Como funciona o desconto de 50%?</h3>
                 <p className="text-foreground/80">
                   O desconto de 50% é aplicado automaticamente no primeiro mês do plano mensal ou no primeiro mês do plano anual.
-                  Nos meses seguintes, você paga o valor normal (R$ 29,90/mês ou R$ 299/ano).
+                  Nos meses seguintes, você paga o valor normal (R$ 29,90/mês ou R$ 238,80/ano).
                 </p>
               </div>
 

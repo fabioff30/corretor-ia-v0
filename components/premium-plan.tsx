@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug, QrCode } from "lucide-react"
+import { Zap, Check, X, AlertTriangle, Loader2, Calendar, Headset, Clock, Mail, Plug, QrCode, CreditCard, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
 import { RegisterForPixDialog } from "@/components/premium/register-for-pix-dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type PlanType = 'monthly' | 'annual'
 
@@ -30,6 +32,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const [pendingPlanType, setPendingPlanType] = useState<PlanType | null>(null)
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'pix' | 'card' | null>(null)
   const [justRegistered, setJustRegistered] = useState(false)
+  const [isPlanSelectionOpen, setIsPlanSelectionOpen] = useState(false) // Modal de seleção de plano (mobile)
   const pixGeneratedRef = useRef(false) // Prevent multiple PIX generations
   const stripeCheckoutRef = useRef(false) // Prevent multiple Stripe checkouts
   const router = useRouter()
@@ -37,10 +40,12 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const { createSubscription, isActive, isPro } = useSubscription()
   const { createPixPayment, paymentData, reset: resetPixPayment } = usePixPayment()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   // Pricing with discount
   const monthlyPrice = 29.90
-  const annualPrice = 299.00
+  const annualPrice = 238.80 // 12x de R$19,90
+  const annualInstallment = 19.90
   const discountPercent = showDiscount && couponCode ? 50 : 0
   const monthlyPriceWithDiscount = monthlyPrice * (1 - discountPercent / 100)
   const annualPriceWithDiscount = annualPrice * (1 - discountPercent / 100)
@@ -85,7 +90,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
       console.log('[Stripe] Creating checkout for authenticated user:', planType)
 
-      const amount = planType === 'monthly' ? 29.90 : 299.00
+      const amount = planType === 'monthly' ? monthlyPrice : annualPrice
       const analyticsPayload = {
         user_id: user.id,
         email: user.email,
@@ -307,254 +312,333 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
   return (
     <div className="py-8">
-      <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
-        {/* Monthly Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-        >
-          <Card className="border-primary shadow-md h-full flex flex-col">
-            <CardHeader className="bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-2xl">Plano Mensal</CardTitle>
-                <div className="p-2 bg-white/20 rounded-full">
-                  <Zap className="h-5 w-5" />
-                </div>
+      {/* Mobile: Card único com 12x R$19,90 */}
+      {isMobile ? (
+        <div className="max-w-md mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <Card className="border-primary shadow-lg relative overflow-hidden">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold rounded-full z-10">
+                MAIS POPULAR
               </div>
-              <CardDescription className="text-white/90 mt-2">
-                Flexibilidade mensal
-              </CardDescription>
-              <div className="mt-4">
-                {showDiscount && couponCode ? (
-                  <>
-                    <div className="text-sm text-white/70 line-through">R${monthlyPrice.toFixed(2)}</div>
-                    <div>
-                      <span className="text-4xl font-bold">R${monthlyPriceWithDiscount.toFixed(2)}</span>
-                      <span className="text-white/90 ml-1">/primeiro mês</span>
+              <CardHeader className="bg-gradient-to-r from-primary to-secondary text-white pt-8">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-2xl">Premium</CardTitle>
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                </div>
+                <CardDescription className="text-white/90 mt-2">
+                  Acesso completo a todos os recursos
+                </CardDescription>
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg text-white/80">12x de</span>
+                    <span className="text-4xl font-bold">R${annualInstallment.toFixed(2)}</span>
+                  </div>
+                  <div className="text-sm mt-1 text-white/90">
+                    ou R${annualPrice.toFixed(2)} à vista
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-6">
+                <ul className="space-y-3">
+                  {features.slice(0, 6).map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{feature.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+
+              <CardFooter className="flex flex-col space-y-3">
+                {isPro || isActive ? (
+                  <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
+                    <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
+                      <Check className="h-5 w-5" />
+                      Você é Premium!
                     </div>
-                    <div className="text-xs text-white/80 mt-1">Depois R${monthlyPrice.toFixed(2)}/mês</div>
-                  </>
+                    <p className="text-sm text-muted-foreground">
+                      Aproveite até 20.000 caracteres por texto.
+                    </p>
+                  </div>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold">R${monthlyPrice.toFixed(2)}</span>
-                    <span className="text-white/90 ml-1">/mês</span>
+                    <Button
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-lg py-6"
+                      onClick={() => setIsPlanSelectionOpen(true)}
+                    >
+                      <Zap className="mr-2 h-5 w-5" />
+                      Assinar Agora
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Garantia de 7 dias • Cancele quando quiser
+                    </p>
                   </>
                 )}
-              </div>
-            </CardHeader>
-
-            <CardContent className="pt-6 flex-grow">
-              <ul className="space-y-3">
-                {features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    {feature.included ? (
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
-                    )}
-                    <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
-                      {feature.name}
-                      {feature.comingSoon && (
-                        <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
-                          Em breve
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-3">
-              {isPro || isActive ? (
-                <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
-                  <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
-                    <Check className="h-5 w-5" />
-                    Você é Premium!
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
+      ) : (
+        /* Desktop: 2 cards (mensal e anual) */
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
+          {/* Monthly Plan */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <Card className="border-primary shadow-md h-full flex flex-col">
+              <CardHeader className="bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-2xl">Plano Mensal</CardTitle>
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <Zap className="h-5 w-5" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Aproveite até 20.000 caracteres por texto.
-                  </p>
                 </div>
-              ) : (
-                <>
-                  <div className="w-full space-y-2">
-                    <Button
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-                      onClick={() => handleSubscribe('monthly')}
-                      disabled={isLoading !== null || pixLoadingPlan !== null}
-                    >
-                      {isLoading === 'monthly' ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Processando...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="mr-2 h-5 w-5" />
-                          Pagar com Cartão
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                      onClick={() => handlePixPayment('monthly')}
-                      disabled={isLoading !== null || pixLoadingPlan !== null}
-                    >
-                      {pixLoadingPlan === 'monthly' ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Gerando PIX...
-                        </>
-                      ) : (
-                        <>
-                          <QrCode className="mr-2 h-5 w-5" />
-                          Pagar com PIX
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Cancele a qualquer momento
-                  </p>
-                </>
-              )}
-            </CardFooter>
-          </Card>
-        </motion.div>
+                <CardDescription className="text-white/90 mt-2">
+                  Flexibilidade mensal
+                </CardDescription>
+                <div className="mt-4">
+                  {showDiscount && couponCode ? (
+                    <>
+                      <div className="text-sm text-white/70 line-through">R${monthlyPrice.toFixed(2)}</div>
+                      <div>
+                        <span className="text-4xl font-bold">R${monthlyPriceWithDiscount.toFixed(2)}</span>
+                        <span className="text-white/90 ml-1">/primeiro mês</span>
+                      </div>
+                      <div className="text-xs text-white/80 mt-1">Depois R${monthlyPrice.toFixed(2)}/mês</div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-bold">R${monthlyPrice.toFixed(2)}</span>
+                      <span className="text-white/90 ml-1">/mês</span>
+                    </>
+                  )}
+                </div>
+              </CardHeader>
 
-        {/* Annual Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          viewport={{ once: true }}
-        >
-          <Card className="border-green-500 shadow-lg h-full flex flex-col relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-              ECONOMIZE 17%
-            </div>
-            <CardHeader className="bg-gradient-to-r from-green-600 to-green-500 text-white rounded-t-lg">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-2xl">Plano Anual</CardTitle>
-                <div className="p-2 bg-white/20 rounded-full">
-                  <Calendar className="h-5 w-5" />
-                </div>
-              </div>
-              <CardDescription className="text-white/90 mt-2">
-                Melhor custo-benefício
-              </CardDescription>
-              <div className="mt-4">
-                {showDiscount && couponCode ? (
-                  <>
-                    <div className="text-sm text-white/70 line-through">R${annualPrice.toFixed(2)}</div>
-                    <div>
-                      <span className="text-4xl font-bold">R${annualPriceWithDiscount.toFixed(2)}</span>
-                      <span className="text-white/90 ml-1">/primeiro ano</span>
+              <CardContent className="pt-6 flex-grow">
+                <ul className="space-y-3">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      {feature.included ? (
+                        <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
+                      )}
+                      <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
+                        {feature.name}
+                        {feature.comingSoon && (
+                          <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
+                            Em breve
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+
+              <CardFooter className="flex flex-col space-y-3">
+                {isPro || isActive ? (
+                  <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
+                    <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
+                      <Check className="h-5 w-5" />
+                      Você é Premium!
                     </div>
-                    <div className="text-xs text-white/80 mt-1">Depois R${annualPrice.toFixed(2)}/ano</div>
-                  </>
+                    <p className="text-sm text-muted-foreground">
+                      Aproveite até 20.000 caracteres por texto.
+                    </p>
+                  </div>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold">R${annualPrice.toFixed(2)}</span>
-                    <span className="text-white/90 ml-1">/ano</span>
-                    <div className="text-sm mt-1 text-white/90">
-                      <span className="line-through opacity-70">R$358,80</span>
-                      <span className="ml-2 font-semibold">Economize R$59,80</span>
+                    <div className="w-full space-y-2">
+                      <Button
+                        size="lg"
+                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                        onClick={() => handleSubscribe('monthly')}
+                        disabled={isLoading !== null || pixLoadingPlan !== null}
+                      >
+                        {isLoading === 'monthly' ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Processando...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Pagar com Cartão
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                        onClick={() => handlePixPayment('monthly')}
+                        disabled={isLoading !== null || pixLoadingPlan !== null}
+                      >
+                        {pixLoadingPlan === 'monthly' ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Gerando PIX...
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="mr-2 h-5 w-5" />
+                            Pagar com PIX
+                          </>
+                        )}
+                      </Button>
                     </div>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Cancele a qualquer momento
+                    </p>
                   </>
                 )}
+              </CardFooter>
+            </Card>
+          </motion.div>
+
+          {/* Annual Plan */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            viewport={{ once: true }}
+          >
+            <Card className="border-green-500 shadow-lg h-full flex flex-col relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                MELHOR OFERTA
               </div>
-            </CardHeader>
-
-            <CardContent className="pt-6 flex-grow">
-              <ul className="space-y-3">
-                {features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    {feature.included ? (
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
-                    )}
-                    <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
-                      {feature.name}
-                      {feature.comingSoon && (
-                        <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
-                          Em breve
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-3">
-              {isPro || isActive ? (
-                <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
-                  <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
-                    <Check className="h-5 w-5" />
-                    Você é Premium!
+              <CardHeader className="bg-gradient-to-r from-green-600 to-green-500 text-white rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-2xl">Plano Anual</CardTitle>
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <Calendar className="h-5 w-5" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Aproveite até 20.000 caracteres por texto.
-                  </p>
                 </div>
-              ) : (
-                <>
-                  <div className="w-full space-y-2">
-                    <Button
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
-                      onClick={() => handleSubscribe('annual')}
-                      disabled={isLoading !== null || pixLoadingPlan !== null}
-                    >
-                      {isLoading === 'annual' ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Processando...
-                        </>
+                <CardDescription className="text-white/90 mt-2">
+                  Melhor custo-benefício
+                </CardDescription>
+                <div className="mt-4">
+                  {showDiscount && couponCode ? (
+                    <>
+                      <div className="text-sm text-white/70 line-through">R${annualPrice.toFixed(2)}</div>
+                      <div>
+                        <span className="text-4xl font-bold">R${annualPriceWithDiscount.toFixed(2)}</span>
+                        <span className="text-white/90 ml-1">/primeiro ano</span>
+                      </div>
+                      <div className="text-xs text-white/80 mt-1">Depois R${annualPrice.toFixed(2)}/ano</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-lg text-white/80">12x de</span>
+                        <span className="text-4xl font-bold">R${annualInstallment.toFixed(2)}</span>
+                      </div>
+                      <div className="text-sm mt-1 text-white/90">
+                        ou R${annualPrice.toFixed(2)} à vista
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-6 flex-grow">
+                <ul className="space-y-3">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      {feature.included ? (
+                        <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                       ) : (
-                        <>
-                          <Calendar className="mr-2 h-5 w-5" />
-                          Pagar com Cartão
-                        </>
+                        <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
                       )}
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                      onClick={() => handlePixPayment('annual')}
-                      disabled={isLoading !== null || pixLoadingPlan !== null}
-                    >
-                      {pixLoadingPlan === 'annual' ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Gerando PIX...
-                        </>
-                      ) : (
-                        <>
-                          <QrCode className="mr-2 h-5 w-5" />
-                          Pagar com PIX
-                        </>
-                      )}
-                    </Button>
+                      <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
+                        {feature.name}
+                        {feature.comingSoon && (
+                          <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
+                            Em breve
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+
+              <CardFooter className="flex flex-col space-y-3">
+                {isPro || isActive ? (
+                  <div className="w-full p-4 bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg text-center">
+                    <div className="inline-flex items-center gap-2 text-lg font-semibold text-green-600 mb-2">
+                      <Check className="h-5 w-5" />
+                      Você é Premium!
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Aproveite até 20.000 caracteres por texto.
+                    </p>
                   </div>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Pague 1x no ano e economize
-                  </p>
-                </>
-              )}
-            </CardFooter>
-          </Card>
-        </motion.div>
-      </div>
+                ) : (
+                  <>
+                    <div className="w-full space-y-2">
+                      <Button
+                        size="lg"
+                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
+                        onClick={() => handleSubscribe('annual')}
+                        disabled={isLoading !== null || pixLoadingPlan !== null}
+                      >
+                        {isLoading === 'annual' ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Processando...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Pagar com Cartão
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                        onClick={() => handlePixPayment('annual')}
+                        disabled={isLoading !== null || pixLoadingPlan !== null}
+                      >
+                        {pixLoadingPlan === 'annual' ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Gerando PIX...
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="mr-2 h-5 w-5" />
+                            Pagar com PIX
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-center text-muted-foreground">
+                      Pague 1x no ano e economize
+                    </p>
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
+      )}
 
       {/* Guarantee Notice */}
       <div className="max-w-5xl mx-auto mt-8">
@@ -647,6 +731,130 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mobile Plan Selection Modal */}
+      <Dialog open={isPlanSelectionOpen} onOpenChange={setIsPlanSelectionOpen}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">Escolha seu plano</DialogTitle>
+            <DialogDescription className="text-center">
+              Selecione a forma de pagamento que preferir
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Plano Anual */}
+            <div className="p-4 border-2 border-green-500 rounded-lg bg-green-50/50 dark:bg-green-950/20">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded">
+                    MELHOR OFERTA
+                  </span>
+                  <h3 className="font-bold mt-1">Plano Anual</h3>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">12x de</div>
+                  <div className="text-2xl font-bold text-green-600">R${annualInstallment.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">ou R${annualPrice.toFixed(2)} à vista</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-green-600 to-green-500 hover:opacity-90"
+                  onClick={() => {
+                    setIsPlanSelectionOpen(false)
+                    handleSubscribe('annual')
+                  }}
+                  disabled={isLoading !== null || pixLoadingPlan !== null}
+                >
+                  {isLoading === 'annual' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-1" />
+                      Cartão
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                  onClick={() => {
+                    setIsPlanSelectionOpen(false)
+                    handlePixPayment('annual')
+                  }}
+                  disabled={isLoading !== null || pixLoadingPlan !== null}
+                >
+                  {pixLoadingPlan === 'annual' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-1" />
+                      PIX
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Plano Mensal */}
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold">Plano Mensal</h3>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">R${monthlyPrice.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">/mês</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                  onClick={() => {
+                    setIsPlanSelectionOpen(false)
+                    handleSubscribe('monthly')
+                  }}
+                  disabled={isLoading !== null || pixLoadingPlan !== null}
+                >
+                  {isLoading === 'monthly' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-1" />
+                      Cartão
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary/10"
+                  onClick={() => {
+                    setIsPlanSelectionOpen(false)
+                    handlePixPayment('monthly')
+                  }}
+                  disabled={isLoading !== null || pixLoadingPlan !== null}
+                >
+                  {pixLoadingPlan === 'monthly' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-1" />
+                      PIX
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Garantia de 7 dias • Cancele quando quiser • Pagamento seguro
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Register Dialog for Payment (Forces account creation for both PIX and Card) */}
       <RegisterForPixDialog

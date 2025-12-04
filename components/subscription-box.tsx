@@ -34,8 +34,9 @@ export function SubscriptionBox() {
   const { toast } = useToast()
 
   const monthlyPrice = 29.90
-  const annualPrice = 299.00
-  const annualSavings = 59.80
+  const annualPrice = 238.80 // 12x de R$19,90
+  const annualInstallment = 19.90
+  const annualSavings = 120.00 // Economia vs 12x mensais (12 x 29,90 = 358,80)
 
   const mainFeatures = [
     "Correções, análises e reescritas ilimitadas",
@@ -68,7 +69,7 @@ export function SubscriptionBox() {
     try {
       setIsLoading(planType)
 
-      const amount = planType === 'monthly' ? 29.90 : 299.00
+      const amount = planType === 'monthly' ? 29.90 : 238.80
       const analyticsPayload = {
         user_id: user.id,
         email: user.email,

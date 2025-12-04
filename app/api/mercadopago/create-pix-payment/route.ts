@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
         description: 'Plano Premium Mensal - CorretorIA'
       },
       annual: {
-        amount: 299.00,
-        description: 'Plano Premium Anual - CorretorIA'
+        amount: 238.80,
+        description: 'Plano Premium Anual - CorretorIA (12x R$19,90)'
       }
     }
 
