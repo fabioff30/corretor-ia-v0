@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, FileText, Loader2, X, CheckCircle } from "lucide-react";
+import { Upload, FileText, Loader2, X, CheckCircle, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sendGTMEvent } from "@/utils/gtm-helper";
+import {
+  uploadToStorage,
+  deleteFromStorage,
+  STORAGE_UPLOAD_THRESHOLD,
+  shouldUseStorageUpload,
+} from "@/lib/supabase/storage";
 
 interface FileToTextUploaderProps {
   onTextExtracted: (text: string) => void;
@@ -19,6 +25,10 @@ const PREMIUM_FORMATS = ["pdf", "docx", "xlsx", "pptx", "txt", "html", "csv", "x
 
 const FREE_MAX_SIZE_MB = 10;
 const PREMIUM_MAX_SIZE_MB = 50;
+
+// Vercel serverless function limit is 4.5MB
+// Files larger than this use Supabase Storage upload
+const DIRECT_UPLOAD_LIMIT_MB = STORAGE_UPLOAD_THRESHOLD / 1024 / 1024;
 
 /**
  * Sanitizes text extracted from documents to prevent JSON parsing errors.
@@ -84,23 +94,28 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
 
     const ext = file.name.toLowerCase().split(".").pop() || "";
     const sizeMB = file.size / 1024 / 1024;
+    const useStorageUpload = shouldUseStorageUpload(file.size);
 
     // Send analytics event for upload start
     sendGTMEvent('file_upload_started', {
       file_type: ext,
       file_size_mb: sizeMB.toFixed(2),
       plan: isPremium ? 'premium' : 'free',
+      upload_method: useStorageUpload ? 'storage' : 'direct',
     });
 
     setIsConverting(true);
     setUploadedFileName(file.name);
     onConversionStateChange?.(true);
 
+    let storagePath: string | undefined;
+
     try {
       // Get Supabase session (optional - works for guests too)
       console.log('handleFileSelect: Getting Supabase session');
 
       let session = null;
+      let userId: string | undefined;
       try {
         const supabase = createClient();
 
@@ -112,107 +127,175 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
 
         const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         session = data?.session || null;
+        userId = session?.user?.id;
         console.log('handleFileSelect: Session retrieved', session ? 'authenticated' : 'guest');
       } catch (sessionError) {
         console.warn('handleFileSelect: Failed to get session, continuing as guest', sessionError);
         // Continue as guest user
       }
 
-      // Upload to API
-      console.log('handleFileSelect: Creating FormData');
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const headers: HeadersInit = {};
-      if (session) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      console.log('handleFileSelect: Sending fetch to /api/convert');
-      const response = await fetch("/api/convert", {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      console.log('handleFileSelect: Fetch response received', { status: response.status, ok: response.ok });
-
-      // Handle response - try JSON first, fallback to text for error handling
       let data: any;
-      const responseText = await response.text();
 
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        // Response is not valid JSON - likely a platform error (413, 502, etc)
-        console.error('handleFileSelect: Non-JSON response', {
-          status: response.status,
-          body: responseText.slice(0, 200) // Log first 200 chars
+      // For large files (> 4MB), use Storage upload to bypass Vercel limit
+      if (useStorageUpload) {
+        console.log(`handleFileSelect: Using Storage upload for large file (${sizeMB.toFixed(1)}MB)`);
+
+        // Step 1: Upload to Supabase Storage
+        toast({
+          title: "Enviando arquivo...",
+          description: "Arquivos grandes são processados via armazenamento seguro.",
         });
 
-        // Handle specific platform errors
-        if (response.status === 413 ||
-            responseText.toLowerCase().includes('too large') ||
-            responseText.toLowerCase().includes('request entity') ||
-            responseText.toLowerCase().includes('payload too large')) {
-          throw new Error(`Arquivo muito grande para upload (${sizeMB.toFixed(1)}MB). O limite da plataforma é ~4.5MB. Tente com um arquivo menor ou copie e cole o texto diretamente.`);
+        const uploadResult = await uploadToStorage(file, userId);
+
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(uploadResult.error || 'Erro ao enviar arquivo para o armazenamento');
         }
 
-        if (response.status === 502 || response.status === 504) {
-          throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+        storagePath = uploadResult.path;
+        console.log('handleFileSelect: File uploaded to Storage', { path: storagePath });
+
+        // Step 2: Call convert-from-url endpoint
+        toast({
+          title: "Convertendo documento...",
+          description: "Extraindo texto do arquivo.",
+        });
+
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (session) {
+          headers.Authorization = `Bearer ${session.access_token}`;
         }
 
-        throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
-      }
+        const response = await fetch("/api/convert-from-url", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            fileUrl: uploadResult.url,
+            filename: file.name,
+            storagePath: storagePath,
+          }),
+        });
 
-      if (!response.ok) {
-        // Check if it's a rate limit error (429)
-        if (response.status === 429) {
-          sendGTMEvent('file_upload_limit_reached', {
-            file_type: ext,
-            file_size_mb: sizeMB.toFixed(2),
-            plan: isPremium ? 'premium' : 'free',
-            upgrade_required: data.upgrade_required || false,
+        const responseText = await response.text();
+
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('handleFileSelect: Non-JSON response from convert-from-url', {
+            status: response.status,
+            body: responseText.slice(0, 200)
           });
 
-          // Show upgrade message with link to premium page
-          const errorMessage = data.message || "Limite de uploads atingido";
-          const upgradeMessage = data.upgrade_message || "Faça upgrade para o plano Premium!";
+          if (response.status === 502 || response.status === 504) {
+            throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+          }
 
-          toast({
-            title: "Limite atingido",
-            description: (
-              <div className="space-y-2">
-                <p>{errorMessage}</p>
-                <p className="text-sm font-medium text-primary">
-                  {upgradeMessage}
-                </p>
-                <a
-                  href="/premium"
-                  className="inline-block text-sm underline text-primary hover:opacity-80"
-                  onClick={() => sendGTMEvent('upgrade_cta_click', { source: 'file_upload_limit' })}
-                >
-                  Ver planos →
-                </a>
-              </div>
-            ) as any,
-            variant: "destructive",
-            duration: 8000, // Show for longer
-          });
-
-          setUploadedFileName(null);
-          setIsConverting(false);
-          onConversionStateChange?.(false);
-          return; // Exit early to avoid duplicate error handling
-        } else {
-          sendGTMEvent('file_upload_error', {
-            file_type: ext,
-            file_size_mb: sizeMB.toFixed(2),
-            error_status: response.status,
-            error_message: data.message || data.error,
-            plan: isPremium ? 'premium' : 'free',
-          });
+          throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
         }
-        throw new Error(data.message || data.error || "Conversão falhou");
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || "Conversão falhou");
+        }
+
+      } else {
+        // For small files, use direct upload
+        console.log('handleFileSelect: Using direct upload');
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const headers: HeadersInit = {};
+        if (session) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+
+        console.log('handleFileSelect: Sending fetch to /api/convert');
+        const response = await fetch("/api/convert", {
+          method: "POST",
+          headers,
+          body: formData,
+        });
+        console.log('handleFileSelect: Fetch response received', { status: response.status, ok: response.ok });
+
+        // Handle response - try JSON first, fallback to text for error handling
+        const responseText = await response.text();
+
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          // Response is not valid JSON - likely a platform error (413, 502, etc)
+          console.error('handleFileSelect: Non-JSON response', {
+            status: response.status,
+            body: responseText.slice(0, 200) // Log first 200 chars
+          });
+
+          // Handle specific platform errors
+          if (response.status === 413 ||
+              responseText.toLowerCase().includes('too large') ||
+              responseText.toLowerCase().includes('request entity') ||
+              responseText.toLowerCase().includes('payload too large')) {
+            throw new Error(`Arquivo muito grande para upload direto (${sizeMB.toFixed(1)}MB). Tente novamente - o sistema vai usar um método alternativo.`);
+          }
+
+          if (response.status === 502 || response.status === 504) {
+            throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+          }
+
+          throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
+        }
+
+        if (!response.ok) {
+          // Check if it's a rate limit error (429)
+          if (response.status === 429) {
+            sendGTMEvent('file_upload_limit_reached', {
+              file_type: ext,
+              file_size_mb: sizeMB.toFixed(2),
+              plan: isPremium ? 'premium' : 'free',
+              upgrade_required: data.upgrade_required || false,
+            });
+
+            // Show upgrade message with link to premium page
+            const errorMessage = data.message || "Limite de uploads atingido";
+            const upgradeMessage = data.upgrade_message || "Faça upgrade para o plano Premium!";
+
+            toast({
+              title: "Limite atingido",
+              description: (
+                <div className="space-y-2">
+                  <p>{errorMessage}</p>
+                  <p className="text-sm font-medium text-primary">
+                    {upgradeMessage}
+                  </p>
+                  <a
+                    href="/premium"
+                    className="inline-block text-sm underline text-primary hover:opacity-80"
+                    onClick={() => sendGTMEvent('upgrade_cta_click', { source: 'file_upload_limit' })}
+                  >
+                    Ver planos →
+                  </a>
+                </div>
+              ) as any,
+              variant: "destructive",
+              duration: 8000, // Show for longer
+            });
+
+            setUploadedFileName(null);
+            setIsConverting(false);
+            onConversionStateChange?.(false);
+            return; // Exit early to avoid duplicate error handling
+          } else {
+            sendGTMEvent('file_upload_error', {
+              file_type: ext,
+              file_size_mb: sizeMB.toFixed(2),
+              error_status: response.status,
+              error_message: data.message || data.error,
+              plan: isPremium ? 'premium' : 'free',
+            });
+          }
+          throw new Error(data.message || data.error || "Conversão falhou");
+        }
       }
 
       // Extract plain text and sanitize before sending to parent
@@ -225,16 +308,26 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
         file_type: ext,
         file_size_mb: sizeMB.toFixed(2),
         file_size_bytes: file.size,
-        words_extracted: data.metadata.words,
-        characters_extracted: data.metadata.characters,
+        words_extracted: data.metadata?.words || 0,
+        characters_extracted: data.metadata?.characters || 0,
         processing_time_ms: data.processing_time_ms,
         plan: isPremium ? 'premium' : 'free',
+        upload_method: useStorageUpload ? 'storage' : 'direct',
       });
 
       toast({
         title: "Arquivo convertido!",
-        description: `${data.metadata.words} palavras extraídas de ${file.name}`,
+        description: `${data.metadata?.words || 0} palavras extraídas de ${file.name}`,
       });
+
+      // Clean up storage file after successful conversion
+      if (storagePath) {
+        console.log('handleFileSelect: Cleaning up storage file', storagePath);
+        deleteFromStorage(storagePath).catch(err => {
+          console.warn('handleFileSelect: Failed to delete storage file', err);
+        });
+      }
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
 
@@ -245,6 +338,7 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
           file_size_mb: sizeMB.toFixed(2),
           error_message: errorMessage,
           plan: isPremium ? 'premium' : 'free',
+          upload_method: useStorageUpload ? 'storage' : 'direct',
         });
       }
 
@@ -254,6 +348,14 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
         variant: "destructive",
       });
       setUploadedFileName(null);
+
+      // Clean up storage file on error
+      if (storagePath) {
+        console.log('handleFileSelect: Cleaning up storage file after error', storagePath);
+        deleteFromStorage(storagePath).catch(err => {
+          console.warn('handleFileSelect: Failed to delete storage file', err);
+        });
+      }
     } finally {
       setIsConverting(false);
       onConversionStateChange?.(false);
