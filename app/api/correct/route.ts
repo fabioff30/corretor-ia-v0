@@ -144,15 +144,23 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================
-    // DeepSeek Streaming for Long Texts
+    // Webhook Selection Logic
     // ========================
+    // For premium users: ALWAYS use premium webhook (handles DeepSeek internally with fallback)
+    // For free users with very long text (>80k): Try streaming endpoint
+    // For all other cases: Use regular webhook
+
     const textLength = text.length
     const acceptHeader = request.headers.get("Accept") || ""
     const clientAcceptsSSE = acceptHeader.includes("text/event-stream")
 
-    // For long texts, use DeepSeek streaming endpoint
-    if (textLength >= DEEPSEEK_LONG_TEXT_THRESHOLD && clientAcceptsSSE) {
-      console.log(`API: Routing to DeepSeek streaming (text length: ${textLength})`, requestId)
+    // Very long text threshold for streaming (only for non-premium or explicit SSE request)
+    const STREAMING_THRESHOLD = 80000 // Only use streaming for texts > 80k chars
+
+    // For very long texts from non-premium users AND client accepts SSE, try streaming
+    // Premium users get better handling via premium webhook (sync DeepSeek with fallback)
+    if (!isPremium && textLength >= STREAMING_THRESHOLD && clientAcceptsSSE) {
+      console.log(`API: Routing to DeepSeek streaming for very long text (${textLength} chars)`, requestId)
 
       try {
         const streamResponse = await fetch(DEEPSEEK_STREAM_WEBHOOK_URL, {
