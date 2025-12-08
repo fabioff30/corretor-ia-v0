@@ -320,7 +320,8 @@ export async function POST(request: NextRequest) {
     let correctionId: string | null = null
 
     if (isPremium) {
-      const premiumUser = premiumContext?.user
+      // Use currentUserContext when isPremium was auto-detected from profile
+      const premiumUser = premiumContext?.user || currentUserContext?.user
 
       if (!premiumUser) {
         return NextResponse.json(
