@@ -220,8 +220,12 @@ export async function POST(request: NextRequest) {
       return handleWebhookError(response, requestId, ip)
     }
 
+    // Check if response is SSE (Server-Sent Events)
+    const contentType = response.headers.get("Content-Type") || ""
+    const isSSE = contentType.includes("text/event-stream")
+
     // Parse and normalize response
-    console.log("API: Processing JSON response", requestId)
+    console.log(`API: Processing ${isSSE ? 'SSE' : 'JSON'} response`, requestId)
     let data
     try {
       const responseText = await response.text()
@@ -232,21 +236,62 @@ export async function POST(request: NextRequest) {
         throw new Error("Empty response from webhook")
       }
 
-      // Use safe JSON parsing with recovery for malformed JSON
-      let parseResult = safeJsonParse<any>(responseText)
+      // Handle SSE responses (from premium webhook with chunking)
+      if (isSSE) {
+        console.log("API: Parsing SSE response to extract complete event", requestId)
 
-      // If parsing fails, attempt to extract valid JSON
-      if (!parseResult.success) {
-        console.info("API: Attempting to recover from malformed JSON...", requestId)
-        parseResult = extractValidJson<any>(responseText)
+        // Find the 'complete' event in the SSE stream
+        // The data after "event: complete\ndata: " until the next double newline
+        const completeEventStart = responseText.indexOf("event: complete\ndata: ")
+        if (completeEventStart !== -1) {
+          const dataStart = completeEventStart + "event: complete\ndata: ".length
+          const dataEnd = responseText.indexOf("\n\n", dataStart)
+          const jsonData = dataEnd !== -1
+            ? responseText.substring(dataStart, dataEnd)
+            : responseText.substring(dataStart)
+
+          const parseResult = safeJsonParse<any>(jsonData)
+          if (parseResult.success) {
+            data = parseResult.data
+            console.log("API: Successfully extracted data from SSE complete event", requestId)
+          } else {
+            // Try extractValidJson as fallback
+            const extractResult = extractValidJson<any>(jsonData)
+            if (extractResult.success) {
+              data = extractResult.data
+              console.log("API: Extracted data from SSE complete event (with recovery)", requestId)
+            } else {
+              throw new Error("Failed to parse SSE complete event: " + parseResult.error)
+            }
+          }
+        } else {
+          // Try to find any JSON with correctedText in the response
+          const jsonMatch = extractValidJson<any>(responseText)
+          if (jsonMatch.success && jsonMatch.data?.correctedText) {
+            data = jsonMatch.data
+            console.log("API: Extracted data from SSE response (fallback)", requestId)
+          } else {
+            throw new Error("No complete event or valid JSON found in SSE response")
+          }
+        }
+      } else {
+        // Standard JSON response
+        // Use safe JSON parsing with recovery for malformed JSON
+        let parseResult = safeJsonParse<any>(responseText)
+
+        // If parsing fails, attempt to extract valid JSON
+        if (!parseResult.success) {
+          console.info("API: Attempting to recover from malformed JSON...", requestId)
+          parseResult = extractValidJson<any>(responseText)
+        }
+
+        // If still failed, throw error to trigger fallback
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || "Failed to parse JSON response")
+        }
+
+        data = parseResult.data
       }
-
-      // If still failed, throw error to trigger fallback
-      if (!parseResult.success) {
-        throw new Error(parseResult.error || "Failed to parse JSON response")
-      }
-
-      data = parseResult.data
     } catch (parseError) {
       console.warn("API: Webhook returned empty or malformed response, using fallback", requestId)
 
