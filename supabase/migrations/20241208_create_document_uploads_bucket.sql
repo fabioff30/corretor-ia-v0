@@ -70,18 +70,63 @@ TO service_role
 USING (bucket_id = 'document-uploads')
 WITH CHECK (bucket_id = 'document-uploads');
 
--- Create a scheduled job to clean up old files (optional - requires pg_cron extension)
--- Files older than 1 hour should be deleted automatically
--- Note: This requires the pg_cron extension to be enabled in Supabase
+-- ============================================
+-- AUTOMATIC CLEANUP - Choose ONE option below
+-- ============================================
 
--- CREATE EXTENSION IF NOT EXISTS pg_cron;
---
--- SELECT cron.schedule(
---   'cleanup-document-uploads',
---   '0 * * * *',  -- Run every hour
---   $$
---   DELETE FROM storage.objects
---   WHERE bucket_id = 'document-uploads'
---   AND created_at < NOW() - INTERVAL '1 hour'
---   $$
--- );
+-- OPTION 1: Using pg_cron (recommended if available)
+-- Supabase Pro plans have pg_cron enabled by default
+-- Run this in SQL Editor to enable cleanup every hour:
+
+/*
+-- Enable pg_cron extension (requires Supabase Pro)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Schedule cleanup job - deletes files older than 24 hours
+SELECT cron.schedule(
+  'cleanup-document-uploads',
+  '0 * * * *',  -- Run every hour
+  $$
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'document-uploads'
+  AND created_at < NOW() - INTERVAL '24 hours'
+  $$
+);
+
+-- To check scheduled jobs:
+-- SELECT * FROM cron.job;
+
+-- To remove the job:
+-- SELECT cron.unschedule('cleanup-document-uploads');
+*/
+
+-- OPTION 2: Manual cleanup function (works on all plans)
+-- Call this function periodically via Edge Function or external cron
+
+CREATE OR REPLACE FUNCTION cleanup_old_document_uploads(hours_old INTEGER DEFAULT 24)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  WITH deleted AS (
+    DELETE FROM storage.objects
+    WHERE bucket_id = 'document-uploads'
+    AND created_at < NOW() - (hours_old || ' hours')::INTERVAL
+    RETURNING *
+  )
+  SELECT COUNT(*) INTO deleted_count FROM deleted;
+
+  RAISE NOTICE 'Deleted % old files from document-uploads bucket', deleted_count;
+  RETURN deleted_count;
+END;
+$$;
+
+-- Grant execute permission to service role
+GRANT EXECUTE ON FUNCTION cleanup_old_document_uploads TO service_role;
+
+-- Example usage:
+-- SELECT cleanup_old_document_uploads(24);  -- Delete files older than 24 hours
+-- SELECT cleanup_old_document_uploads(1);   -- Delete files older than 1 hour
