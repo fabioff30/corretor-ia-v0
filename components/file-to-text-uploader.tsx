@@ -16,6 +16,7 @@ interface FileToTextUploaderProps {
 
 const FREE_FORMATS = ["pdf", "docx", "txt", "html"];
 const PREMIUM_FORMATS = ["pdf", "docx", "xlsx", "pptx", "txt", "html", "csv", "xml", "json"];
+
 const FREE_MAX_SIZE_MB = 10;
 const PREMIUM_MAX_SIZE_MB = 50;
 
@@ -135,7 +136,33 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       });
       console.log('handleFileSelect: Fetch response received', { status: response.status, ok: response.ok });
 
-      const data = await response.json();
+      // Handle response - try JSON first, fallback to text for error handling
+      let data: any;
+      const responseText = await response.text();
+
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        // Response is not valid JSON - likely a platform error (413, 502, etc)
+        console.error('handleFileSelect: Non-JSON response', {
+          status: response.status,
+          body: responseText.slice(0, 200) // Log first 200 chars
+        });
+
+        // Handle specific platform errors
+        if (response.status === 413 ||
+            responseText.toLowerCase().includes('too large') ||
+            responseText.toLowerCase().includes('request entity') ||
+            responseText.toLowerCase().includes('payload too large')) {
+          throw new Error(`Arquivo muito grande para upload (${sizeMB.toFixed(1)}MB). O limite da plataforma é ~4.5MB. Tente com um arquivo menor ou copie e cole o texto diretamente.`);
+        }
+
+        if (response.status === 502 || response.status === 504) {
+          throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+        }
+
+        throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
+      }
 
       if (!response.ok) {
         // Check if it's a rate limit error (429)
