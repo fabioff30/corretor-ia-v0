@@ -108,12 +108,12 @@ const ALLOWED_TONES = [
 ]
 
 // Base text validation schema
-// Note: Max length set to 20000 for premium users
-// Actual limits are enforced at the API route level based on user plan
+// Note: Max length set to 500000 to support DeepSeek V3.2 (163k tokens ~= 650k chars)
+// Actual limits per plan are enforced at the API route level (1.5k free / 20k premium)
 const baseTextValidation = z
   .string()
   .min(1, "O texto não pode estar vazio")
-  .max(20000, "O texto não pode exceder 20000 caracteres")
+  .max(500000, "O texto não pode exceder 500000 caracteres")
   .refine((text) => {
     // Check for dangerous content using the HTML sanitizer utility
     // More lenient for longer texts (premium users may have technical content)
