@@ -103,18 +103,28 @@ export function useSSECorrection() {
       const abortController = new AbortController()
       abortControllerRef.current = abortController
 
+      // Build request body - only include fields that the BFF expects
+      const requestBody: Record<string, any> = {
+        text: options.text,
+      }
+
+      // Only add tone if not default
+      if (options.tone && options.tone !== 'Padrão') {
+        requestBody.tone = options.tone
+      }
+
+      // Only add styleGuide if provided
+      if (options.styleGuide) {
+        requestBody.styleGuide = options.styleGuide
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
         },
-        body: JSON.stringify({
-          text: options.text,
-          authToken: options.authToken,
-          tone: options.tone,
-          styleGuide: options.styleGuide,
-        }),
+        body: JSON.stringify(requestBody),
         signal: abortController.signal,
       })
 
