@@ -550,19 +550,16 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       currentTone === "Padrão"
 
     // If text is large and we're doing standard correction, use SSE streaming
+    // SSE goes through BFF (/api/correct) which handles auth and proxies to worker
     if (shouldUseSSE) {
       console.log(`Cliente: Usando SSE streaming para texto de ${textToSend.length} caracteres`)
 
-      // For SSE, call worker directly (bypass Next.js BFF)
-      // In production, this should be the worker URL from env vars
-      const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:8787'
-      const sseEndpoint = isPremium ? '/api/premium-corrigir' : '/api/corrigir'
-
-      // Start SSE correction calling worker directly
+      // Start SSE correction through BFF endpoint
       sseCorrection.startCorrection({
         text: textToSend,
-        authToken: process.env.NEXT_PUBLIC_WORKER_AUTH_TOKEN || 'dev-auth-token-12345',
-        apiUrl: `${workerUrl}${sseEndpoint}`,
+        authToken: '', // Auth handled by BFF via cookies
+        apiUrl: '/api/correct', // BFF endpoint that proxies to worker
+        tone: currentTone,
       })
 
       return
