@@ -165,13 +165,12 @@ export function useSSECorrection() {
           for (const line of lines) {
             if (!line.trim()) continue
 
-            // Parse SSE format: "event: eventName\ndata: jsonData"
+            // Parse SSE format: "event: eventName\ndata: jsonData" or "data: jsonData" (DeepSeek format)
             const eventMatch = line.match(/^event:\s*(.+)/m)
             const dataMatch = line.match(/^data:\s*(.+)/m)
 
-            if (!eventMatch || !dataMatch) continue
+            if (!dataMatch) continue
 
-            const eventType = eventMatch[1].trim()
             let eventData
             try {
               eventData = JSON.parse(dataMatch[1])
@@ -179,6 +178,9 @@ export function useSSECorrection() {
               console.error('Failed to parse SSE event data:', dataMatch[1])
               continue
             }
+
+            // Determine event type - either from explicit event: line or from data.type (DeepSeek format)
+            const eventType = eventMatch ? eventMatch[1].trim() : eventData.type
 
           switch (eventType) {
             case 'status':
@@ -192,12 +194,23 @@ export function useSSECorrection() {
 
             case 'progress':
               // Worker sends: { progress, chunk, totalChunks }
-              setState(prev => ({
-                ...prev,
-                totalChunks: eventData.totalChunks || prev.totalChunks,
-                completedChunks: eventData.chunk || prev.completedChunks,
-                progress: eventData.progress || prev.progress,
-              }))
+              // DeepSeek sends: { type: 'progress', partial, length }
+              if (eventData.partial !== undefined) {
+                // DeepSeek format - show partial text being corrected
+                setState(prev => ({
+                  ...prev,
+                  status: 'processing',
+                  progress: Math.min(90, Math.round((eventData.length || 0) / 100)), // Estimate progress
+                }))
+              } else {
+                // Original format
+                setState(prev => ({
+                  ...prev,
+                  totalChunks: eventData.totalChunks || prev.totalChunks,
+                  completedChunks: eventData.chunk || prev.completedChunks,
+                  progress: eventData.progress || prev.progress,
+                }))
+              }
               break
 
             case 'chunk':
@@ -213,11 +226,23 @@ export function useSSECorrection() {
               break
 
             case 'complete':
+              // DeepSeek sends: { type: 'complete', content: stringifiedJson }
+              // Worker sends: { correctedText, evaluation, ... }
+              let resultData = eventData
+              if (eventData.content && typeof eventData.content === 'string') {
+                // DeepSeek format - content is the raw JSON string
+                try {
+                  resultData = JSON.parse(eventData.content)
+                } catch (e) {
+                  console.warn('Failed to parse DeepSeek complete content, using as-is')
+                }
+              }
+
               setState(prev => ({
                 ...prev,
                 status: 'completed',
                 progress: 100,
-                result: eventData,
+                result: resultData,
                 isLoading: false,
               }))
               isStreamComplete = true
@@ -227,7 +252,7 @@ export function useSSECorrection() {
               setState(prev => ({
                 ...prev,
                 status: 'error',
-                error: eventData.error || eventData.details || 'Unknown error',
+                error: eventData.error || eventData.details || eventData.message || 'Unknown error',
                 isLoading: false,
               }))
               isStreamComplete = true

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL } from "@/utils/constants"
+import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN } from "@/utils/constants"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -135,6 +135,48 @@ export async function POST(request: NextRequest) {
     console.log(`API: Selected tone: ${tone}`, requestId)
     if (useAdvancedAI && isPremium) {
       console.log(`API: Using Advanced AI (premium models)`, requestId)
+    }
+
+    // ========================
+    // DeepSeek Streaming for Long Texts
+    // ========================
+    const textLength = text.length
+    const acceptHeader = request.headers.get("Accept") || ""
+    const clientAcceptsSSE = acceptHeader.includes("text/event-stream")
+
+    // For long texts, use DeepSeek streaming endpoint
+    if (textLength >= DEEPSEEK_LONG_TEXT_THRESHOLD && clientAcceptsSSE) {
+      console.log(`API: Routing to DeepSeek streaming (text length: ${textLength})`, requestId)
+
+      try {
+        const streamResponse = await fetch(DEEPSEEK_STREAM_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify({
+            text,
+            authToken: AUTH_TOKEN,
+          }),
+        })
+
+        if (streamResponse.ok) {
+          // Return SSE stream to client
+          return new Response(streamResponse.body, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive",
+              "X-Request-ID": requestId,
+            },
+          })
+        } else {
+          console.error(`API: DeepSeek streaming failed (${streamResponse.status}), falling back to regular webhook`, requestId)
+        }
+      } catch (streamError) {
+        console.error("API: DeepSeek streaming error, falling back to regular webhook", streamError, requestId)
+      }
     }
 
     // Call webhook (use premium webhook for premium users)
