@@ -98,13 +98,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If user is authenticated and not premium, check limits
-    if (currentUserContext?.user && !isPremium) {
+    // If user is authenticated, check their plan
+    if (currentUserContext?.user) {
       const userId = currentUserContext.user.id
       const userPlan = currentUserContext.profile?.plan_type
 
+      // Auto-detect premium status from user plan
+      if (userPlan === 'pro' || userPlan === 'admin') {
+        isPremium = true
+        console.log(`API: Auto-detected premium user (${userPlan})`, requestId)
+      }
+
       // Only check limits for free users
-      if (userPlan === 'free') {
+      if (userPlan === 'free' && !isPremium) {
         const limitCheck = await canUserPerformOperation(userId, 'correct')
 
         if (!limitCheck.allowed) {
