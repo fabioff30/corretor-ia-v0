@@ -345,7 +345,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       console.log(`[MP Webhook Payment] Fetching user details to send payment confirmation email...`)
       const { data: userProfile, error: userProfileError } = await supabase
         .from('profiles')
-        .select('email, name')
+        .select('email, full_name')
         .eq('id', userId)
         .maybeSingle()
 
@@ -363,9 +363,9 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
           await sendPaymentApprovedEmail({
             to: {
               email: userProfile.email,
-              name: userProfile.name || 'Usuário',
+              name: userProfile.full_name || 'Usuário',
             },
-            name: userProfile.name || 'Usuário',
+            name: userProfile.full_name || 'Usuário',
             amount: payment.transaction_amount,
             planType: planType,
             activationLink: dashboardLink,
