@@ -31,10 +31,16 @@ export async function getCurrentUserWithProfile(): Promise<AuthContext> {
           .map((cookie) => ({ name: cookie.name, value: cookie.value }))
       : []
 
-    console.warn('[Auth][Debug] Supabase getUser returned no user', {
-      getUserError: error?.message ?? null,
-      cookies: cookieSnapshot,
-    })
+    // Only log warning if there were Supabase auth cookies but session still failed
+    // This indicates a real problem (expired/invalid session) vs just an anonymous visitor
+    const hasSupabaseCookies = cookieSnapshot.some(c => c.name.startsWith('sb-'))
+    if (hasSupabaseCookies) {
+      console.warn('[Auth] Session invalid despite having auth cookies', {
+        getUserError: error?.message ?? null,
+        supabaseCookies: cookieSnapshot.filter(c => c.name.startsWith('sb-')).map(c => c.name),
+      })
+    }
+    // If no sb-* cookies, user is just an anonymous visitor - no need to log
 
     return {
       user: null,
