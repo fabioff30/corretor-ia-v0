@@ -362,70 +362,72 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={`fixed ${positionClasses[position]} z-50`}
-        >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleOpenChat}
-                  size="icon"
-                  className={`${isMobile ? "h-14 w-14" : "h-12 w-12"} rounded-full shadow-lg ${JULINHO_DISABLED
-                      ? "bg-gray-400 hover:bg-gray-500 cursor-not-allowed"
-                      : "bg-green-500 hover:bg-green-600"
-                    } text-white p-0 overflow-hidden flex items-center justify-center`}
-                  aria-label={JULINHO_DISABLED ? "Julinho está indisponível" : "Falar com Julinho no WhatsApp"}
-                  disabled={JULINHO_DISABLED}
-                >
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <Image
-                      src="/images/julinho-avatar.webp"
-                      alt="Julinho"
-                      width={56}
-                      height={56}
-                      className={`w-full h-full object-cover ${JULINHO_DISABLED ? "grayscale" : ""}`}
-                    />
-                    <div
-                      className={`absolute bottom-0 right-0 ${JULINHO_DISABLED ? "bg-gray-600" : "bg-green-600"
-                        } rounded-full p-0.5 shadow-sm`}
-                    >
-                      {JULINHO_DISABLED ? (
-                        <AlertCircle className="h-4 w-4 text-white" />
-                      ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-white"
-                        >
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                        </svg>
-                      )}
-                    </div>
+      {/* Floating button - outside Dialog to prevent hydration issues */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`fixed ${positionClasses[position]} z-50`}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={handleOpenChat}
+                size="icon"
+                className={`${isMobile ? "h-14 w-14" : "h-12 w-12"} rounded-full shadow-lg ${JULINHO_DISABLED
+                    ? "bg-gray-400 hover:bg-gray-500 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                  } text-white p-0 overflow-hidden flex items-center justify-center`}
+                aria-label={JULINHO_DISABLED ? "Julinho está indisponível" : "Falar com Julinho no WhatsApp"}
+                disabled={JULINHO_DISABLED}
+              >
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <Image
+                    src="/images/julinho-avatar.webp"
+                    alt="Julinho"
+                    width={56}
+                    height={56}
+                    className={`w-full h-full object-cover ${JULINHO_DISABLED ? "grayscale" : ""}`}
+                  />
+                  <div
+                    className={`absolute bottom-0 right-0 ${JULINHO_DISABLED ? "bg-gray-600" : "bg-green-600"
+                      } rounded-full p-0.5 shadow-sm`}
+                  >
+                    {JULINHO_DISABLED ? (
+                      <AlertCircle className="h-4 w-4 text-white" />
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-white"
+                      >
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                      </svg>
+                    )}
                   </div>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side={isMobile ? "top" : "left"}>
-                <p>
-                  {JULINHO_DISABLED
-                    ? "Julinho está temporariamente indisponível"
-                    : "Julinho no WhatsApp - Tutor de Português"}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </motion.div>
+                </div>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={isMobile ? "top" : "left"}>
+              <p>
+                {JULINHO_DISABLED
+                  ? "Julinho está temporariamente indisponível"
+                  : "Julinho no WhatsApp - Tutor de Português"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </motion.div>
 
+      {/* Dialog for chat - only rendered when needed */}
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className={`${isMobile ? "w-[calc(100%-32px)] h-[80vh] max-h-[600px]" : "sm:max-w-[400px] h-[500px]"
             } flex flex-col p-0 gap-0 rounded-xl overflow-hidden border-0`}
