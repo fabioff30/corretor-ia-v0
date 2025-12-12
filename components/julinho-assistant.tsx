@@ -306,9 +306,10 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   }
 
   // Determine the position of the widget
+  // On mobile, position above the bottom navigation bar (h-16 = 64px + safe area)
   const positionClasses = {
-    "bottom-right": isMobile ? "bottom-4 right-4" : "bottom-6 right-6",
-    "bottom-left": isMobile ? "bottom-4 left-4" : "bottom-6 left-6",
+    "bottom-right": isMobile ? "bottom-20 right-4" : "bottom-6 right-6",
+    "bottom-left": isMobile ? "bottom-20 left-4" : "bottom-6 left-6",
   }
 
   // Handle opening the chat
@@ -350,7 +351,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
   // Hide the widget on the chat page
   const shouldHideWidget = pathname === "/chat/julinho"
 
-  if (shouldHideWidget || isMobile) {
+  if (shouldHideWidget) {
     return null
   }
 

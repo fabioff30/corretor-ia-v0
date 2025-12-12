@@ -2,9 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, ScanSearch, FileText, Crown, Menu, MessageCircle, LogIn, LogOut, PenTool, History, Settings, Moon, Sun, CreditCard } from "lucide-react"
+import { Home, ScanSearch, FileText, Menu, LogIn, LogOut, PenTool, History, Settings, Moon, Sun, CreditCard } from "lucide-react"
 import { useTheme } from "next-themes"
-import Image from "next/image"
 import { cn } from "@/utils/classnames"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -66,12 +65,6 @@ export function MobileNav() {
             icon: PenTool,
         },
         {
-            href: "/chat/julinho",
-            label: "Julinho",
-            icon: MessageCircle,
-            isJulinho: true,
-        },
-        {
             href: "/login",
             label: user ? "Logout" : "Entrar",
             icon: user ? LogOut : LogIn,
@@ -89,30 +82,6 @@ export function MobileNav() {
                 <div className="flex h-16 items-center justify-around px-2">
                     {navItems.map((item) => {
                         const active = isActive(item.href)
-
-                        if (item.isJulinho) {
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center gap-1 min-w-[64px] h-full px-1 transition-colors",
-                                        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                                    )}
-                                >
-                                    <div className="relative w-6 h-6 rounded-full overflow-hidden border border-border">
-                                        <Image
-                                            src="/images/julinho-avatar.webp"
-                                            alt="Julinho"
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-medium">{item.label}</span>
-                                </Link>
-                            )
-                        }
-
                         const Icon = item.icon
 
                         // Handle logout as button
