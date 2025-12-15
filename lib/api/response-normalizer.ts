@@ -1,6 +1,16 @@
 /**
  * Normalizes different webhook response formats to a standard format
+ * Supports both legacy JSON format and new Markdown format
  */
+
+import {
+  isMarkdownResponse,
+  hasLegacyMarkers,
+  parseCorrectionResponse,
+  parseRewriteResponse,
+  parseToneResponse,
+  type ParsedEvaluation,
+} from './markdown-parser'
 
 export type PainBanner = "concordancia" | "virgula" | "muito_formal" | "muito_informal"
 
@@ -34,20 +44,103 @@ interface NormalizedResponse {
 }
 
 /**
+ * Determines the response type based on text field names
+ */
+type ResponseType = 'correction' | 'rewrite' | 'tone'
+
+function getResponseType(textFieldNames: string[]): ResponseType {
+  if (textFieldNames.includes('rewrittenText')) return 'rewrite'
+  if (textFieldNames.includes('adjustedText')) return 'tone'
+  return 'correction'
+}
+
+/**
+ * Tries to parse string data as Markdown format
+ * Returns null if not Markdown format
+ */
+function tryParseMarkdown(
+  rawString: string,
+  responseType: ResponseType,
+  requestId: string
+): { text: string; evaluation: ParsedEvaluation } | null {
+  // Check if the response is in Markdown format (new) or has legacy markers
+  if (!isMarkdownResponse(rawString) && !hasLegacyMarkers(rawString)) {
+    return null
+  }
+
+  console.log(`API: Detected Markdown/markers format, using Markdown parser [${requestId}]`)
+
+  try {
+    switch (responseType) {
+      case 'rewrite': {
+        const result = parseRewriteResponse(rawString)
+        if (result.rewrittenText) {
+          return { text: result.rewrittenText, evaluation: result.evaluation }
+        }
+        break
+      }
+      case 'tone': {
+        const result = parseToneResponse(rawString)
+        if (result.adjustedText) {
+          return { text: result.adjustedText, evaluation: result.evaluation }
+        }
+        break
+      }
+      case 'correction':
+      default: {
+        const result = parseCorrectionResponse(rawString)
+        if (result.correctedText) {
+          return { text: result.correctedText, evaluation: result.evaluation }
+        }
+        break
+      }
+    }
+  } catch (error) {
+    console.warn(`API: Markdown parsing failed, falling back to JSON [${requestId}]:`, error)
+  }
+
+  return null
+}
+
+/**
  * Tries to extract text and evaluation from various response formats
+ * Supports both legacy JSON format and new Markdown format
  */
 export function normalizeWebhookResponse(
   data: any,
   requestId: string,
   textFieldNames: string[] = ["correctedText", "rewrittenText", "adjustedText", "text"]
 ): NormalizedResponse {
-  console.log("API: Raw response received:", JSON.stringify(data).substring(0, 500), requestId)
+  const dataPreview = typeof data === 'string'
+    ? data.substring(0, 500)
+    : JSON.stringify(data).substring(0, 500)
+  console.log("API: Raw response received:", dataPreview, requestId)
 
+  const responseType = getResponseType(textFieldNames)
   let extractedText = ""
   let evaluation: any = null
   let painBanner: any = null
 
-  // Try different response formats
+  // If data is a string, try Markdown parsing first
+  if (typeof data === "string") {
+    const markdownResult = tryParseMarkdown(data, responseType, requestId)
+    if (markdownResult) {
+      return {
+        text: markdownResult.text,
+        evaluation: normalizeEvaluation(markdownResult.evaluation),
+      }
+    }
+
+    // If not Markdown, try to parse as JSON
+    try {
+      data = JSON.parse(data)
+    } catch {
+      // Not valid JSON either - might be plain text, will be handled below
+      console.warn(`API: String response is neither Markdown nor valid JSON [${requestId}]`)
+    }
+  }
+
+  // Try different response formats (JSON objects)
   if (Array.isArray(data) && data.length > 0) {
     const firstItem = data[0].output || data[0]
     const result = extractFromObject(firstItem, textFieldNames)
@@ -62,18 +155,6 @@ export function normalizeWebhookResponse(
       extractedText = result.text
       evaluation = result.evaluation
       painBanner = result.painBanner
-    }
-  } else if (typeof data === "string") {
-    try {
-      const parsedData = JSON.parse(data)
-      const result = extractFromObject(parsedData, textFieldNames)
-      if (result) {
-        extractedText = result.text
-        evaluation = result.evaluation
-        painBanner = result.painBanner
-      }
-    } catch {
-      throw new Error("Failed to parse string response")
     }
   }
 
@@ -106,13 +187,33 @@ export function normalizeWebhookResponse(
 }
 
 /**
+ * Cleans marker tags from text (e.g., <<<CORRIGIDO>>> and <<<FIM>>>)
+ * This handles cases where the AI model includes markers inside JSON fields
+ */
+function cleanMarkersFromText(text: string): string {
+  if (!text || typeof text !== 'string') return text
+
+  // Remove various marker patterns
+  let cleaned = text
+    .replace(/<<<CORRIGIDO>>>\n?/gi, '')
+    .replace(/<<<FIM>>>\n?/gi, '')
+    .replace(/<<<REESCRITO>>>\n?/gi, '')
+    .replace(/<<<AJUSTADO>>>\n?/gi, '')
+    .replace(/<<<FIM_AVALIACAO>>>\n?/gi, '')
+    .replace(/<<<AVALIACAO>>>\n?/gi, '')
+    .trim()
+
+  return cleaned
+}
+
+/**
  * Extracts text, evaluation, and painBanner from an object
  */
 function extractFromObject(obj: any, textFieldNames: string[]): { text: string; evaluation: any; painBanner?: any } | null {
   for (const fieldName of textFieldNames) {
     if (obj[fieldName]) {
       return {
-        text: obj[fieldName],
+        text: cleanMarkersFromText(obj[fieldName]),
         evaluation: obj.evaluation || null,
         painBanner: obj.painBanner || null,
       }
@@ -131,7 +232,7 @@ function findFieldsRecursively(obj: any, textFieldNames: string[]): { text: stri
   for (const fieldName of textFieldNames) {
     if (obj[fieldName]) {
       return {
-        text: obj[fieldName],
+        text: cleanMarkersFromText(obj[fieldName]),
         evaluation: obj.evaluation || null,
         painBanner: obj.painBanner || null,
       }

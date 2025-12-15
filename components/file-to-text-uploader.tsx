@@ -119,84 +119,159 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
       try {
         const supabase = createClient();
 
-        // Add timeout to prevent hanging
-        const sessionPromise = supabase.auth.getSession();
+        // Get user with timeout to prevent hanging
+        const getUserPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Session timeout')), 3000)
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
         );
 
-        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        session = data?.session || null;
-        userId = session?.user?.id;
-        console.log('handleFileSelect: Session retrieved', session ? 'authenticated' : 'guest');
-      } catch (sessionError) {
-        console.warn('handleFileSelect: Failed to get session, continuing as guest', sessionError);
-        // Continue as guest user
+        const { data: { user }, error: userError } = await Promise.race([
+          getUserPromise,
+          timeoutPromise
+        ]) as any;
+
+        if (userError) {
+          console.warn('handleFileSelect: getUser error:', userError.message);
+        } else if (user) {
+          userId = user.id;
+          // Get session for token (with timeout)
+          try {
+            const sessionPromise = supabase.auth.getSession();
+            const { data: sessionData } = await Promise.race([
+              sessionPromise,
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 3000))
+            ]) as any;
+            session = sessionData?.session || null;
+          } catch {
+            console.warn('handleFileSelect: Session timeout, continuing without token');
+          }
+        }
+
+        console.log('handleFileSelect: Auth check completed', {
+          authenticated: !!user,
+          userId: userId || 'guest',
+          hasSession: !!session
+        });
+      } catch (authError) {
+        console.warn('handleFileSelect: Auth timeout/error, continuing as guest', authError);
+        // Continue as guest user - this is fine for file upload
       }
 
       let data: any;
 
-      // For large files (> 4MB), use Storage upload to bypass Vercel limit
+      // For large files (> 4MB), try Storage upload first, fallback to direct upload
       if (useStorageUpload) {
         console.log(`handleFileSelect: Using Storage upload for large file (${sizeMB.toFixed(1)}MB)`);
 
-        // Step 1: Upload to Supabase Storage
+        // Step 1: Try to upload to Supabase Storage
         toast({
           title: "Enviando arquivo...",
-          description: "Arquivos grandes são processados via armazenamento seguro.",
+          description: "Processando arquivo grande...",
         });
 
-        const uploadResult = await uploadToStorage(file, userId);
-
-        if (!uploadResult.success || !uploadResult.url) {
-          throw new Error(uploadResult.error || 'Erro ao enviar arquivo para o armazenamento');
-        }
-
-        storagePath = uploadResult.path;
-        console.log('handleFileSelect: File uploaded to Storage', { path: storagePath });
-
-        // Step 2: Call convert-from-url endpoint
-        toast({
-          title: "Convertendo documento...",
-          description: "Extraindo texto do arquivo.",
-        });
-
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-        if (session) {
-          headers.Authorization = `Bearer ${session.access_token}`;
-        }
-
-        const response = await fetch("/api/convert-from-url", {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            fileUrl: uploadResult.url,
-            filename: file.name,
-            storagePath: storagePath,
-          }),
-        });
-
-        const responseText = await response.text();
+        let useDirectUploadFallback = false;
 
         try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('handleFileSelect: Non-JSON response from convert-from-url', {
-            status: response.status,
-            body: responseText.slice(0, 200)
-          });
+          const uploadResult = await uploadToStorage(file, userId);
 
-          if (response.status === 502 || response.status === 504) {
-            throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+          if (!uploadResult.success || !uploadResult.url) {
+            console.warn('handleFileSelect: Storage upload failed, trying direct upload', uploadResult.error);
+            useDirectUploadFallback = true;
+          } else {
+            storagePath = uploadResult.path;
+            console.log('handleFileSelect: File uploaded to Storage', { path: storagePath });
+
+            // Step 2: Call convert-from-url endpoint
+            toast({
+              title: "Convertendo documento...",
+              description: "Extraindo texto do arquivo.",
+            });
+
+            const headers: HeadersInit = {
+              'Content-Type': 'application/json',
+            };
+            if (session) {
+              headers.Authorization = `Bearer ${session.access_token}`;
+            }
+
+            const response = await fetch("/api/convert-from-url", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                fileUrl: uploadResult.url,
+                filename: file.name,
+                storagePath: storagePath,
+              }),
+            });
+
+            const responseText = await response.text();
+
+            try {
+              data = JSON.parse(responseText);
+            } catch (parseError) {
+              console.error('handleFileSelect: Non-JSON response from convert-from-url', {
+                status: response.status,
+                body: responseText.slice(0, 200)
+              });
+
+              if (response.status === 502 || response.status === 504) {
+                throw new Error('O serviço de conversão está temporariamente indisponível. Tente novamente em alguns segundos.');
+              }
+
+              throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
+            }
+
+            if (!response.ok) {
+              throw new Error(data.message || data.error || "Conversão falhou");
+            }
           }
-
-          throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
+        } catch (storageError) {
+          console.warn('handleFileSelect: Storage upload error, trying direct upload', storageError);
+          useDirectUploadFallback = true;
         }
 
-        if (!response.ok) {
-          throw new Error(data.message || data.error || "Conversão falhou");
+        // Fallback: Try direct upload even for large files
+        if (useDirectUploadFallback) {
+          console.log('handleFileSelect: Using direct upload fallback for large file');
+          toast({
+            title: "Tentando método alternativo...",
+            description: "Enviando arquivo diretamente.",
+          });
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const headers: HeadersInit = {};
+          if (session) {
+            headers.Authorization = `Bearer ${session.access_token}`;
+          }
+
+          const response = await fetch("/api/convert", {
+            method: "POST",
+            headers,
+            body: formData,
+          });
+
+          const responseText = await response.text();
+
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('handleFileSelect: Non-JSON response from direct upload', {
+              status: response.status,
+              body: responseText.slice(0, 200)
+            });
+
+            if (response.status === 413) {
+              throw new Error(`Arquivo muito grande (${sizeMB.toFixed(1)}MB). O limite é 4.5MB para upload direto. Por favor, configure o Supabase Storage.`);
+            }
+
+            throw new Error(responseText.slice(0, 100) || `Erro do servidor: ${response.status}`);
+          }
+
+          if (!response.ok) {
+            throw new Error(data.message || data.error || "Conversão falhou");
+          }
         }
 
       } else {
@@ -404,11 +479,29 @@ export function FileToTextUploader({ onTextExtracted, isPremium, onConversionSta
   };
 
   const handleConvert = async () => {
+    console.log('handleConvert: Called', {
+      hasSelectedFile: !!selectedFile,
+      fileName: selectedFile?.name,
+      fileSize: selectedFile?.size,
+      isConverting
+    });
+
     if (!selectedFile) {
       console.error('handleConvert: No file selected');
+      toast({
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, selecione um arquivo primeiro.",
+        variant: "destructive",
+      });
       return;
     }
-    console.log('handleConvert: Converting file', selectedFile.name);
+
+    if (isConverting) {
+      console.warn('handleConvert: Already converting, ignoring');
+      return;
+    }
+
+    console.log('handleConvert: Starting conversion for', selectedFile.name);
     await handleFileSelect(selectedFile);
   };
 

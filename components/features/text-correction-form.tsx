@@ -80,7 +80,7 @@ type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlik
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
 const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
-const SSE_THRESHOLD_CHARS = 80000 // Use SSE streaming only for very long texts > 80k chars
+const SSE_THRESHOLD_CHARS = 5000 // Use SSE streaming for texts > 5k chars (matches worker PARALLEL_CHUNK_SIZE)
 
 // Interface para a avaliação de reescrita
 interface RewriteEvaluation {

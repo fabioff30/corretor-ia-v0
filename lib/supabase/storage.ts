@@ -40,16 +40,30 @@ export async function uploadToStorage(file: File, userId?: string): Promise<Uplo
     console.log('[Storage] Uploading file:', {
       name: file.name,
       size: file.size,
-      path: filePath
+      path: filePath,
+      userId: userId || 'anonymous'
     })
 
-    // Upload file to Storage
-    const { data, error } = await supabase.storage
+    // Upload file to Storage with timeout
+    console.log('[Storage] Starting upload to Supabase Storage...')
+    const uploadStartTime = Date.now()
+
+    // Create upload promise with timeout
+    const uploadPromise = supabase.storage
       .from(DOCUMENTS_BUCKET)
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
       })
+
+    // 15 second timeout - if Storage is not configured, fail fast and use fallback
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Storage timeout - usando método alternativo')), 15000)
+    )
+
+    const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any
+
+    console.log('[Storage] Upload completed in', Date.now() - uploadStartTime, 'ms')
 
     if (error) {
       console.error('[Storage] Upload error:', error)

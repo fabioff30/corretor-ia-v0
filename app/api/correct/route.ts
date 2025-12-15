@@ -154,19 +154,22 @@ export async function POST(request: NextRequest) {
     const acceptHeader = request.headers.get("Accept") || ""
     const clientAcceptsSSE = acceptHeader.includes("text/event-stream")
 
-    // Very long text threshold for streaming (only for non-premium or explicit SSE request)
-    const STREAMING_THRESHOLD = 80000 // Only use streaming for texts > 80k chars
+    // SSE streaming threshold - matches worker PARALLEL_CHUNK_SIZE
+    const STREAMING_THRESHOLD = 5000 // Use streaming for texts > 5k chars
 
-    // For very long texts from non-premium users AND client accepts SSE, try streaming
-    // Premium users get better handling via premium webhook (sync DeepSeek with fallback)
-    if (!isPremium && textLength >= STREAMING_THRESHOLD && clientAcceptsSSE) {
-      console.log(`API: Routing to DeepSeek streaming for very long text (${textLength} chars)`, requestId)
+    // For texts > 5k AND client accepts SSE, use streaming with progress
+    // Premium users get Gemini 3 Pro Preview with SSE
+    // Free users get DeepSeek streaming
+    if (textLength >= STREAMING_THRESHOLD && clientAcceptsSSE) {
+      const streamUrl = isPremium ? PREMIUM_WEBHOOK_URL : DEEPSEEK_STREAM_WEBHOOK_URL
+      console.log(`API: Routing to ${isPremium ? 'Premium Gemini' : 'DeepSeek'} streaming for long text (${textLength} chars)`, requestId)
 
       try {
-        const streamResponse = await fetch(DEEPSEEK_STREAM_WEBHOOK_URL, {
+        const streamResponse = await fetch(streamUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Accept": "text/event-stream",
             "X-Request-ID": requestId,
           },
           body: JSON.stringify({
@@ -175,8 +178,9 @@ export async function POST(request: NextRequest) {
           }),
         })
 
-        if (streamResponse.ok) {
-          // Return SSE stream to client
+        if (streamResponse.ok && streamResponse.headers.get("Content-Type")?.includes("text/event-stream")) {
+          // Return SSE stream directly to client for real-time progress
+          console.log(`API: Streaming SSE response to client`, requestId)
           return new Response(streamResponse.body, {
             headers: {
               "Content-Type": "text/event-stream",
@@ -185,11 +189,15 @@ export async function POST(request: NextRequest) {
               "X-Request-ID": requestId,
             },
           })
+        } else if (streamResponse.ok) {
+          // Worker returned JSON instead of SSE - process normally
+          console.log(`API: Worker returned JSON instead of SSE, processing normally`, requestId)
+          // Continue to regular processing below
         } else {
-          console.error(`API: DeepSeek streaming failed (${streamResponse.status}), falling back to regular webhook`, requestId)
+          console.error(`API: Streaming failed (${streamResponse.status}), falling back to regular webhook`, requestId)
         }
       } catch (streamError) {
-        console.error("API: DeepSeek streaming error, falling back to regular webhook", streamError, requestId)
+        console.error("API: Streaming error, falling back to regular webhook", streamError, requestId)
       }
     }
 
