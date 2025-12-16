@@ -14,8 +14,10 @@ import {
 } from '@/lib/mercadopago/webhook-validator'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendPaymentApprovedEmail } from '@/lib/email/send'
+import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardEmail } from '@/lib/email/send'
 import { getPublicConfig } from '@/utils/env-config'
+import { CHRISTMAS_GIFT_CONFIG } from '@/lib/gift/config'
+import type { GiftPlanId } from '@/lib/gift/types'
 
 export const maxDuration = 60
 
@@ -177,10 +179,16 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
     // Check if it's a PIX payment
     if (payment.payment_method_id === 'pix' && payment.status === 'approved') {
       // Handle PIX payment for subscription creation
-      const externalReference = payment.external_reference // Can be userId or guest_email
+      const externalReference = payment.external_reference // Can be userId, guest_email, or gift_{id}
 
       if (!externalReference) {
         console.error('PIX payment missing external_reference')
+        return
+      }
+
+      // Check if this is a GIFT payment (starts with "gift_")
+      if (externalReference.startsWith('gift_')) {
+        await handleGiftPayment(payment, externalReference, supabase)
         return
       }
 
@@ -577,6 +585,155 @@ function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: 
   return {
     startDateIso: startDate.toISOString(),
     expiresAtIso: expiresAt.toISOString(),
+  }
+}
+
+/**
+ * Handle gift payment - send invitation email to recipient
+ */
+async function handleGiftPayment(payment: any, externalReference: string, supabase: any) {
+  const startTime = Date.now()
+  const giftId = externalReference.replace('gift_', '')
+
+  console.log(`[MP Webhook Gift] Processing gift payment ${payment.id} for gift ${giftId}`)
+
+  try {
+    // Get gift purchase details
+    const { data: gift, error: giftError } = await supabase
+      .from('gift_purchases')
+      .select('*')
+      .eq('id', giftId)
+      .single()
+
+    if (giftError || !gift) {
+      console.error('[MP Webhook Gift] Gift not found:', giftId, giftError)
+      return
+    }
+
+    // Check if already processed
+    if (gift.status !== 'pending_payment') {
+      console.log('[MP Webhook Gift] Gift already processed:', gift.status)
+      return
+    }
+
+    // Update gift status to paid
+    const { error: updateError } = await supabase
+      .from('gift_purchases')
+      .update({
+        status: 'paid',
+        payment_id: payment.id.toString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', giftId)
+
+    if (updateError) {
+      console.error('[MP Webhook Gift] Error updating gift status:', updateError)
+      return
+    }
+
+    console.log('[MP Webhook Gift] Gift marked as paid, sending email to recipient...')
+
+    // Get plan name from config
+    const planConfig = CHRISTMAS_GIFT_CONFIG.PLANS[gift.plan_type as GiftPlanId]
+    const planName = planConfig?.name || 'Premium'
+
+    // Send gift invitation email to recipient
+    try {
+      await sendGiftInvitationEmail({
+        to: {
+          email: gift.recipient_email,
+          name: gift.recipient_name,
+        },
+        recipientName: gift.recipient_name,
+        buyerName: gift.buyer_name,
+        planName: planName,
+        giftCode: gift.gift_code,
+        giftMessage: gift.gift_message,
+        expiresAt: new Date(gift.expires_at),
+      })
+
+      // Update status to email_sent
+      await supabase
+        .from('gift_purchases')
+        .update({
+          status: 'email_sent',
+          email_sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', giftId)
+
+      console.log(`[MP Webhook Gift] Gift email sent to recipient: ${gift.recipient_email}`)
+
+      // Create PIX payment with 50% discount for the buyer (Annual plan)
+      const originalPrice = 238.80 // Annual plan price
+      const discountedPrice = originalPrice * 0.5 // 50% off = R$ 119.40
+      const discountExpiresAt = new Date()
+      discountExpiresAt.setDate(discountExpiresAt.getDate() + 7) // PIX valid for 7 days
+
+      try {
+        const mpClient = getMercadoPagoClient()
+
+        // Create discounted PIX payment
+        const pixPayment = await mpClient.createPixPayment(
+          discountedPrice,
+          gift.buyer_email,
+          `buyer_reward_${giftId}`, // external_reference
+          'CorretorIA Premium Anual - 50% OFF (Presente)',
+          60 * 24 * 7 // 7 days in minutes
+        )
+
+        const pixQrCodeBase64 = pixPayment.point_of_interaction?.transaction_data?.qr_code_base64
+        const pixCopyPaste = pixPayment.point_of_interaction?.transaction_data?.qr_code
+
+        if (!pixQrCodeBase64 || !pixCopyPaste) {
+          console.error('[MP Webhook Gift] PIX QR code not generated for buyer reward')
+        } else {
+          // Send reward email to buyer with PIX QR code
+          await sendGiftBuyerRewardEmail({
+            to: {
+              email: gift.buyer_email,
+              name: gift.buyer_name,
+            },
+            buyerName: gift.buyer_name,
+            recipientName: gift.recipient_name,
+            planName: planName,
+            discountedPrice: discountedPrice,
+            originalPrice: originalPrice,
+            pixQrCodeBase64: pixQrCodeBase64,
+            pixCopyPaste: pixCopyPaste,
+            expiresAt: discountExpiresAt,
+          })
+
+          console.log(`[MP Webhook Gift] Buyer reward PIX email sent to: ${gift.buyer_email}`, {
+            pixPaymentId: pixPayment.id,
+            discountedPrice,
+            originalPrice,
+          })
+        }
+      } catch (buyerEmailError) {
+        console.error('[MP Webhook Gift] Error creating buyer reward PIX:', buyerEmailError)
+        // Non-critical - gift was already sent to recipient
+      }
+
+      const duration = Date.now() - startTime
+      console.log(`[MP Webhook Gift] Gift processed successfully in ${duration}ms:`, {
+        giftId,
+        recipientEmail: gift.recipient_email,
+        buyerEmail: gift.buyer_email,
+        giftCode: gift.gift_code,
+        planName,
+      })
+    } catch (emailError) {
+      console.error('[MP Webhook Gift] Error sending gift email:', emailError)
+      // Keep status as 'paid' - can retry email later
+    }
+  } catch (error) {
+    console.error('[MP Webhook Gift] Error processing gift payment:', {
+      giftId,
+      paymentId: payment.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      processing_time_ms: Date.now() - startTime,
+    })
   }
 }
 
