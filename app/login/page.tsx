@@ -4,8 +4,8 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -17,12 +17,14 @@ import { Loader2, Mail, Lock, Sparkles, AlertTriangle } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
 import { useToast } from '@/hooks/use-toast'
 import { useUser } from "@/components/providers/user-provider"
+import { supabase } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useUser()
-  const { signIn, signInWithGoogle } = useUser()
+  const { signIn } = useUser()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,13 +33,15 @@ export default function LoginPage() {
     password: '',
   })
 
-  // Redirecionar se já estiver autenticado
+  // Get redirect URL from query params
+  const redirectUrl = searchParams.get('redirect') || '/'
+
+  // Redirecionar se ja estiver autenticado
   useEffect(() => {
     if (user) {
-      // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
-      router.push('/')
+      router.push(redirectUrl)
     }
-  }, [user, router])
+  }, [user, router, redirectUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,8 +64,8 @@ export default function LoginPage() {
         description: 'Redirecionando...',
       })
 
-      // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
-      router.push('/')
+      // Redirecionar para URL especificada ou home
+      router.push(redirectUrl)
     } catch (err: any) {
       console.error('Erro ao fazer login:', err)
       const message =
@@ -88,7 +92,12 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
 
     try {
-      const { error } = await signInWithGoogle()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
+        },
+      })
 
       if (error) {
         throw error
@@ -228,8 +237,11 @@ export default function LoginPage() {
 
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-center text-muted-foreground">
-              Não tem uma conta?{' '}
-              <Link href="/cadastro" className="text-primary font-medium hover:underline">
+              Nao tem uma conta?{' '}
+              <Link
+                href={`/register${redirectUrl !== '/' ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
+                className="text-primary font-medium hover:underline"
+              >
                 Criar conta
               </Link>
             </div>
@@ -259,5 +271,21 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+function LoginPageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

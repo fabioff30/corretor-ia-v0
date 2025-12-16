@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, Mail, Lock, User, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
 import Link from "next/link"
 import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase/client"
 
 export function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -24,56 +26,68 @@ export function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  
-  const { signUp } = useUser()
+
+  const { signUp, user } = useUser()
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Get redirect URL from query params
+  const redirectUrl = searchParams.get('redirect') || '/dashboard'
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      router.push(redirectUrl)
+    }
+  }, [user, router, redirectUrl])
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError("Nome é obrigatório")
+      setError("Nome e obrigatorio")
       return false
     }
-    
+
     if (!formData.email.trim()) {
-      setError("Email é obrigatório")
+      setError("Email e obrigatorio")
       return false
     }
-    
+
     if (formData.password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres")
       return false
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
-      setError("As senhas não coincidem")
+      setError("As senhas nao coincidem")
       return false
     }
-    
+
     if (!acceptTerms) {
-      setError("Você deve aceitar os termos de uso")
+      setError("Voce deve aceitar os termos de uso")
       return false
     }
-    
+
     return true
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    
+
     if (!validateForm()) return
-    
+
     setIsLoading(true)
 
     try {
       const { error } = await signUp(formData.email, formData.password, formData.name)
-      
+
       if (error) {
         if (error.message.includes("already registered")) {
-          setError("Este email já está cadastrado. Tente fazer login.")
+          setError("Este email ja esta cadastrado. Tente fazer login.")
         } else {
           setError(error.message)
         }
@@ -88,10 +102,10 @@ export function RegisterForm() {
           title: "Cadastro realizado com sucesso!",
           description: "Verifique seu email para confirmar a conta"
         })
-        
-        // Redirecionar para dashboard após alguns segundos
+
+        // Redirect after a few seconds
         setTimeout(() => {
-          router.push("/dashboard")
+          router.push(redirectUrl)
         }, 2000)
       }
     } catch (err) {
@@ -104,6 +118,31 @@ export function RegisterForm() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignup = async () => {
+    if (!acceptTerms) {
+      setError("Voce deve aceitar os termos de uso para continuar")
+      return
+    }
+
+    setError("")
+    setIsGoogleLoading(true)
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
+        },
+      })
+
+      if (error) throw error
+    } catch (err: any) {
+      console.error('Erro ao cadastrar com Google:', err)
+      setError(err.message || 'Erro ao cadastrar com Google.')
+      setIsGoogleLoading(false)
     }
   }
 
@@ -124,7 +163,7 @@ export function RegisterForm() {
               <div>
                 <h2 className="text-2xl font-bold text-green-600">Cadastro realizado!</h2>
                 <p className="text-muted-foreground mt-2">
-                  Sua conta foi criada com sucesso. Você será redirecionado em instantes.
+                  Sua conta foi criada com sucesso. Voce sera redirecionado em instantes.
                 </p>
               </div>
             </div>
@@ -145,15 +184,40 @@ export function RegisterForm() {
             Cadastre-se gratuitamente para acessar o CorretorIA
           </CardDescription>
         </CardHeader>
-        
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Google Signup Button */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignup}
+            disabled={isGoogleLoading || isLoading}
+          >
+            {isGoogleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FcGoogle className="mr-2 h-5 w-5" />
             )}
-            
+            Continuar com Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Ou cadastre-se com email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <div className="relative">
@@ -166,11 +230,11 @@ export function RegisterForm() {
                   onChange={handleInputChange("name")}
                   className="pl-10"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -183,11 +247,11 @@ export function RegisterForm() {
                   onChange={handleInputChange("email")}
                   className="pl-10"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
@@ -195,24 +259,24 @@ export function RegisterForm() {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Minimo 6 caracteres"
                   value={formData.password}
                   onChange={handleInputChange("password")}
                   className="pl-10 pr-10"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar Senha</Label>
               <div className="relative">
@@ -225,52 +289,50 @@ export function RegisterForm() {
                   onChange={handleInputChange("confirmPassword")}
                   className="pl-10 pr-10"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="terms"
                 checked={acceptTerms}
-                onCheckedChange={setAcceptTerms}
-                disabled={isLoading}
+                onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                disabled={isLoading || isGoogleLoading}
               />
               <Label htmlFor="terms" className="text-sm text-muted-foreground">
                 Aceito os{" "}
-                <Link 
-                  href="/termos" 
+                <Link
+                  href="/termos"
                   className="text-primary hover:underline"
                   target="_blank"
                 >
                   termos de uso
                 </Link>
                 {" "}e{" "}
-                <Link 
-                  href="/privacidade" 
+                <Link
+                  href="/privacidade"
                   className="text-primary hover:underline"
                   target="_blank"
                 >
-                  política de privacidade
+                  politica de privacidade
                 </Link>
               </Label>
             </div>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4">
+
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !acceptTerms}
+              disabled={isLoading || isGoogleLoading || !acceptTerms}
             >
               {isLoading ? (
                 <>
@@ -281,18 +343,20 @@ export function RegisterForm() {
                 "Criar Conta"
               )}
             </Button>
-            
-            <p className="text-center text-sm text-muted-foreground">
-              Já tem uma conta?{" "}
-              <Link 
-                href="/login" 
-                className="text-primary hover:underline font-medium"
-              >
-                Fazer login
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex flex-col space-y-4">
+          <p className="text-center text-sm text-muted-foreground">
+            Ja tem uma conta?{" "}
+            <Link
+              href={`/login${redirectUrl !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
+              className="text-primary hover:underline font-medium"
+            >
+              Fazer login
+            </Link>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   )

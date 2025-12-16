@@ -192,6 +192,12 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         return
       }
 
+      // Check if this is a BUYER REWARD payment (starts with "buyer_reward_")
+      if (externalReference.startsWith('buyer_reward_')) {
+        await handleBuyerRewardPayment(payment, externalReference, supabase)
+        return
+      }
+
       // Check if this is a guest payment (starts with "guest_")
       const isGuestPayment = externalReference.startsWith('guest_')
 
@@ -749,6 +755,165 @@ async function handleGiftPayment(payment: any, externalReference: string, supaba
     console.error('[MP Webhook Gift] Error processing gift payment:', {
       giftId,
       paymentId: payment.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      processing_time_ms: Date.now() - startTime,
+    })
+  }
+}
+
+/**
+ * Handle buyer reward payment - when buyer pays the 50% discount PIX
+ * external_reference format: buyer_reward_monthly_{giftId} or buyer_reward_annual_{giftId}
+ */
+async function handleBuyerRewardPayment(payment: any, externalReference: string, supabase: any) {
+  const startTime = Date.now()
+
+  // Parse external_reference: buyer_reward_monthly_xxx or buyer_reward_annual_xxx
+  const parts = externalReference.split('_')
+  const planType = parts[2] as 'monthly' | 'annual' // 'monthly' or 'annual'
+  const giftId = parts[3]
+
+  console.log('[MP Webhook BuyerReward] Processing buyer reward payment:', {
+    paymentId: payment.id,
+    planType,
+    giftId,
+    amount: payment.transaction_amount,
+    status: payment.status,
+  })
+
+  // Only process approved payments
+  if (payment.status !== 'approved') {
+    console.log('[MP Webhook BuyerReward] Payment not approved yet, status:', payment.status)
+    return
+  }
+
+  try {
+    // Get gift purchase to find buyer email
+    const { data: gift, error: giftError } = await supabase
+      .from('gift_purchases')
+      .select('buyer_email, buyer_name')
+      .eq('id', giftId)
+      .single()
+
+    if (giftError || !gift) {
+      console.error('[MP Webhook BuyerReward] Gift not found:', giftId, giftError)
+      return
+    }
+
+    // Check if user exists with this email
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, plan_type')
+      .eq('email', gift.buyer_email)
+      .maybeSingle()
+
+    if (profileError) {
+      console.error('[MP Webhook BuyerReward] Error checking user profile:', profileError)
+    }
+
+    // Create pix_payments record for tracking
+    const { error: insertError } = await supabase
+      .from('pix_payments')
+      .insert({
+        user_id: userProfile?.id || null,
+        email: gift.buyer_email,
+        plan_type: planType,
+        amount: payment.transaction_amount,
+        payment_intent_id: payment.id.toString(),
+        status: userProfile ? 'paid' : 'approved', // 'paid' if user exists, 'approved' if guest
+        paid_at: payment.date_approved || new Date().toISOString(),
+      })
+
+    if (insertError) {
+      console.error('[MP Webhook BuyerReward] Error inserting pix_payment:', insertError)
+      // Continue anyway - we want to log this
+    }
+
+    // If user exists and doesn't have active subscription, activate it
+    if (userProfile && userProfile.plan_type !== 'pro') {
+      const paidAtIso = payment.date_approved || new Date().toISOString()
+      const { startDateIso, expiresAtIso } = calculateSubscriptionWindow(planType, paidAtIso)
+
+      // Create subscription record
+      const { data: newSubscription, error: subError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userProfile.id,
+          mp_subscription_id: `buyer_reward_${payment.id}`,
+          mp_payer_id: payment.payer?.id || null,
+          status: 'authorized',
+          start_date: startDateIso,
+          next_payment_date: expiresAtIso,
+          amount: payment.transaction_amount,
+          currency: payment.currency_id || 'BRL',
+          payment_method_id: 'pix',
+        })
+        .select()
+        .single()
+
+      if (subError) {
+        console.error('[MP Webhook BuyerReward] Error creating subscription:', subError)
+      } else if (newSubscription) {
+        // Activate subscription
+        const { error: activateError } = await supabase.rpc('activate_subscription', {
+          p_user_id: userProfile.id,
+          p_subscription_id: newSubscription.id,
+        })
+
+        if (activateError) {
+          console.error('[MP Webhook BuyerReward] Error activating subscription:', activateError)
+        }
+
+        // Update profile to pro
+        await supabase
+          .from('profiles')
+          .update({
+            plan_type: 'pro',
+            subscription_status: 'active',
+            subscription_expires_at: expiresAtIso,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userProfile.id)
+
+        // Mark payment as consumed
+        await supabase
+          .from('pix_payments')
+          .update({ status: 'consumed' })
+          .eq('payment_intent_id', payment.id.toString())
+
+        console.log('[MP Webhook BuyerReward] Subscription activated for buyer:', {
+          userId: userProfile.id,
+          email: gift.buyer_email,
+          planType,
+          expiresAt: expiresAtIso,
+        })
+      }
+    } else if (!userProfile) {
+      // User doesn't exist yet - payment is recorded as 'approved'
+      // Will be linked when user registers with this email
+      console.log('[MP Webhook BuyerReward] Payment recorded for guest buyer (will activate on registration):', {
+        email: gift.buyer_email,
+        planType,
+        amount: payment.transaction_amount,
+      })
+    } else {
+      console.log('[MP Webhook BuyerReward] User already has pro plan, payment recorded:', {
+        userId: userProfile.id,
+        email: gift.buyer_email,
+      })
+    }
+
+    const duration = Date.now() - startTime
+    console.log(`[MP Webhook BuyerReward] Processed in ${duration}ms:`, {
+      paymentId: payment.id,
+      buyerEmail: gift.buyer_email,
+      planType,
+      giftId,
+    })
+  } catch (error) {
+    console.error('[MP Webhook BuyerReward] Error processing:', {
+      paymentId: payment.id,
+      externalReference,
       error: error instanceof Error ? error.message : 'Unknown error',
       processing_time_ms: Date.now() - startTime,
     })
