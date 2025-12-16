@@ -1,27 +1,39 @@
 /**
  * Email template for gift buyer reward - 50% discount PIX
  * Sent to the person who bought the gift as a thank you
+ * Offers both monthly and annual plans with 50% off
  */
 
 export interface GiftBuyerRewardContext {
   buyerName: string
   recipientName: string
-  planName: string
-  discountedPrice: number
-  originalPrice: number
-  pixQrCodeBase64: string
-  pixCopyPaste: string
+  giftPlanName: string
+  // Monthly plan
+  monthlyDiscountedPrice: number
+  monthlyOriginalPrice: number
+  monthlyPixQrCodeBase64: string
+  monthlyPixCopyPaste: string
+  // Annual plan
+  annualDiscountedPrice: number
+  annualOriginalPrice: number
+  annualPixQrCodeBase64: string
+  annualPixCopyPaste: string
+  // Expiration
   expiresAt: string // ISO date string
 }
 
 export function giftBuyerRewardEmailTemplate({
   buyerName,
   recipientName,
-  planName,
-  discountedPrice,
-  originalPrice,
-  pixQrCodeBase64,
-  pixCopyPaste,
+  giftPlanName,
+  monthlyDiscountedPrice,
+  monthlyOriginalPrice,
+  monthlyPixQrCodeBase64,
+  monthlyPixCopyPaste,
+  annualDiscountedPrice,
+  annualOriginalPrice,
+  annualPixQrCodeBase64,
+  annualPixCopyPaste,
   expiresAt,
 }: GiftBuyerRewardContext) {
   const expiresDate = new Date(expiresAt).toLocaleDateString('pt-BR', {
@@ -30,8 +42,7 @@ export function giftBuyerRewardEmailTemplate({
     year: 'numeric',
   })
 
-  const formattedDiscount = discountedPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  const formattedOriginal = originalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const formatPrice = (price: number) => price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   const subject = `🎁 Obrigado por presentear! Seu Premium com 50% OFF esta aqui`
 
@@ -72,7 +83,7 @@ export function giftBuyerRewardEmailTemplate({
               </p>
 
               <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Seu presente de <strong>${planName}</strong> para <strong>${recipientName}</strong> foi enviado com sucesso!
+                Seu presente de <strong>${giftPlanName}</strong> para <strong>${recipientName}</strong> foi enviado com sucesso!
                 Temos certeza que ${recipientName.split(' ')[0]} vai adorar. 🎁
               </p>
 
@@ -80,52 +91,47 @@ export function giftBuyerRewardEmailTemplate({
                 E porque voce e tao generoso(a), preparamos um <strong>presente especial so pra voce</strong>:
               </p>
 
-              <!-- Discount Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; padding: 30px; text-align: center;">
-                    <div style="font-size: 18px; color: #fff; margin-bottom: 10px; font-weight: 600;">
-                      🔥 SEU PREMIUM COM 50% OFF 🔥
-                    </div>
-                    <div style="font-size: 20px; color: rgba(255,255,255,0.8); text-decoration: line-through; margin-bottom: 5px;">
-                      De ${formattedOriginal}
-                    </div>
-                    <div style="font-size: 48px; font-weight: 800; color: #fff; margin: 10px 0;">
-                      ${formattedDiscount}
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 5px;">
-                      Plano Anual Premium - 1 ano completo!
-                    </div>
-                  </td>
-                </tr>
-              </table>
+              <!-- Discount Header -->
+              <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 25px;">
+                <div style="font-size: 18px; color: #fff; font-weight: 600;">
+                  🔥 SEU PREMIUM COM 50% OFF 🔥
+                </div>
+                <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 5px;">
+                  Escolha o plano que preferir:
+                </div>
+              </div>
 
-              <!-- PIX QR Code -->
+              <!-- Two Plans Side by Side -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
                 <tr>
-                  <td style="background: #f8f9fa; border-radius: 16px; padding: 25px; text-align: center;">
-                    <div style="font-size: 16px; color: #333; font-weight: 600; margin-bottom: 15px;">
-                      📱 Pague com PIX
+                  <!-- Monthly Plan -->
+                  <td width="48%" valign="top" style="padding-right: 2%;">
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; border: 2px solid #e9ecef;">
+                      <div style="font-size: 14px; color: #666; font-weight: 600; margin-bottom: 10px;">MENSAL</div>
+                      <div style="font-size: 14px; color: #999; text-decoration: line-through;">${formatPrice(monthlyOriginalPrice)}</div>
+                      <div style="font-size: 28px; font-weight: 800; color: #f5576c; margin: 5px 0;">${formatPrice(monthlyDiscountedPrice)}</div>
+                      <div style="font-size: 12px; color: #666; margin-bottom: 15px;">por mes</div>
+                      <div style="background: #fff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                        <img src="data:image/png;base64,${monthlyPixQrCodeBase64}" alt="QR Code PIX Mensal" width="120" height="120" style="display: block; margin: 0 auto;">
+                      </div>
+                      <div style="font-size: 10px; color: #666; word-break: break-all; background: #e8f5e9; padding: 8px; border-radius: 6px; font-family: monospace;">
+                        ${monthlyPixCopyPaste.substring(0, 50)}...
+                      </div>
                     </div>
-                    <div style="background: #fff; display: inline-block; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                      <img src="data:image/png;base64,${pixQrCodeBase64}" alt="QR Code PIX" width="200" height="200" style="display: block;">
-                    </div>
-                    <p style="color: #666; font-size: 13px; margin: 15px 0 0 0;">
-                      Escaneie com o app do seu banco
-                    </p>
                   </td>
-                </tr>
-              </table>
-
-              <!-- PIX Copy Paste -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
-                <tr>
-                  <td style="background: #e8f5e9; border: 2px dashed #4caf50; border-radius: 12px; padding: 15px; text-align: center;">
-                    <div style="font-size: 12px; color: #2e7d32; margin-bottom: 8px; font-weight: 600;">
-                      Ou copie o codigo PIX:
-                    </div>
-                    <div style="font-size: 11px; color: #333; word-break: break-all; font-family: monospace; background: #fff; padding: 10px; border-radius: 6px;">
-                      ${pixCopyPaste}
+                  <!-- Annual Plan -->
+                  <td width="48%" valign="top" style="padding-left: 2%;">
+                    <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 12px; padding: 20px; text-align: center; border: 2px solid #667eea;">
+                      <div style="font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 10px;">⭐ ANUAL (MELHOR!)</div>
+                      <div style="font-size: 14px; color: #999; text-decoration: line-through;">${formatPrice(annualOriginalPrice)}</div>
+                      <div style="font-size: 28px; font-weight: 800; color: #667eea; margin: 5px 0;">${formatPrice(annualDiscountedPrice)}</div>
+                      <div style="font-size: 12px; color: #666; margin-bottom: 15px;">por ano</div>
+                      <div style="background: #fff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                        <img src="data:image/png;base64,${annualPixQrCodeBase64}" alt="QR Code PIX Anual" width="120" height="120" style="display: block; margin: 0 auto;">
+                      </div>
+                      <div style="font-size: 10px; color: #666; word-break: break-all; background: #e8f5e9; padding: 8px; border-radius: 6px; font-family: monospace;">
+                        ${annualPixCopyPaste.substring(0, 50)}...
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -147,7 +153,7 @@ export function giftBuyerRewardEmailTemplate({
               </div>
 
               <p style="color: #888; font-size: 12px; text-align: center; margin: 0;">
-                Este PIX e exclusivo para voce. Apos o pagamento, seu plano sera ativado automaticamente!
+                Escaneie o QR Code do plano que preferir ou copie o codigo PIX. Apos o pagamento, seu plano sera ativado automaticamente!
               </p>
 
             </td>
@@ -180,25 +186,27 @@ Obrigado por espalhar alegria neste Natal!
 
 Oi ${buyerName.split(' ')[0]}!
 
-Seu presente de ${planName} para ${recipientName} foi enviado com sucesso!
+Seu presente de ${giftPlanName} para ${recipientName} foi enviado com sucesso!
 Temos certeza que ${recipientName.split(' ')[0]} vai adorar.
 
 E porque voce e tao generoso(a), preparamos um presente especial so pra voce:
 
 🔥 SEU PREMIUM COM 50% OFF 🔥
-De ${formattedOriginal} por apenas ${formattedDiscount}
-Plano Anual Premium - 1 ano completo!
 
-Para pagar, copie o codigo PIX abaixo e cole no app do seu banco:
+PLANO MENSAL:
+De ${formatPrice(monthlyOriginalPrice)} por ${formatPrice(monthlyDiscountedPrice)}/mes
+Codigo PIX: ${monthlyPixCopyPaste}
 
-${pixCopyPaste}
+PLANO ANUAL (MELHOR!):
+De ${formatPrice(annualOriginalPrice)} por ${formatPrice(annualDiscountedPrice)}/ano
+Codigo PIX: ${annualPixCopyPaste}
 
 ⏰ PIX valido ate ${expiresDate}
 
 "Voce ja presenteou alguem com boa escrita... que tal garantir a sua tambem?
 Afinal, quem corrige os outros nao pode sair por ai escrevendo 'concerteza'!" 😄
 
-Este PIX e exclusivo para voce. Apos o pagamento, seu plano sera ativado automaticamente!
+Escaneie o QR Code do plano que preferir. Apos o pagamento, seu plano sera ativado automaticamente!
 
 Com carinho da equipe CorretorIA
 `

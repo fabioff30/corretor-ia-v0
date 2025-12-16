@@ -129,11 +129,18 @@ type GiftBuyerRewardContext = {
   to: EmailRecipient
   buyerName: string
   recipientName: string
-  planName: string
-  discountedPrice: number
-  originalPrice: number
-  pixQrCodeBase64: string
-  pixCopyPaste: string
+  giftPlanName: string
+  // Monthly plan
+  monthlyDiscountedPrice: number
+  monthlyOriginalPrice: number
+  monthlyPixQrCodeBase64: string
+  monthlyPixCopyPaste: string
+  // Annual plan
+  annualDiscountedPrice: number
+  annualOriginalPrice: number
+  annualPixQrCodeBase64: string
+  annualPixCopyPaste: string
+  // Expiration
   expiresAt: Date
 }
 
@@ -141,21 +148,29 @@ export async function sendGiftBuyerRewardEmail({
   to,
   buyerName,
   recipientName,
-  planName,
-  discountedPrice,
-  originalPrice,
-  pixQrCodeBase64,
-  pixCopyPaste,
+  giftPlanName,
+  monthlyDiscountedPrice,
+  monthlyOriginalPrice,
+  monthlyPixQrCodeBase64,
+  monthlyPixCopyPaste,
+  annualDiscountedPrice,
+  annualOriginalPrice,
+  annualPixQrCodeBase64,
+  annualPixCopyPaste,
   expiresAt,
 }: GiftBuyerRewardContext) {
   const template = giftBuyerRewardEmailTemplate({
     buyerName,
     recipientName,
-    planName,
-    discountedPrice,
-    originalPrice,
-    pixQrCodeBase64,
-    pixCopyPaste,
+    giftPlanName,
+    monthlyDiscountedPrice,
+    monthlyOriginalPrice,
+    monthlyPixQrCodeBase64,
+    monthlyPixCopyPaste,
+    annualDiscountedPrice,
+    annualOriginalPrice,
+    annualPixQrCodeBase64,
+    annualPixCopyPaste,
     expiresAt: expiresAt.toISOString(),
   })
 

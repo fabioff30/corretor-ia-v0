@@ -664,31 +664,44 @@ async function handleGiftPayment(payment: any, externalReference: string, supaba
 
       console.log(`[MP Webhook Gift] Gift email sent to recipient: ${gift.recipient_email}`)
 
-      // Create PIX payment with 50% discount for the buyer (Annual plan)
-      const originalPrice = 238.80 // Annual plan price
-      const discountedPrice = originalPrice * 0.5 // 50% off = R$ 119.40
+      // Create TWO PIX payments with 50% discount for the buyer (Monthly and Annual)
+      const monthlyOriginalPrice = 29.90
+      const monthlyDiscountedPrice = monthlyOriginalPrice * 0.5 // 50% off = R$ 14.95
+      const annualOriginalPrice = 238.80
+      const annualDiscountedPrice = annualOriginalPrice * 0.5 // 50% off = R$ 119.40
       const discountExpiresAt = new Date()
       discountExpiresAt.setDate(discountExpiresAt.getDate() + 7) // PIX valid for 7 days
 
       try {
         const mpClient = getMercadoPagoClient()
 
-        // Create discounted PIX payment
-        const pixPayment = await mpClient.createPixPayment(
-          discountedPrice,
+        // Create Monthly PIX payment
+        const monthlyPixPayment = await mpClient.createPixPayment(
+          monthlyDiscountedPrice,
           gift.buyer_email,
-          `buyer_reward_${giftId}`, // external_reference
-          'CorretorIA Premium Anual - 50% OFF (Presente)',
+          `buyer_reward_monthly_${giftId}`,
+          'CorretorIA Premium Mensal - 50% OFF',
           60 * 24 * 7 // 7 days in minutes
         )
 
-        const pixQrCodeBase64 = pixPayment.point_of_interaction?.transaction_data?.qr_code_base64
-        const pixCopyPaste = pixPayment.point_of_interaction?.transaction_data?.qr_code
+        // Create Annual PIX payment
+        const annualPixPayment = await mpClient.createPixPayment(
+          annualDiscountedPrice,
+          gift.buyer_email,
+          `buyer_reward_annual_${giftId}`,
+          'CorretorIA Premium Anual - 50% OFF',
+          60 * 24 * 7 // 7 days in minutes
+        )
 
-        if (!pixQrCodeBase64 || !pixCopyPaste) {
-          console.error('[MP Webhook Gift] PIX QR code not generated for buyer reward')
+        const monthlyQrCode = monthlyPixPayment.point_of_interaction?.transaction_data?.qr_code_base64
+        const monthlyPixCopy = monthlyPixPayment.point_of_interaction?.transaction_data?.qr_code
+        const annualQrCode = annualPixPayment.point_of_interaction?.transaction_data?.qr_code_base64
+        const annualPixCopy = annualPixPayment.point_of_interaction?.transaction_data?.qr_code
+
+        if (!monthlyQrCode || !annualQrCode || !monthlyPixCopy || !annualPixCopy) {
+          console.error('[MP Webhook Gift] PIX QR codes not generated for buyer reward')
         } else {
-          // Send reward email to buyer with PIX QR code
+          // Send reward email to buyer with both PIX options
           await sendGiftBuyerRewardEmail({
             to: {
               email: gift.buyer_email,
@@ -696,18 +709,23 @@ async function handleGiftPayment(payment: any, externalReference: string, supaba
             },
             buyerName: gift.buyer_name,
             recipientName: gift.recipient_name,
-            planName: planName,
-            discountedPrice: discountedPrice,
-            originalPrice: originalPrice,
-            pixQrCodeBase64: pixQrCodeBase64,
-            pixCopyPaste: pixCopyPaste,
+            giftPlanName: planName,
+            monthlyDiscountedPrice,
+            monthlyOriginalPrice,
+            monthlyPixQrCodeBase64: monthlyQrCode,
+            monthlyPixCopyPaste: monthlyPixCopy,
+            annualDiscountedPrice,
+            annualOriginalPrice,
+            annualPixQrCodeBase64: annualQrCode,
+            annualPixCopyPaste: annualPixCopy,
             expiresAt: discountExpiresAt,
           })
 
           console.log(`[MP Webhook Gift] Buyer reward PIX email sent to: ${gift.buyer_email}`, {
-            pixPaymentId: pixPayment.id,
-            discountedPrice,
-            originalPrice,
+            monthlyPixId: monthlyPixPayment.id,
+            annualPixId: annualPixPayment.id,
+            monthlyDiscountedPrice,
+            annualDiscountedPrice,
           })
         }
       } catch (buyerEmailError) {

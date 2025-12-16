@@ -289,13 +289,13 @@ export default function GiftRedeemPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <Button asChild variant="outline">
-                      <Link href={`/auth/login?redirect=/presente/${code}`}>
+                      <Link href={`/login?redirect=/presente/${code}`}>
                         <LogIn className="h-4 w-4 mr-2" />
                         Entrar
                       </Link>
                     </Button>
                     <Button asChild>
-                      <Link href={`/auth/register?redirect=/presente/${code}`}>
+                      <Link href={`/register?redirect=/presente/${code}`}>
                         <User className="h-4 w-4 mr-2" />
                         Criar conta
                       </Link>
