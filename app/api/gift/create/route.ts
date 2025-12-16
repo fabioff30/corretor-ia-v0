@@ -20,7 +20,7 @@ const createGiftSchema = z.object({
   buyer_email: z.string().email('Email invalido'),
   recipient_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100),
   recipient_email: z.string().email('Email invalido'),
-  plan_id: z.enum(['monthly', 'annual', 'lifetime']),
+  plan_id: z.enum(['test', 'monthly', 'annual', 'lifetime']),
   gift_message: z.string().max(CHRISTMAS_GIFT_CONFIG.MAX_MESSAGE_LENGTH).optional(),
   payment_method: z.enum(['pix', 'stripe']),
 })
