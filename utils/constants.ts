@@ -10,6 +10,8 @@ export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humaniz
 // Pro plan: unlimited (-1) for all operations
 // These limits are enforced in /api/correct and /api/rewrite routes
 // via canUserPerformOperation() and incrementUserUsage() functions
+export const FREE_DAILY_CORRECTIONS_LIMIT = 3 // Hardcoded fallback - MUST match Supabase plan_limits_config
+export const FREE_DAILY_REWRITES_LIMIT = 3 // Hardcoded fallback - MUST match Supabase plan_limits_config
 
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2

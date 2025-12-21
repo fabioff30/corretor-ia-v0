@@ -30,7 +30,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { useUser } from "@/hooks/use-user"
-import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
+import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL, FREE_DAILY_CORRECTIONS_LIMIT } from "@/utils/constants"
 import { useSSECorrection } from "@/hooks/use-sse-correction"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { AdvancedAIToggle } from "@/components/advanced-ai-toggle"
@@ -138,18 +138,32 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [showPremiumUpsellModal, setShowPremiumUpsellModal] = useState(false)
   const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
-  const correctionsDailyLimit = limits?.corrections_per_day ?? 5
+  // CRITICAL: Use FREE_DAILY_CORRECTIONS_LIMIT (3) as fallback, not 5!
+  // This ensures the limit is enforced even if Supabase query fails
+  const correctionsDailyLimit = limits?.corrections_per_day ?? FREE_DAILY_CORRECTIONS_LIMIT
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
 
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
   const [showPainBanner, setShowPainBanner] = useState(false)
 
+  // Helper to get today's date in local timezone (not UTC)
+  // This prevents the counter from resetting at midnight UTC instead of local midnight
+  const getLocalDateString = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const readFreeCorrectionUsage = () => {
     if (typeof window === "undefined") {
       return { date: "", count: 0 }
     }
-    const today = new Date().toISOString().split("T")[0]
+    // IMPORTANT: Use local timezone, not UTC!
+    // toISOString() returns UTC which causes counter to reset at wrong time for non-UTC users
+    const today = getLocalDateString()
 
     try {
       const raw = window.localStorage.getItem(FREE_CORRECTIONS_STORAGE_KEY)
@@ -242,11 +256,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       // Incrementar contagem de correções gratuitas se for usuário free
       if (!isPremium && operationMode === "correct") {
         const usage = readFreeCorrectionUsage()
-        const newCount = usage.count + 1
+        // Use Math.min to cap at daily limit (prevents counter going beyond limit)
+        const newCount = Math.min(correctionsDailyLimit, usage.count + 1)
         if (typeof window !== "undefined") {
           window.localStorage.setItem(
             FREE_CORRECTIONS_STORAGE_KEY,
-            JSON.stringify({ date: usage.date, count: newCount })
+            JSON.stringify({ date: usage.date || getLocalDateString(), count: newCount })
           )
         }
         setFreeCorrectionsCount(newCount)
@@ -887,7 +902,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           window.localStorage.setItem(
             FREE_CORRECTIONS_STORAGE_KEY,
             JSON.stringify({
-              date: usage.date || new Date().toISOString().split("T")[0],
+              // Use local timezone date, not UTC
+              date: usage.date || getLocalDateString(),
               count: updatedCount,
             }),
           )
