@@ -30,7 +30,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import { StarRating } from "@/components/star-rating"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { useUser } from "@/hooks/use-user"
-import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL, FREE_DAILY_CORRECTIONS_LIMIT } from "@/utils/constants"
+import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL, FREE_DAILY_CORRECTIONS_LIMIT, FREE_DAILY_REWRITES_LIMIT } from "@/utils/constants"
 import { useSSECorrection } from "@/hooks/use-sse-correction"
 import { ToneAdjuster } from "@/components/tone-adjuster"
 import { AdvancedAIToggle } from "@/components/advanced-ai-toggle"
@@ -79,6 +79,7 @@ type OperationMode = "correct" | "rewrite"
 type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlike"
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
+const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
 const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
 const SSE_THRESHOLD_CHARS = 5000 // Use SSE streaming for texts > 5k chars (matches worker PARALLEL_CHUNK_SIZE)
 
@@ -138,10 +139,13 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [showPremiumUpsellModal, setShowPremiumUpsellModal] = useState(false)
   const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
+  const [freeRewritesCount, setFreeRewritesCount] = useState(0)
   // CRITICAL: Use FREE_DAILY_CORRECTIONS_LIMIT (3) as fallback, not 5!
   // This ensures the limit is enforced even if Supabase query fails
   const correctionsDailyLimit = limits?.corrections_per_day ?? FREE_DAILY_CORRECTIONS_LIMIT
+  const rewritesDailyLimit = limits?.rewrites_per_day ?? FREE_DAILY_REWRITES_LIMIT
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
+  const remainingRewrites = Math.max(rewritesDailyLimit - freeRewritesCount, 0)
 
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
@@ -184,13 +188,41 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     return initialValue
   }
 
+  const readFreeRewriteUsage = () => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = getLocalDateString()
+
+    try {
+      const raw = window.localStorage.getItem(FREE_REWRITES_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível ler o uso diário de reescritas gratuitas:", error)
+    }
+
+    const initialValue = { date: today, count: 0 }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FREE_REWRITES_STORAGE_KEY, JSON.stringify(initialValue))
+    }
+    return initialValue
+  }
+
   useEffect(() => {
     if (isPremium) {
       setFreeCorrectionsCount(0)
+      setFreeRewritesCount(0)
       return
     }
-    const usage = readFreeCorrectionUsage()
-    setFreeCorrectionsCount(usage.count)
+    const correctionUsage = readFreeCorrectionUsage()
+    setFreeCorrectionsCount(correctionUsage.count)
+    const rewriteUsage = readFreeRewriteUsage()
+    setFreeRewritesCount(rewriteUsage.count)
   }, [isPremium])
 
   // Detectar se é dispositivo móvel
@@ -502,8 +534,44 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       }
     }
 
-    // Verificar se usuário free está tentando usar estilo premium para reescrita
+    // Verificar limite diário de reescritas para usuários gratuitos
     if (!isPremium && operationMode === "rewrite") {
+      const rewriteUsage = readFreeRewriteUsage()
+      if (rewriteUsage.count >= rewritesDailyLimit) {
+        const description =
+          rewritesDailyLimit === 1
+            ? "Você já realizou a reescrita gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
+            : `Você já realizou ${rewritesDailyLimit} reescritas gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
+
+        toast({
+          title: "Oferta Especial - 50% OFF!",
+          description,
+          variant: "destructive",
+          action: (
+            <Link
+              href="/oferta-especial"
+              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+              onClick={() => sendGTMEvent("special_offer_cta_click", { location: "rewrite_limit_toast", trigger: "rewrite_limit" })}
+            >
+              Ver Oferta →
+            </Link>
+          ),
+        })
+
+        sendGTMEvent("free_rewrite_limit_reached", {
+          limit: rewritesDailyLimit,
+          usage: rewriteUsage.count,
+        })
+
+        // Redirect to special offer page after 2 seconds
+        setTimeout(() => {
+          window.location.href = "/oferta-especial"
+        }, 2000)
+
+        return
+      }
+
+      // Verificar se usuário free está tentando usar estilo premium para reescrita
       const styleDef = getRewriteStyle(selectedRewriteStyleInternal)
       if (styleDef?.tier === "premium") {
         setShowPremiumUpsellModal(true)
@@ -909,6 +977,23 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           )
         }
         setFreeCorrectionsCount(updatedCount)
+      }
+
+      // Incrementar contagem de reescritas gratuitas se for usuário free
+      if (!isPremium && operationMode === "rewrite") {
+        const rewriteUsage = readFreeRewriteUsage()
+        const updatedRewriteCount = Math.min(rewritesDailyLimit, rewriteUsage.count + 1)
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            FREE_REWRITES_STORAGE_KEY,
+            JSON.stringify({
+              // Use local timezone date, not UTC
+              date: rewriteUsage.date || getLocalDateString(),
+              count: updatedRewriteCount,
+            }),
+          )
+        }
+        setFreeRewritesCount(updatedRewriteCount)
       }
 
       // Mostrar a avaliação após a correção bem-sucedida
@@ -1417,7 +1502,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
             </TooltipProvider>
             {!isPremium && (
               <div className="text-xs text-right text-muted-foreground">
-                Correções gratuitas restantes hoje: {remainingCorrections} de {correctionsDailyLimit}
+                {operationMode === "correct"
+                  ? `Correções gratuitas restantes hoje: ${remainingCorrections} de ${correctionsDailyLimit}`
+                  : `Reescritas gratuitas restantes hoje: ${remainingRewrites} de ${rewritesDailyLimit}`}
               </div>
             )}
             {!isUnlimited && limitsLoading && (

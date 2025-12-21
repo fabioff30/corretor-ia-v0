@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MobileHero } from "./mobile-hero"
 import { MobileFAB } from "./mobile-fab"
 import { MobileBottomDrawer } from "./mobile-bottom-drawer"
@@ -10,8 +10,45 @@ import { AnimatePresence } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
-import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT } from "@/utils/constants"
+import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, FREE_DAILY_REWRITES_LIMIT } from "@/utils/constants"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import Link from "next/link"
+
+const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
+
+// Helper to get today's date in local timezone (not UTC)
+const getLocalDateString = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const readFreeRewriteUsage = () => {
+    if (typeof window === "undefined") {
+        return { date: "", count: 0 }
+    }
+    const today = getLocalDateString()
+
+    try {
+        const raw = window.localStorage.getItem(FREE_REWRITES_STORAGE_KEY)
+        if (raw) {
+            const parsed = JSON.parse(raw) as { date?: string; count?: number }
+            if (parsed.date === today) {
+                return { date: today, count: parsed.count ?? 0 }
+            }
+        }
+    } catch (error) {
+        console.warn("Não foi possível ler o uso diário de reescritas gratuitas:", error)
+    }
+
+    const initialValue = { date: today, count: 0 }
+    if (typeof window !== "undefined") {
+        window.localStorage.setItem(FREE_REWRITES_STORAGE_KEY, JSON.stringify(initialValue))
+    }
+    return initialValue
+}
 
 interface MobileRewriteWrapperProps {
     onCorrect?: (text: string) => void
@@ -31,12 +68,24 @@ export function MobileRewriteWrapper({
     const [originalText, setOriginalText] = useState("")
     const [isLoading, setIsLoading] = useState(propIsLoading)
     const [selectedTone, setSelectedTone] = useState("humanized")
+    const [freeRewritesCount, setFreeRewritesCount] = useState(0)
 
     const { toast } = useToast()
     const { profile } = useUser()
     const { limits } = usePlanLimits()
 
     const isPremium = profile?.plan_type === "pro" || profile?.plan_type === "admin"
+    const rewritesDailyLimit = limits?.rewrites_per_day ?? FREE_DAILY_REWRITES_LIMIT
+
+    // Load rewrite usage on mount
+    useEffect(() => {
+        if (isPremium) {
+            setFreeRewritesCount(0)
+            return
+        }
+        const usage = readFreeRewriteUsage()
+        setFreeRewritesCount(usage.count)
+    }, [isPremium])
     const resolvedCharacterLimit = isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
     const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
     const characterLimit = isUnlimited ? null : resolvedCharacterLimit
@@ -72,6 +121,44 @@ export function MobileRewriteWrapper({
 
     const handleRewrite = async (text: string) => {
         if (!text.trim()) return
+
+        // Check daily limit for free users
+        if (!isPremium) {
+            const usage = readFreeRewriteUsage()
+            if (usage.count >= rewritesDailyLimit) {
+                const description =
+                    rewritesDailyLimit === 1
+                        ? "Você já realizou a reescrita gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
+                        : `Você já realizou ${rewritesDailyLimit} reescritas gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
+
+                toast({
+                    title: "Oferta Especial - 50% OFF!",
+                    description,
+                    variant: "destructive",
+                    action: (
+                        <Link
+                            href="/oferta-especial"
+                            className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
+                            onClick={() => sendGTMEvent("special_offer_cta_click", { location: "mobile_rewrite_limit_toast", trigger: "rewrite_limit" })}
+                        >
+                            Ver Oferta →
+                        </Link>
+                    ),
+                })
+
+                sendGTMEvent("free_rewrite_limit_reached", {
+                    limit: rewritesDailyLimit,
+                    usage: usage.count,
+                })
+
+                // Redirect to special offer page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = "/oferta-especial"
+                }, 2000)
+
+                return
+            }
+        }
 
         setOriginalText(text)
         setViewState("LOADING")
@@ -119,6 +206,22 @@ export function MobileRewriteWrapper({
                 style: selectedTone,
                 is_premium: isPremium,
             })
+
+            // Increment rewrite count for free users
+            if (!isPremium) {
+                const usage = readFreeRewriteUsage()
+                const updatedCount = Math.min(rewritesDailyLimit, usage.count + 1)
+                if (typeof window !== "undefined") {
+                    window.localStorage.setItem(
+                        FREE_REWRITES_STORAGE_KEY,
+                        JSON.stringify({
+                            date: usage.date || getLocalDateString(),
+                            count: updatedCount,
+                        })
+                    )
+                }
+                setFreeRewritesCount(updatedCount)
+            }
 
         } catch (error: any) {
             console.error("Rewrite error:", error)
@@ -199,6 +302,8 @@ export function MobileRewriteWrapper({
                 selectedStyle={selectedTone}
                 selectedStyleLabel={selectedStyleLabel}
                 onStyleClick={handleSettingsClick}
+                usageCount={freeRewritesCount}
+                usageLimit={rewritesDailyLimit}
             />
 
             <MobileFAB
