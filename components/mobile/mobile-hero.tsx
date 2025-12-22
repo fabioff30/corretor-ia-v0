@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { MobileCorrectionInput } from "./mobile-correction-input"
 import { MobileQuickStats } from "./mobile-quick-stats"
 import { useUser } from "@/hooks/use-user"
@@ -13,7 +13,7 @@ interface MobileHeroProps {
   isLoading?: boolean
   onAIToggle?: (enabled: boolean) => void
   aiEnabled?: boolean
-  title?: string
+  title?: React.ReactNode
   subtitle?: string
   badges?: Array<{ text: string; icon: string; color: string }>
   placeholder?: string
@@ -42,7 +42,7 @@ export function MobileHero({
   isLoading = false,
   onAIToggle,
   aiEnabled = false,
-  title = "Corretor de Texto e Ortográfico com IA",
+  title = <>Corretor de Texto e<br />Ortográfico com IA</>,
   subtitle = "Corrija erros gramaticais, ortográficos e de estilo em português com inteligência artificial.",
   badges = [
     { text: "Gratuito", icon: "✓", color: "text-green-500" },
@@ -90,7 +90,7 @@ export function MobileHero({
         transition={{ delay: 0.1, duration: 0.3 }}
       >
         <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight pb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             {title}
           </h1>
           <p className="text-sm text-muted-foreground max-w-[280px] mx-auto">
