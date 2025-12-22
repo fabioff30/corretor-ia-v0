@@ -88,10 +88,10 @@ export function Header() {
             <Image
               src="/images/logo-corretoria.png"
               alt="CorretorIA - Corretor de Texto Online"
-              width={140}
-              height={32}
+              width={210}
+              height={48}
               priority
-              className="h-8 w-auto"
+              className="h-12 w-auto"
             />
           </Link>
         </div>
