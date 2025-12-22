@@ -37,7 +37,7 @@ export function BenefitsSection() {
             Recursos exclusivos
           </span>
           <h2 className="text-3xl font-bold tracking-tight mb-4 gradient-text">
-            Por que escolher o Corretor de Texto CorretorIA
+            Por que escolher nosso Corretor de Texto e Ortográfico
           </h2>
           <p className="text-muted-foreground max-w-[700px] mx-auto">
             Descubra por que milhares de pessoas escolhem nosso corretor de texto online para aprimorar a qualidade da

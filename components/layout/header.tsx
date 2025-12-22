@@ -4,9 +4,10 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Shield, LogOut, LogIn, LayoutDashboard, Crown, Sparkles } from "lucide-react"
+import { Shield, LogOut, LogIn, LayoutDashboard, Crown } from "lucide-react"
 import { useAdminAuth } from "@/hooks/use-admin-auth"
 import { useUser } from "@/hooks/use-user"
 import { Input } from "@/components/ui/input"
@@ -84,8 +85,14 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center">
-            <Sparkles className="h-5 w-5 text-primary mr-1.5" />
-            <span className="text-xl font-bold gradient-text">CorretorIA</span>
+            <Image
+              src="/images/logo-corretoria.png"
+              alt="CorretorIA - Corretor de Texto Online"
+              width={140}
+              height={32}
+              priority
+              className="h-8 w-auto"
+            />
           </Link>
         </div>
 

@@ -43,7 +43,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
           >
-            Corretor de Texto com IA
+            Corretor de Texto e Ortográfico com IA
           </motion.h1>
 
           <motion.div

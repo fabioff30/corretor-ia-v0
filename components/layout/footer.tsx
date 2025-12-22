@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Github, Linkedin, Sparkles, BookOpen, Globe } from "lucide-react"
+import Image from "next/image"
+import { Github, Linkedin, BookOpen, Globe } from "lucide-react"
 import { EasterEggSecret } from "@/components/easter-egg-secret"
 
 export function Footer() {
@@ -16,8 +17,13 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center">
-              <Sparkles className="h-5 w-5 text-primary mr-1.5" />
-              <span className="text-xl font-bold gradient-text">CorretorIA</span>
+              <Image
+                src="/images/logo-corretoria.png"
+                alt="CorretorIA - Corretor de Texto Online"
+                width={140}
+                height={32}
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
               Corrija erros gramaticais, ortográficos e de estilo em seus textos em português com nossa ferramenta
