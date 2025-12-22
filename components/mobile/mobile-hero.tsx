@@ -42,8 +42,8 @@ export function MobileHero({
   isLoading = false,
   onAIToggle,
   aiEnabled = false,
-  title = "Corretor de Texto IA",
-  subtitle = "Corrija gramática, ortografia e estilo do seu texto gratuitamente com inteligência artificial.",
+  title = "Corretor de Texto e Ortográfico com IA",
+  subtitle = "Corrija erros gramaticais, ortográficos e de estilo em português com inteligência artificial.",
   badges = [
     { text: "Gratuito", icon: "✓", color: "text-green-500" },
     { text: "Rápido", icon: "⚡", color: "text-blue-500" },
