@@ -202,7 +202,7 @@ export default async function RootLayout({
             <JulinhoAssistant />
             <GoogleOneTap />
             <GoogleAnalyticsWrapper />
-            <CleverWebServerLoader />
+            {/* <CleverWebServerLoader /> */}
           </ThemeProvider>
         </UserProvider>      </body>
     </html>
