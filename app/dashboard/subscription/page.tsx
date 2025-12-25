@@ -66,11 +66,16 @@ function SubscriptionContent() {
         const purchaseCurrency = currency ?? 'BRL'
 
         sendGTMEvent('purchase', {
+          transaction_id: `sub_${Date.now()}`,
           value: purchaseValue,
           currency: purchaseCurrency,
-          plan: 'premium_subscription',
-          subscription_status: subscription?.status ?? 'unknown',
-          profile_plan: profile?.plan_type ?? 'unknown',
+          payment_method: 'card',
+          items: [{
+            item_id: 'premium_subscription',
+            item_name: 'Premium Subscription',
+            price: purchaseValue,
+            quantity: 1,
+          }],
         })
 
         purchaseTrackedRef.current = true

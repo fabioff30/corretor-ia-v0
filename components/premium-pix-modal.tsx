@@ -84,12 +84,17 @@ export function PremiumPixModal({
 
     setStatus('success')
 
-    sendGA4Event('pix_payment_confirmed', {
+    sendGA4Event('purchase', {
       transaction_id: anonymizedPayment,
-      plan: paymentData.planType,
       value: paymentData.amount,
       currency: 'BRL',
-      manual: options.manual,
+      payment_method: 'pix',
+      items: [{
+        item_id: paymentData.planType === 'monthly' ? 'premium_monthly' : 'premium_annual',
+        item_name: paymentData.planType === 'monthly' ? 'Premium Mensal' : 'Premium Anual',
+        price: paymentData.amount,
+        quantity: 1,
+      }],
     })
 
     const successMessage = paymentData.isGuest
