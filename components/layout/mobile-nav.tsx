@@ -75,9 +75,6 @@ export function MobileNav() {
 
     return (
         <>
-            {/* Spacer to prevent content from being hidden behind the fixed nav */}
-            <div className="h-16 md:hidden" />
-
             <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60 md:hidden pb-safe">
                 <div className="flex h-16 items-center justify-around px-2">
                     {navItems.map((item) => {
