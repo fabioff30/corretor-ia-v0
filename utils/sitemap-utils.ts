@@ -23,8 +23,9 @@ export async function updateSitemap(): Promise<boolean> {
  */
 export async function getBlogPostUrlsForSitemap(baseUrl: string) {
   try {
-    // Get up to 100 posts for the sitemap
-    const { posts } = await getPosts(1, 100, true)
+    // Get up to 100 posts for the sitemap (use cache, don't force refresh)
+    // The sitemap itself has a 1-hour revalidation period
+    const { posts } = await getPosts(1, 100, false)
 
     return posts.map((post) => ({
       url: `${baseUrl}/blog/${post.slug}`,

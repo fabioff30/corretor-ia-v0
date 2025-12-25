@@ -64,15 +64,11 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/favicon.png" sizes="180x180" />
         <link rel="manifest" href="/manifest.json" />
-        <Script id="canonical-url" strategy="beforeInteractive">
-          {`
-            // Set canonical URL dynamically
-            const link = document.createElement('link');
-            link.rel = 'canonical';
-            link.href = 'https://www.corretordetextoonline.com.br' + window.location.pathname + window.location.search;
-            document.head.appendChild(link);
-          `}
-        </Script>
+
+        {/* Canonical URLs are handled by:
+            1. Middleware (canonical.ts) - adds Link header
+            2. Page metadata (alternates.canonical)
+            No client-side script needed. */}
 
         {/* Structured Data for Corretor de Texto */}
         <Script id="structured-data-corretor" type="application/ld+json">

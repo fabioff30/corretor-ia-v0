@@ -4,7 +4,7 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { SharePost } from "@/components/blog/share-post"
 import { RelatedPosts } from "@/components/blog/related-posts"
 import { TableOfContents } from "@/components/blog/table-of-contents"
-import { type WPPost, formatWpDate, calculateReadingTime, getRelatedPosts } from "@/utils/wordpress-api"
+import { type WPPost, formatWpDate, calculateReadingTime } from "@/utils/wordpress-api"
 import { Suspense } from "react"
 import { SupportButton } from "@/components/support-button"
 import { createSafeHtml } from "@/utils/html-sanitizer"
@@ -12,9 +12,10 @@ import { AdminRefreshButton } from "@/components/admin-refresh-button"
 
 interface BlogPostContentProps {
   post: WPPost
+  relatedPosts?: WPPost[]
 }
 
-export async function BlogPostContent({ post }: BlogPostContentProps) {
+export function BlogPostContent({ post, relatedPosts = [] }: BlogPostContentProps) {
   // Get featured image URL if available
   const featuredImage = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/placeholder.svg"
 
@@ -29,9 +30,6 @@ export async function BlogPostContent({ post }: BlogPostContentProps) {
 
   // Get author avatar
   const authorAvatar = post._embedded?.author?.[0]?.avatar_urls?.["96"] || ""
-
-  // Fetch related posts
-  const relatedPosts = await getRelatedPosts(post.slug)
 
   // Process content to fix any styling issues
   const processedContent = processWordPressContent(post.content.rendered)

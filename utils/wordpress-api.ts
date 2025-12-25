@@ -7,6 +7,10 @@ const API_URL = "https://blog.corretordetextoonline.com.br/wp-json/wp/v2"
 // Reduced revalidation time from 3600 (1 hour) to 300 (5 minutes)
 const DEFAULT_REVALIDATION_TIME = 300
 
+// Timeout for WordPress API calls (10 seconds)
+// Prevents hanging requests that could delay page rendering for crawlers
+const FETCH_TIMEOUT_MS = 10000
+
 export interface WPPost {
   id: number
   slug: string
@@ -81,6 +85,7 @@ export async function getPosts(
 
     const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&page=${page}&per_page=${perPage}`, {
       next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -120,6 +125,7 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
 
     const response = await fetch(`${API_URL}/posts?slug=${slug}&_embed=author,wp:featuredmedia`, {
       next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -154,6 +160,7 @@ export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefre
 
     const response = await fetch(`${API_URL}/posts?_embed=author,wp:featuredmedia&per_page=${limit}`, {
       next: forceRefresh ? { revalidate: 0 } : { revalidate: DEFAULT_REVALIDATION_TIME },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     if (!response.ok) {

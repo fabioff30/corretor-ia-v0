@@ -3,8 +3,9 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { BlogPostList } from "@/components/blog/blog-post-list"
 import { BlogPageSkeleton } from "@/components/blog/blog-page-skeleton"
 import { AdminRefreshButton } from "@/components/admin-refresh-button"
-export const dynamic = "force-dynamic"
-export const revalidate = 900 // 15 minutes in seconds
+
+// ISR: revalidate every 15 minutes for fresh content while maintaining cache
+export const revalidate = 900
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { page } = await searchParams
@@ -12,10 +13,23 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const canonicalUrl = `https://www.corretordetextoonline.com.br/blog${pageParam}`
 
   return {
-    title: "Blog | CorretorIA",
-    description: "Artigos e dicas sobre comunicação escrita, português e muito mais",
+    title: "Blog | CorretorIA - Dicas de Português e Comunicação",
+    description: "Artigos e dicas sobre comunicação escrita, português, gramática e muito mais. Aprenda a escrever melhor com o CorretorIA.",
     alternates: {
       canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: "Blog CorretorIA - Dicas de Português e Comunicação",
+      description: "Artigos e dicas sobre comunicação escrita, português, gramática e muito mais.",
+      url: canonicalUrl,
+      siteName: "CorretorIA",
+      locale: "pt_BR",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: "Blog CorretorIA",
+      description: "Artigos e dicas sobre comunicação escrita e português.",
     },
   }
 }

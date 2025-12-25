@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next"
 import { getBlogPostUrlsForSitemap } from "@/utils/sitemap-utils"
 
-// Prevent static generation since we make external WordPress API calls
-export const dynamic = 'force-dynamic'
+// ISR: revalidate sitemap every hour (3600 seconds)
+// This balances freshness with performance for search engine crawlers
+export const revalidate = 3600
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.corretordetextoonline.com.br"

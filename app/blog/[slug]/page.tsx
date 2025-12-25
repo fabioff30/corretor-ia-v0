@@ -1,9 +1,23 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getPostBySlug, extractExcerpt } from "@/utils/wordpress-api"
+import { getPostBySlug, extractExcerpt, getPosts, getRelatedPosts } from "@/utils/wordpress-api"
 import { BlogPostContent } from "@/components/blog/blog-post-content"
-export const dynamic = "force-dynamic" // Forçar renderização dinâmica
-export const revalidate = 900 // 15 minutes in seconds
+
+// ISR: revalidate every 15 minutes for fresh content while maintaining cache
+export const revalidate = 900
+
+// Pre-render top 50 posts at build time for faster indexing
+export async function generateStaticParams() {
+  try {
+    const { posts } = await getPosts(1, 50)
+    return posts.map((post) => ({
+      slug: post.slug,
+    }))
+  } catch (error) {
+    console.error("Error generating static params for blog posts:", error)
+    return []
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -55,11 +69,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getPostBySlug(slug)
+
+  // Fetch post and related posts in parallel for better performance
+  const [post, relatedPosts] = await Promise.all([
+    getPostBySlug(slug),
+    getRelatedPosts(slug, 4),
+  ])
 
   if (!post) {
     notFound()
   }
 
-  return <BlogPostContent post={post} />
+  return <BlogPostContent post={post} relatedPosts={relatedPosts} />
 }
