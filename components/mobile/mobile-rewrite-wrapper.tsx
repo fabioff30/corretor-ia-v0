@@ -306,12 +306,12 @@ export function MobileRewriteWrapper({
                 usageLimit={rewritesDailyLimit}
             />
 
-            <MobileFAB
+            {/* <MobileFAB
                 onSettingsClick={handleSettingsClick}
                 onFileUpload={onFileUpload}
                 onHistoryClick={handleHistoryClick}
                 onHelpClick={handleHelpClick}
-            />
+            /> */}
 
             <AnimatePresence>
                 {isDrawerOpen && (

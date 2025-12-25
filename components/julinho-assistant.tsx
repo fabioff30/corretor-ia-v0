@@ -545,8 +545,8 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         </DialogContent>
       </Dialog>
 
-      {/* CTA popup desativado - usuários fechavam sem interagir */}
-      {/* <JulinhoCTA onOpenChat={handleOpenChat} position={position} /> */}
+      {/* CTA popup - avisa que Julinho pode ajudar via WhatsApp */}
+      <JulinhoCTA onOpenChat={handleOpenChat} position={position} />
     </>
   )
 }

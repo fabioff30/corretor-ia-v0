@@ -145,14 +145,14 @@ export function MobileDetectorWrapper({
                 showAIToggle={false}
             />
 
-            <MobileFAB
+            {/* <MobileFAB
                 onFileUpload={onFileUpload}
                 onHistoryClick={handleHistoryClick}
                 onHelpClick={handleHelpClick}
                 // Hide AI Toggle and Settings for Detector
                 onAIToggle={undefined}
                 onSettingsClick={undefined}
-            />
+            /> */}
         </div>
     )
 }

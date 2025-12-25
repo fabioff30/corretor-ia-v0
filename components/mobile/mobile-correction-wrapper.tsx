@@ -243,13 +243,13 @@ export function MobileCorrectionWrapper({
         onToneChange={handleToneChange}
       />
 
-      {/* Floating Action Button */}
-      <MobileFAB
+      {/* Floating Action Button - desabilitado temporariamente */}
+      {/* <MobileFAB
         onFileUpload={onFileUpload}
         onAIToggle={() => handleAIToggle(!aiEnabled)}
         onHistoryClick={handleHistoryClick}
         onHelpClick={handleHelpClick}
-      />
+      /> */}
     </div>
   )
 }
