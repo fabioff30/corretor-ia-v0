@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Image from "next/image"
 import { MobileCorrectionInput } from "./mobile-correction-input"
 import { MobileQuickStats } from "./mobile-quick-stats"
 import { useUser } from "@/hooks/use-user"
@@ -89,7 +90,15 @@ export function MobileHero({
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.3 }}
       >
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <Image
+            src="/images/logo-corretoria.png"
+            alt="CorretorIA"
+            width={180}
+            height={40}
+            priority
+            className="h-10 w-auto mx-auto"
+          />
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight pb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             {title}
           </h1>
