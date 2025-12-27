@@ -324,3 +324,325 @@ export async function retryJulinhoActivation(
     error: `Failed after ${maxRetries} attempts: ${lastError}`
   }
 }
+
+// ============================================
+// BROADCAST CAMPAIGN FUNCTIONS
+// ============================================
+
+interface BroadcastFilters {
+  engagement?: 'high' | 'medium' | 'low' | 'all'
+  subscriptionStatus?: 'active' | 'expired' | 'free' | 'all'
+  minMessages?: number
+  state?: string
+}
+
+interface BroadcastPreviewResult {
+  success: boolean
+  error?: string
+  data?: {
+    totalRecipients: number
+    breakdown: {
+      highEngagement: number
+      mediumEngagement: number
+      lowEngagement: number
+      activeSubscribers: number
+    }
+    estimatedTime: string
+  }
+}
+
+interface BroadcastResult {
+  success: boolean
+  error?: string
+  message?: string
+  config?: {
+    messageLength: number
+    filters: BroadcastFilters
+    delayBetweenMessages: string
+    testMode: boolean
+  }
+}
+
+/**
+ * Gets a preview of how many contacts would receive a broadcast.
+ *
+ * @param filters - Filters to apply to the contact list
+ * @returns Preview with contact counts and estimated time
+ */
+export async function getJulinhoBroadcastPreview(
+  filters: BroadcastFilters = {}
+): Promise<BroadcastPreviewResult> {
+  if (!JULINHO_DASHBOARD_SECRET) {
+    return {
+      success: false,
+      error: 'Julinho integration not configured'
+    }
+  }
+
+  try {
+    const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+
+    const response = await fetch(
+      `${JULINHO_API_URL}/api/webhook/broadcast-preview`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`,
+        },
+        body: JSON.stringify({ filters }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Julinho] Broadcast preview failed:', {
+        status: response.status,
+        error: errorText
+      })
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${errorText}`
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      data: data.data
+    }
+  } catch (error) {
+    console.error('[Julinho] Broadcast preview error:', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error'
+    }
+  }
+}
+
+/**
+ * Sends a custom broadcast message to Julinho contacts.
+ *
+ * @param message - Message to send (supports {nome} and {phone} placeholders)
+ * @param filters - Filters to apply to the contact list
+ * @param delaySeconds - Delay between messages (default: 5)
+ * @param testMode - If true, only sends to first 3 contacts (default: false)
+ * @returns Result of the broadcast request
+ */
+export async function sendJulinhoBroadcast(
+  message: string,
+  filters: BroadcastFilters = {},
+  delaySeconds: number = 5,
+  testMode: boolean = false
+): Promise<BroadcastResult> {
+  if (!JULINHO_DASHBOARD_SECRET) {
+    return {
+      success: false,
+      error: 'Julinho integration not configured'
+    }
+  }
+
+  if (!message || message.trim().length === 0) {
+    return {
+      success: false,
+      error: 'Message content is required'
+    }
+  }
+
+  try {
+    const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+
+    console.log('[Julinho] Starting broadcast:', {
+      messageLength: message.length,
+      filters,
+      delaySeconds,
+      testMode
+    })
+
+    const response = await fetch(
+      `${JULINHO_API_URL}/api/webhook/send-custom-broadcast`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`,
+        },
+        body: JSON.stringify({
+          message,
+          filters,
+          delaySeconds,
+          testMode
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Julinho] Broadcast failed:', {
+        status: response.status,
+        error: errorText
+      })
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${errorText}`
+      }
+    }
+
+    const data = await response.json()
+
+    console.log('[Julinho] Broadcast started:', data)
+
+    return {
+      success: true,
+      message: data.message,
+      config: data.config
+    }
+  } catch (error) {
+    console.error('[Julinho] Broadcast error:', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error'
+    }
+  }
+}
+
+/**
+ * Sends a WhatsApp template message via Julinho.
+ * Uses Meta-approved templates for transactional messages.
+ *
+ * @param phone - WhatsApp phone number
+ * @param templateName - Name of the approved template
+ * @param language - Language code (default: pt_BR)
+ * @param parameters - Template parameters
+ * @returns Result of the template send
+ */
+export async function sendJulinhoTemplate(
+  phone: string,
+  templateName: string,
+  language: string = 'pt_BR',
+  parameters: string[] = []
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  if (!JULINHO_DASHBOARD_SECRET) {
+    return {
+      success: false,
+      error: 'Julinho integration not configured'
+    }
+  }
+
+  const normalizedPhone = normalizePhoneNumber(phone)
+
+  try {
+    const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+
+    const response = await fetch(
+      `${JULINHO_API_URL}/api/webhook/send-template`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`,
+        },
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          templateName,
+          language,
+          parameters
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Julinho] Template send failed:', {
+        status: response.status,
+        error: errorText,
+        phone: `${normalizedPhone.slice(0, 4)}****`,
+        template: templateName
+      })
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${errorText}`
+      }
+    }
+
+    const data = await response.json()
+
+    console.log('[Julinho] Template sent:', {
+      phone: `${normalizedPhone.slice(0, 4)}****`,
+      template: templateName,
+      messageId: data.data?.messageId
+    })
+
+    return {
+      success: true,
+      messageId: data.data?.messageId
+    }
+  } catch (error) {
+    console.error('[Julinho] Template error:', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error'
+    }
+  }
+}
+
+/**
+ * Gets list of available WhatsApp templates from Julinho.
+ *
+ * @returns List of approved templates
+ */
+export async function getJulinhoTemplates(): Promise<{
+  success: boolean
+  error?: string
+  templates?: Array<{ name: string; status: string; language: string }>
+}> {
+  if (!JULINHO_DASHBOARD_SECRET) {
+    return {
+      success: false,
+      error: 'Julinho integration not configured'
+    }
+  }
+
+  try {
+    const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+
+    const response = await fetch(
+      `${JULINHO_API_URL}/api/webhook/templates`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${errorText}`
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      templates: data.data?.templates || []
+    }
+  } catch (error) {
+    console.error('[Julinho] Templates fetch error:', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error'
+    }
+  }
+}
