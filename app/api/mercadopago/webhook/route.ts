@@ -695,7 +695,34 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
     const paidAtIso = payment.date_approved || new Date().toISOString()
     const { startDateIso, expiresAtIso } = calculateSubscriptionWindow('monthly', paidAtIso)
 
-    // Check if user already has an active subscription
+    // Check for idempotency - if subscription with this payment ID already exists
+    const mpSubscriptionId = `bundle_${payment.id}`
+    const { data: existingByPayment } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('mp_subscription_id', mpSubscriptionId)
+      .maybeSingle()
+
+    if (existingByPayment) {
+      console.log('[MP Webhook Bundle] Subscription already exists for this payment (idempotency check):', mpSubscriptionId)
+      // Already processed, just ensure profile is updated
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          plan_type: 'pro',
+          subscription_status: 'active',
+          subscription_expires_at: expiresAtIso,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (profileError) {
+        console.error('[MP Webhook Bundle] Error updating profile (idempotency):', profileError)
+      }
+      return
+    }
+
+    // Check if user already has an active subscription (different payment)
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('id')
@@ -712,7 +739,7 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
       .from('subscriptions')
       .insert({
         user_id: userId,
-        mp_subscription_id: `bundle_${payment.id}`,
+        mp_subscription_id: mpSubscriptionId,
         mp_payer_id: payment.payer?.id,
         status: 'authorized',
         start_date: startDateIso,
@@ -725,6 +752,11 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
       .single()
 
     if (insertError) {
+      // Double-check for race condition
+      if (insertError.code === '23505') {
+        console.log('[MP Webhook Bundle] Subscription already exists (race condition), skipping:', mpSubscriptionId)
+        return
+      }
       console.error('[MP Webhook Bundle] Error creating subscription:', insertError)
       return
     }

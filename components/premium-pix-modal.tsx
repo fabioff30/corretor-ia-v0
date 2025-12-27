@@ -84,14 +84,21 @@ export function PremiumPixModal({
 
     setStatus('success')
 
+    const planNames: Record<string, { id: string; name: string }> = {
+      monthly: { id: 'premium_monthly', name: 'Premium Mensal' },
+      annual: { id: 'premium_annual', name: 'Premium Anual' },
+      bundle_monthly: { id: 'bundle_monthly', name: 'CorretorIA + Julinho Mensal' },
+    }
+    const planInfo = planNames[paymentData.planType] || planNames.monthly
+
     sendGA4Event('purchase', {
       transaction_id: anonymizedPayment,
       value: paymentData.amount,
       currency: 'BRL',
       payment_method: 'pix',
       items: [{
-        item_id: paymentData.planType === 'monthly' ? 'premium_monthly' : 'premium_annual',
-        item_name: paymentData.planType === 'monthly' ? 'Premium Mensal' : 'Premium Anual',
+        item_id: planInfo.id,
+        item_name: planInfo.name,
         price: paymentData.amount,
         quantity: 1,
       }],
@@ -438,7 +445,7 @@ export function PremiumPixModal({
                   Pagamento confirmado!
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Seu plano {paymentData.planType === 'monthly' ? 'mensal' : 'anual'} foi ativado.
+                  Seu plano {paymentData.planType === 'bundle_monthly' ? 'CorretorIA + Julinho' : paymentData.planType === 'monthly' ? 'mensal' : 'anual'} foi ativado.
                 </p>
               </div>
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -576,7 +583,11 @@ export function PremiumPixModal({
               {/* Plan info */}
               <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                 <p className="text-sm text-green-800 dark:text-green-200">
-                  <strong>Plano selecionado:</strong> Premium {paymentData.planType === 'monthly' ? 'Mensal' : 'Anual'}
+                  <strong>Plano selecionado:</strong> {
+                    paymentData.planType === 'bundle_monthly'
+                      ? 'CorretorIA + Julinho Mensal'
+                      : `Premium ${paymentData.planType === 'monthly' ? 'Mensal' : 'Anual'}`
+                  }
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-300 mt-1">
                   Após o pagamento, seu plano será ativado automaticamente.
