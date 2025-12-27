@@ -109,8 +109,8 @@ export async function createCheckoutSession(
   // Get or create customer
   const customerId = await getOrCreateStripeCustomer(userId, email)
 
-  // Determine if this is a bundle purchase
-  const isBundle = priceId === STRIPE_PRICES.BUNDLE_MONTHLY
+  // Determine if this is a bundle purchase (by whatsappPhone presence or price ID)
+  const isBundle = !!whatsappPhone || priceId === STRIPE_PRICES.BUNDLE_MONTHLY
 
   // Prepare metadata
   const baseMetadata = userId

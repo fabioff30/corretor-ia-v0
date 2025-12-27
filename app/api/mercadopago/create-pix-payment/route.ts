@@ -20,13 +20,14 @@ interface CreatePixPaymentRequest {
   guestEmail?: string // Email for guest (non-logged) users
   couponCode?: string // Optional coupon code for discounts
   whatsappPhone?: string // Required for bundle purchases (Julinho activation)
+  testMode?: boolean // Test mode with R$1 price
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, couponCode, whatsappPhone } = body
+    const { planType, userId, couponCode, whatsappPhone, testMode } = body
     const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : undefined
     const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : undefined
 
@@ -105,7 +106,14 @@ export async function POST(request: NextRequest) {
     // Apply discount if coupon code is provided (ZhX6Oy78 = 50% off)
     // Note: bundle_monthly already has promotional price, no additional discount
     const discountPercent = (couponCode === 'ZhX6Oy78' && !isBundle) ? 50 : 0
-    const finalAmount = plan.amount * (1 - discountPercent / 100)
+
+    // Test mode: use R$1 instead of regular price
+    const finalAmount = testMode ? 1.00 : plan.amount * (1 - discountPercent / 100)
+    const description = testMode ? `[TESTE] ${plan.description}` : plan.description
+
+    if (testMode) {
+      console.log('[MP PIX] TEST MODE: Creating R$1 payment for testing')
+    }
 
     // Initialize clients
     const mpClient = getMercadoPagoClient()
@@ -188,7 +196,7 @@ export async function POST(request: NextRequest) {
       finalAmount,
       finalUserEmail,
       externalReference,
-      plan.description,
+      description,
       30 // 30 minutes expiration
     )
 

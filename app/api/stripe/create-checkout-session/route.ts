@@ -15,19 +15,23 @@ interface CreateCheckoutRequest {
   userId?: string // Optional for guest checkouts
   userEmail?: string // Optional for authenticated users
   guestEmail?: string // Required for guest checkouts
-  planType: 'monthly' | 'annual' | 'bundle_monthly'
+  planType: 'monthly' | 'annual' | 'bundle_monthly' | 'bundle_monthly_test'
   returnUrl?: string
   couponCode?: string // Optional coupon code for discounts
   whatsappPhone?: string // Required for bundle purchases (for Julinho activation)
+  testPriceId?: string // Optional test price ID for testing
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CreateCheckoutRequest = await request.json()
-    const { userId, userEmail, guestEmail, planType, returnUrl, couponCode, whatsappPhone } = body
+    const { userId, userEmail, guestEmail, planType, returnUrl, couponCode, whatsappPhone, testPriceId } = body
 
     // Determine if this is a guest checkout
     const isGuestCheckout = !userId
+
+    // Check if this is a test mode request
+    const isTestMode = planType === 'bundle_monthly_test' || !!testPriceId
 
     // Validate: must have userId OR guestEmail
     if (!userId && !guestEmail) {
@@ -38,15 +42,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate plan type
-    if (!planType || !['monthly', 'annual', 'bundle_monthly'].includes(planType)) {
+    if (!planType || !['monthly', 'annual', 'bundle_monthly', 'bundle_monthly_test'].includes(planType)) {
       return NextResponse.json(
-        { error: 'Invalid plan type. Must be "monthly", "annual", or "bundle_monthly"' },
+        { error: 'Invalid plan type. Must be "monthly", "annual", "bundle_monthly", or "bundle_monthly_test"' },
         { status: 400 }
       )
     }
 
-    // Bundle requires WhatsApp phone for Julinho activation
-    if (planType === 'bundle_monthly' && !whatsappPhone) {
+    // Bundle requires WhatsApp phone for Julinho activation (including test mode)
+    const isBundlePlan = planType === 'bundle_monthly' || planType === 'bundle_monthly_test'
+    if (isBundlePlan && !whatsappPhone) {
       return NextResponse.json(
         { error: 'WhatsApp phone is required for bundle purchases' },
         { status: 400 }
@@ -69,20 +74,27 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Checkout]', isGuestCheckout ? 'Guest' : 'Authenticated', 'checkout for:', finalEmail, 'plan:', planType)
 
-    // Get price ID based on plan type
+    // Get price ID based on plan type (or use test price ID if provided)
     let priceId: string
-    switch (planType) {
-      case 'monthly':
-        priceId = STRIPE_PRICES.MONTHLY
-        break
-      case 'annual':
-        priceId = STRIPE_PRICES.ANNUAL
-        break
-      case 'bundle_monthly':
-        priceId = STRIPE_PRICES.BUNDLE_MONTHLY
-        break
-      default:
-        priceId = STRIPE_PRICES.MONTHLY
+    if (testPriceId) {
+      // Test mode: use provided test price ID
+      priceId = testPriceId
+      console.log('[Stripe Checkout] TEST MODE: Using test price ID:', priceId)
+    } else {
+      switch (planType) {
+        case 'monthly':
+          priceId = STRIPE_PRICES.MONTHLY
+          break
+        case 'annual':
+          priceId = STRIPE_PRICES.ANNUAL
+          break
+        case 'bundle_monthly':
+        case 'bundle_monthly_test':
+          priceId = STRIPE_PRICES.BUNDLE_MONTHLY
+          break
+        default:
+          priceId = STRIPE_PRICES.MONTHLY
+      }
     }
 
     // Determine URLs - use request origin for correct environment
@@ -93,7 +105,7 @@ export async function POST(request: NextRequest) {
     // For all plans, redirect to dashboard after success
     let successUrl: string
     if (isGuestCheckout) {
-      successUrl = planType === 'bundle_monthly'
+      successUrl = isBundlePlan
         ? `${baseUrl}/login?payment_success=true&bundle=true&email=${encodeURIComponent(finalEmail)}`
         : `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}`
     } else {
@@ -101,7 +113,7 @@ export async function POST(request: NextRequest) {
       successUrl = `${baseUrl}/dashboard?payment_success=true&plan=${planType}`
     }
 
-    const cancelUrl = planType === 'bundle_monthly'
+    const cancelUrl = isBundlePlan
       ? `${baseUrl}/oferta-fim-de-ano?canceled=true`
       : `${baseUrl}/premium?canceled=true`
 
@@ -114,7 +126,7 @@ export async function POST(request: NextRequest) {
       cancelUrl,
       isGuestCheckout, // Pass flag to mark as guest in metadata
       couponCode, // Optional coupon code
-      planType === 'bundle_monthly' ? whatsappPhone : undefined // Pass WhatsApp for bundle
+      isBundlePlan ? whatsappPhone : undefined // Pass WhatsApp for bundle (including test)
     )
 
     return NextResponse.json(
