@@ -180,6 +180,15 @@ See `SUPABASE_SETUP.md` for complete database setup instructions.
 
 ### Payment Integration
 
+> ⚠️ **CRITICAL RULE**: All payment flows MUST follow the exact same pattern as `/premium`. This means:
+> 1. **Authentication BEFORE payment**: User must be logged in or register BEFORE generating PIX/payment
+> 2. **No guest payments**: Never allow payment generation without an authenticated user
+> 3. **Registration dialog pattern**: Use `RegisterForPixDialog` pattern (or adapted version like `RegisterForBundleDialog`)
+> 4. **Auto-generate after registration**: Store pending data in localStorage, then auto-trigger payment after successful registration
+> 5. **Reference implementation**: Always check `/app/premium/page.tsx` and `/components/premium/` as the canonical implementation
+>
+> This prevents 401 errors on payment verification endpoints and ensures all payments are properly linked to user accounts.
+
 #### Mercado Pago (Primary - Brazil)
 - **PIX Payments**: One-time payments for subscriptions
   - 30-minute expiration on QR codes
