@@ -7,10 +7,33 @@ import Stripe from 'stripe'
 import { getServerConfig } from '@/utils/env-config'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
-// Initialize Stripe SDK
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
-  typescript: true,
+// Lazy-initialized Stripe instance to avoid build-time errors
+let stripeInstance: Stripe | null = null
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+    }
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: '2024-11-20.acacia',
+      typescript: true,
+    })
+  }
+  return stripeInstance
+}
+
+// Export stripe getter for backwards compatibility
+export const stripe = new Proxy({} as Stripe, {
+  get: (_target, prop) => {
+    const instance = getStripe()
+    const value = (instance as any)[prop]
+    if (typeof value === 'function') {
+      return value.bind(instance)
+    }
+    return value
+  },
 })
 
 // Price IDs from Stripe Dashboard (Production Mode)
