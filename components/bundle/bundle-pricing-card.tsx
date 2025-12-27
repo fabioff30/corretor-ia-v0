@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import {
   Sparkles,
@@ -13,6 +13,7 @@ import {
   Zap,
   Crown,
   CreditCard,
+  Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { WhatsAppInput, validateWhatsAppPhone } from "./whatsapp-input"
 import { PremiumPixModal } from "@/components/premium-pix-modal"
+import { RegisterForBundleDialog } from "./register-for-bundle-dialog"
 import { useUser } from "@/hooks/use-user"
 import { useToast } from "@/hooks/use-toast"
 import { sendGTMEvent } from "@/utils/gtm-helper"
@@ -30,53 +32,42 @@ interface BundlePricingCardProps {
 }
 
 export function BundlePricingCard({ className }: BundlePricingCardProps) {
-  const [email, setEmail] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isCardLoading, setIsCardLoading] = useState(false)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [paymentData, setPaymentData] = useState<any>(null)
-  const [emailError, setEmailError] = useState("")
   const [whatsappError, setWhatsappError] = useState("")
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false)
+  const [justRegistered, setJustRegistered] = useState(false)
   const pixGeneratedRef = useRef(false)
 
   const { user, profile } = useUser()
   const { toast } = useToast()
 
-  // Pre-fill email if user is logged in
-  useState(() => {
-    if (user?.email) {
-      setEmail(user.email)
-    }
-  })
+  // Get email from user if logged in
+  const userEmail = user?.email || profile?.email || ""
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
+  // Create PIX payment
+  const createPixPayment = useCallback(async (whatsappPhone?: string) => {
+    const phoneToUse = whatsappPhone || whatsapp
 
-  const handleSubmit = async () => {
-    // Prevent double submission
     if (pixGeneratedRef.current || isLoading) return
 
-    // Reset errors
-    setEmailError("")
-    setWhatsappError("")
-
-    // Validate email
-    if (!email.trim()) {
-      setEmailError("Digite seu email")
-      return
-    }
-    if (!validateEmail(email)) {
-      setEmailError("Email inválido")
-      return
-    }
-
     // Validate WhatsApp
-    const whatsappValidation = validateWhatsAppPhone(whatsapp)
+    const whatsappValidation = validateWhatsAppPhone(phoneToUse)
     if (!whatsappValidation.isValid) {
       setWhatsappError(whatsappValidation.message || "WhatsApp inválido")
+      return
+    }
+
+    // Must be logged in at this point
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Você precisa estar logado para gerar o PIX",
+      })
       return
     }
 
@@ -101,9 +92,8 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planType: "bundle_monthly",
-          guestEmail: user ? undefined : email,
-          userEmail: user ? email : undefined,
-          whatsappPhone: whatsapp,
+          userEmail: userEmail,
+          whatsappPhone: phoneToUse,
         }),
       })
 
@@ -135,6 +125,54 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
     } finally {
       setIsLoading(false)
     }
+  }, [whatsapp, user, userEmail, isLoading, toast])
+
+  // Auto-generate PIX after registration
+  useEffect(() => {
+    if (!justRegistered || !user) return
+
+    const pendingWhatsApp = localStorage.getItem('pendingBundleWhatsApp')
+    if (pendingWhatsApp && !pixGeneratedRef.current) {
+      localStorage.removeItem('pendingBundleWhatsApp')
+      setJustRegistered(false)
+      setWhatsapp(pendingWhatsApp)
+
+      // Small delay to ensure user state is fully updated
+      setTimeout(() => {
+        createPixPayment(pendingWhatsApp)
+      }, 500)
+    }
+  }, [user, justRegistered, createPixPayment])
+
+  const handleSubmit = async () => {
+    // Reset errors
+    setWhatsappError("")
+
+    // Validate WhatsApp
+    const whatsappValidation = validateWhatsAppPhone(whatsapp)
+    if (!whatsappValidation.isValid) {
+      setWhatsappError(whatsappValidation.message || "WhatsApp inválido")
+      return
+    }
+
+    // If not logged in, open registration dialog
+    if (!user) {
+      localStorage.setItem('pendingBundleWhatsApp', whatsapp)
+      setIsRegisterDialogOpen(true)
+      return
+    }
+
+    // User is logged in, generate PIX directly
+    await createPixPayment()
+  }
+
+  const handleRegisterSuccess = () => {
+    setIsRegisterDialogOpen(false)
+    setJustRegistered(true)
+    toast({
+      title: "Conta criada!",
+      description: "Gerando seu QR Code PIX...",
+    })
   }
 
   const handlePixModalClose = () => {
@@ -148,23 +186,20 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
     if (isCardLoading || isLoading) return
 
     // Reset errors
-    setEmailError("")
     setWhatsappError("")
-
-    // Validate email
-    if (!email.trim()) {
-      setEmailError("Digite seu email")
-      return
-    }
-    if (!validateEmail(email)) {
-      setEmailError("Email inválido")
-      return
-    }
 
     // Validate WhatsApp
     const whatsappValidation = validateWhatsAppPhone(whatsapp)
     if (!whatsappValidation.isValid) {
       setWhatsappError(whatsappValidation.message || "WhatsApp inválido")
+      return
+    }
+
+    // If not logged in, open registration dialog
+    if (!user) {
+      localStorage.setItem('pendingBundleWhatsApp', whatsapp)
+      localStorage.setItem('pendingBundlePaymentMethod', 'card')
+      setIsRegisterDialogOpen(true)
       return
     }
 
@@ -189,8 +224,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planType: "bundle_monthly",
-          guestEmail: user ? undefined : email,
-          userEmail: user ? email : undefined,
+          userEmail: userEmail,
           userId: user?.id,
           whatsappPhone: whatsapp,
         }),
@@ -338,30 +372,18 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
 
             {/* Form */}
             <div className="space-y-4 pt-4 border-t border-white/10">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-amber-400" />
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setEmailError("")
-                  }}
-                  disabled={isLoading}
-                  className={cn(
-                    "h-12 text-base bg-background/50 backdrop-blur-sm border-2",
-                    emailError ? "border-red-500/50" : "border-border/50"
-                  )}
-                />
-                {emailError && (
-                  <p className="text-xs text-red-500">{emailError}</p>
-                )}
-              </div>
+              {/* Show logged in user email */}
+              {user && userEmail && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    Email da conta
+                  </Label>
+                  <div className="h-12 px-4 flex items-center rounded-md bg-primary/5 border border-primary/20 text-sm text-muted-foreground">
+                    {userEmail}
+                  </div>
+                </div>
+              )}
 
               <WhatsAppInput
                 value={whatsapp}
@@ -426,12 +448,24 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                Assinatura mensal. Acesso imediato após confirmação.
+                {user
+                  ? "Assinatura mensal. Acesso imediato após confirmação."
+                  : "Crie sua conta para continuar com o pagamento."
+                }
               </p>
             </div>
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Registration Dialog */}
+      <RegisterForBundleDialog
+        isOpen={isRegisterDialogOpen}
+        onClose={() => setIsRegisterDialogOpen(false)}
+        onSuccess={handleRegisterSuccess}
+        whatsappPhone={whatsapp}
+        planPrice={19.90}
+      />
 
       {/* PIX Modal */}
       {paymentData && (
@@ -445,8 +479,8 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
             amount: paymentData.amount,
             planType: 'bundle_monthly',
             expiresAt: paymentData.expiresAt,
-            isGuest: !user,
-            payerEmail: email,
+            isGuest: false, // Always false now - user must be logged in
+            payerEmail: userEmail,
           }}
         />
       )}
