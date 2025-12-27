@@ -241,7 +241,7 @@ export async function sendJulinhoTemplateMessage(
     const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
 
     const response = await fetch(
-      `${JULINHO_API_URL}/api/webhook/messages/template`,
+      `${JULINHO_API_URL}/api/webhook/send-template`,
       {
         method: 'POST',
         headers: {
@@ -250,7 +250,8 @@ export async function sendJulinhoTemplateMessage(
         },
         body: JSON.stringify({
           phone: normalizedPhone,
-          template: templateName,
+          templateName: templateName, // Cloud API uses 'templateName' not 'template'
+          language: 'pt_BR',
         }),
       }
     )
@@ -549,9 +550,9 @@ export async function sendJulinhoTemplate(
         },
         body: JSON.stringify({
           phone: normalizedPhone,
-          templateName,
-          language,
-          parameters
+          templateName: templateName,
+          language: language,
+          parameters: parameters
         }),
       }
     )
