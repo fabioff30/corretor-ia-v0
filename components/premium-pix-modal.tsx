@@ -173,14 +173,17 @@ export function PremiumPixModal({
       return
     }
 
-    if (statusRef.current === 'success' || statusRef.current === 'error' || statusRef.current === 'awaitingActivation') {
+    // Don't restart polling if already completed successfully or in error state
+    if (statusRef.current === 'success' || statusRef.current === 'error') {
       return
     }
 
     let isCancelled = false
     let intervalId: ReturnType<typeof setInterval> | null = null
     let checkCount = 0
+    let autoActivationAttempted = false
     const maxChecks = 36 // 36 checks * 5s = 3 minutes timeout
+    const autoActivateAfterChecks = 6 // Try auto-activation after 30s (6 * 5s)
 
     const checkPayment = async () => {
       if (isCancelled || !paymentData || statusRef.current === 'success' || statusRef.current === 'error') {
@@ -233,18 +236,39 @@ export function PremiumPixModal({
           checkCount,
         })
 
-        // Only proceed if EVERYTHING is ready (payment + profile + subscription)
+        // Profile is activated - complete the flow
         if (data.ready) {
           await completeActivation({ manual: false })
           if (intervalId) {
             clearInterval(intervalId)
           }
         } else if (data.paymentApproved && !data.profileActivated) {
-          console.log('[PIX Modal] Payment approved, waiting for profile activation...')
+          console.log('[PIX Modal] Payment approved, waiting for profile activation...', { checkCount, autoActivationAttempted })
           setStatus('awaitingActivation')
-          if (intervalId) {
-            clearInterval(intervalId)
+
+          // If profile still not activated after autoActivateAfterChecks (30s), try auto-activation
+          if (checkCount >= autoActivateAfterChecks && !autoActivationAttempted) {
+            autoActivationAttempted = true
+            console.log('[PIX Modal] Auto-activating after waiting for webhook...')
+            try {
+              const activateResponse = await fetch('/api/mercadopago/activate-pix-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ paymentId: paymentData.paymentId }),
+              })
+
+              if (activateResponse.ok) {
+                console.log('[PIX Modal] Auto-activation successful')
+                // Don't complete yet - let the next poll verify
+              } else {
+                console.warn('[PIX Modal] Auto-activation failed:', await activateResponse.text())
+              }
+            } catch (autoError) {
+              console.error('[PIX Modal] Auto-activation error:', autoError)
+            }
           }
+          // Keep polling - don't clear interval here
         } else {
           // Payment not yet approved
           setStatus('waiting')

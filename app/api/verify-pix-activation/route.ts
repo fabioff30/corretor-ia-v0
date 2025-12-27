@@ -144,8 +144,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`[PIX Activation] Subscription created: ${subscriptionCreated}, status: ${subscription?.status || 'none'}`)
 
-    // Both conditions must be true for successful activation
-    const ready = paymentApproved && profileActivated && subscriptionCreated
+    // Ready when payment approved AND profile activated
+    // Note: subscription creation can happen async (Julinho integration, etc.)
+    // so we don't require subscriptionCreated for ready state
+    const ready = paymentApproved && profileActivated
 
     const duration = Date.now() - startTime
 

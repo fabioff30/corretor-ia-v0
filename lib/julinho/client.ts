@@ -124,7 +124,7 @@ export async function activateJulinhoSubscription(
           'Content-Type': 'application/json',
           'Authorization': `Basic ${credentials}`,
         },
-        body: JSON.stringify({ days }),
+        body: JSON.stringify({ days, source: 'corretoria-bundle' }),
       }
     )
 
