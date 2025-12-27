@@ -14,7 +14,7 @@ import {
 } from '@/lib/mercadopago/webhook-validator'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardEmail } from '@/lib/email/send'
+import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardEmail, sendBundleActivationEmail } from '@/lib/email/send'
 import { getPublicConfig } from '@/utils/env-config'
 import { CHRISTMAS_GIFT_CONFIG } from '@/lib/gift/config'
 import type { GiftPlanId } from '@/lib/gift/types'
@@ -752,7 +752,7 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
       .update({ status: 'consumed' })
       .eq('payment_intent_id', payment.id.toString())
 
-    // Send payment confirmation email
+    // Send bundle activation email with Julinho CTA
     const { data: userProfile } = await supabase
       .from('profiles')
       .select('email, full_name')
@@ -761,17 +761,14 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
 
     if (userProfile?.email) {
       try {
-        const appUrl = getPublicConfig().APP_URL
-        await sendPaymentApprovedEmail({
+        await sendBundleActivationEmail({
           to: { email: userProfile.email, name: userProfile.full_name || 'Usuário' },
-          name: userProfile.full_name || 'Usuário',
-          amount: payment.transaction_amount,
-          planType: 'bundle' as any,
-          activationLink: `${appUrl}/dashboard`,
+          name: userProfile.full_name,
+          whatsappPhone,
         })
-        console.log('[MP Webhook Bundle] Payment email sent to:', userProfile.email)
+        console.log('[MP Webhook Bundle] Bundle activation email sent to:', userProfile.email)
       } catch (emailError) {
-        console.error('[MP Webhook Bundle] Error sending email:', emailError)
+        console.error('[MP Webhook Bundle] Error sending bundle activation email:', emailError)
       }
     }
 

@@ -33,7 +33,7 @@ interface PixPaymentData {
   qrCode: string
   qrCodeText: string
   amount: number
-  planType: 'monthly' | 'annual'
+  planType: 'monthly' | 'annual' | 'bundle_monthly'
   expiresAt: string
   payerEmail?: string
   isGuest: boolean
@@ -112,6 +112,12 @@ export function PremiumPixModal({
 
     redirectTimeoutRef.current = window.setTimeout(() => {
       onSuccess?.()
+
+      // Bundle purchases: always redirect to dashboard
+      if (paymentData.planType === 'bundle_monthly' && !paymentData.isGuest) {
+        router.push('/dashboard?payment_success=true&plan=bundle_monthly')
+        return
+      }
 
       // Mobile + logged in: redirect to home
       if (isMobile && !paymentData.isGuest) {

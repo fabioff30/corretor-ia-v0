@@ -9,6 +9,7 @@ import {
 import { giftInvitationEmailTemplate } from "@/lib/email/templates/gift-invitation"
 import { giftBuyerRewardEmailTemplate } from "@/lib/email/templates/gift-buyer-reward"
 import { newYearBundleEmailTemplate } from "@/lib/email/templates/new-year-bundle"
+import { bundleActivationEmailTemplate } from "@/lib/email/templates/bundle-activation"
 
 type BasicContext = {
   to: EmailRecipient
@@ -197,6 +198,26 @@ export async function sendNewYearBundleEmail({
   isCancelled,
 }: NewYearBundleContext) {
   const template = newYearBundleEmailTemplate({ name, isFreePlan, isCancelled })
+  await sendBrevoEmail({
+    to: [to],
+    subject: template.subject,
+    htmlContent: template.htmlContent,
+    textContent: template.textContent,
+  })
+}
+
+type BundleActivationContext = {
+  to: EmailRecipient
+  name?: string | null
+  whatsappPhone?: string | null
+}
+
+export async function sendBundleActivationEmail({
+  to,
+  name,
+  whatsappPhone,
+}: BundleActivationContext) {
+  const template = bundleActivationEmailTemplate({ name, whatsappPhone })
   await sendBrevoEmail({
     to: [to],
     subject: template.subject,

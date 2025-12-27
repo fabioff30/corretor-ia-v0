@@ -438,12 +438,16 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
         <PremiumPixModal
           isOpen={isPixModalOpen}
           onClose={handlePixModalClose}
-          qrCode={paymentData.qrCode}
-          qrCodeText={paymentData.qrCodeText}
-          paymentId={paymentData.paymentId}
-          amount={paymentData.amount}
-          expiresAt={paymentData.expiresAt}
-          planType="bundle_monthly"
+          paymentData={{
+            paymentId: paymentData.paymentId,
+            qrCode: paymentData.qrCode,
+            qrCodeText: paymentData.qrCodeText,
+            amount: paymentData.amount,
+            planType: 'bundle_monthly',
+            expiresAt: paymentData.expiresAt,
+            isGuest: !user,
+            payerEmail: email,
+          }}
         />
       )}
     </>

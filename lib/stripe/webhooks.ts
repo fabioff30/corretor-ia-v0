@@ -5,7 +5,7 @@
 
 import Stripe from 'stripe'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendCancellationEmail, sendPremiumUpgradeEmail } from '@/lib/email/send'
+import { sendCancellationEmail, sendPremiumUpgradeEmail, sendBundleActivationEmail } from '@/lib/email/send'
 import { activateJulinhoSubscription } from '@/lib/julinho/client'
 
 /**
@@ -160,7 +160,7 @@ export async function handleCheckoutCompleted(
 
     console.log('[Stripe Webhook] Subscription activated for user:', userId)
 
-    // If this is a bundle purchase, also activate Julinho
+    // If this is a bundle purchase, also activate Julinho and send activation email
     if (isBundle && whatsappPhone) {
       console.log('[Stripe Webhook] Bundle purchase detected, activating Julinho for:', whatsappPhone)
 
@@ -176,6 +176,26 @@ export async function handleCheckoutCompleted(
       } catch (julinhoError) {
         console.error('[Stripe Webhook] Error calling Julinho API:', julinhoError)
         // CorretorIA is still activated - don't block the user
+      }
+
+      // Send bundle activation email with Julinho CTA
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single()
+
+        if (profile?.email) {
+          await sendBundleActivationEmail({
+            to: { email: profile.email, name: profile.full_name },
+            name: profile.full_name,
+            whatsappPhone,
+          })
+          console.log('[Stripe Webhook] Bundle activation email sent to:', profile.email)
+        }
+      } catch (emailError) {
+        console.error('[Stripe Webhook] Failed to send bundle activation email:', emailError)
       }
     }
   }

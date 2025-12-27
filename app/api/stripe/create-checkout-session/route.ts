@@ -90,16 +90,15 @@ export async function POST(request: NextRequest) {
     const baseUrl = origin.endsWith('/') ? origin.slice(0, -1) : origin // Remove trailing slash
 
     // For guest checkouts, redirect to login/register page after success
-    // For bundle, redirect back to the offer page with success message
+    // For all plans, redirect to dashboard after success
     let successUrl: string
-    if (planType === 'bundle_monthly') {
-      successUrl = isGuestCheckout
+    if (isGuestCheckout) {
+      successUrl = planType === 'bundle_monthly'
         ? `${baseUrl}/login?payment_success=true&bundle=true&email=${encodeURIComponent(finalEmail)}`
-        : `${baseUrl}/oferta-fim-de-ano?success=true`
+        : `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}`
     } else {
-      successUrl = isGuestCheckout
-        ? `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}`
-        : (returnUrl || `${baseUrl}/dashboard/subscription?success=true`)
+      // Authenticated users go to dashboard
+      successUrl = `${baseUrl}/dashboard?payment_success=true&plan=${planType}`
     }
 
     const cancelUrl = planType === 'bundle_monthly'
