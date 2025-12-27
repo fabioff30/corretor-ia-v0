@@ -6,7 +6,7 @@
 import Stripe from 'stripe'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendCancellationEmail, sendPremiumUpgradeEmail, sendBundleActivationEmail } from '@/lib/email/send'
-import { activateJulinhoSubscription } from '@/lib/julinho/client'
+import { activateJulinhoSubscription, sendJulinhoTemplateMessage } from '@/lib/julinho/client'
 
 /**
  * Handle checkout.session.completed event
@@ -92,6 +92,14 @@ export async function handleCheckoutCompleted(
 
         if (julinhoResult.success) {
           console.log('[Stripe Webhook] Julinho activated for guest:', whatsappPhone)
+
+          // Send WhatsApp template message "pagamento_aprovado"
+          const templateResult = await sendJulinhoTemplateMessage(whatsappPhone, 'pagamento_aprovado')
+          if (templateResult.success) {
+            console.log('[Stripe Webhook] Template message "pagamento_aprovado" sent to:', whatsappPhone)
+          } else {
+            console.error('[Stripe Webhook] Failed to send template message:', templateResult.error)
+          }
         } else {
           console.error('[Stripe Webhook] Failed to activate Julinho for guest:', julinhoResult.error)
         }
@@ -169,6 +177,14 @@ export async function handleCheckoutCompleted(
 
         if (julinhoResult.success) {
           console.log('[Stripe Webhook] Julinho activated successfully for:', whatsappPhone)
+
+          // Send WhatsApp template message "pagamento_aprovado"
+          const templateResult = await sendJulinhoTemplateMessage(whatsappPhone, 'pagamento_aprovado')
+          if (templateResult.success) {
+            console.log('[Stripe Webhook] Template message "pagamento_aprovado" sent to:', whatsappPhone)
+          } else {
+            console.error('[Stripe Webhook] Failed to send template message:', templateResult.error)
+          }
         } else {
           console.error('[Stripe Webhook] Failed to activate Julinho:', julinhoResult.error)
           // Note: We don't throw here - CorretorIA is activated, Julinho failure is logged

@@ -210,6 +210,83 @@ export async function getJulinhoSubscriptionStatus(
 }
 
 /**
+ * Sends a WhatsApp template message to a user via Julinho API.
+ *
+ * @param phone - WhatsApp phone number
+ * @param templateName - Name of the template to send (e.g., "pagamento_aprovado")
+ * @returns Result with success status
+ */
+export async function sendJulinhoTemplateMessage(
+  phone: string,
+  templateName: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!JULINHO_DASHBOARD_SECRET) {
+    console.error('[Julinho] JULINHO_DASHBOARD_SECRET not configured')
+    return {
+      success: false,
+      error: 'Julinho integration not configured'
+    }
+  }
+
+  const normalizedPhone = normalizePhoneNumber(phone)
+
+  if (!validateWhatsAppPhone(normalizedPhone)) {
+    return {
+      success: false,
+      error: `Invalid phone number: ${phone}`
+    }
+  }
+
+  try {
+    const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+
+    const response = await fetch(
+      `${JULINHO_API_URL}/api/webhook/messages/template`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`,
+        },
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          template: templateName,
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Julinho] Template message failed:', {
+        status: response.status,
+        error: errorText,
+        phone: `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}`,
+        template: templateName
+      })
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${errorText}`
+      }
+    }
+
+    console.log('[Julinho] Template message sent:', {
+      phone: `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}`,
+      template: templateName
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('[Julinho] Template message error:', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error'
+    }
+  }
+}
+
+/**
  * Retries failed Julinho activations.
  * Used for manual retry of failed bundle activations.
  *

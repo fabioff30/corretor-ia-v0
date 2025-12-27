@@ -18,7 +18,7 @@ import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardE
 import { getPublicConfig } from '@/utils/env-config'
 import { CHRISTMAS_GIFT_CONFIG } from '@/lib/gift/config'
 import type { GiftPlanId } from '@/lib/gift/types'
-import { activateJulinhoSubscription } from '@/lib/julinho/client'
+import { activateJulinhoSubscription, sendJulinhoTemplateMessage } from '@/lib/julinho/client'
 
 export const maxDuration = 60
 
@@ -662,6 +662,14 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
         phone: whatsappPhone,
         end_date: julinhoResult.data?.subscription_end_date,
       })
+
+      // Send WhatsApp template message "pagamento_aprovado"
+      const templateResult = await sendJulinhoTemplateMessage(whatsappPhone, 'pagamento_aprovado')
+      if (templateResult.success) {
+        console.log('[MP Webhook Bundle] Template message "pagamento_aprovado" sent to:', whatsappPhone)
+      } else {
+        console.error('[MP Webhook Bundle] Failed to send template message:', templateResult.error)
+      }
     } else {
       console.error('[MP Webhook Bundle] Julinho activation failed (will retry later):', {
         phone: whatsappPhone,
