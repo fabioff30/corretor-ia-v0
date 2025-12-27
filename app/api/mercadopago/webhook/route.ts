@@ -18,6 +18,7 @@ import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardE
 import { getPublicConfig } from '@/utils/env-config'
 import { CHRISTMAS_GIFT_CONFIG } from '@/lib/gift/config'
 import type { GiftPlanId } from '@/lib/gift/types'
+import { activateJulinhoSubscription } from '@/lib/julinho/client'
 
 export const maxDuration = 60
 
@@ -195,6 +196,12 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       // Check if this is a BUYER REWARD payment (starts with "buyer_reward_")
       if (externalReference.startsWith('buyer_reward_')) {
         await handleBuyerRewardPayment(payment, externalReference, supabase)
+        return
+      }
+
+      // Check if this is a BUNDLE payment (CorretorIA + Julinho)
+      if (externalReference.startsWith('bundle_')) {
+        await handleBundlePayment(payment, externalReference, supabase)
         return
       }
 
@@ -573,6 +580,217 @@ async function handleSubscriptionEvent(subscriptionId: string, webhookBody: any)
       timestamp: new Date().toISOString()
     })
     // Don't throw - let main handler catch and return 200
+  }
+}
+
+/**
+ * Handle bundle payment - CorretorIA + Julinho Premium bundle
+ * external_reference format: bundle_{userId}_{phone} or bundle_guest_{email}_{phone}
+ */
+async function handleBundlePayment(payment: any, externalReference: string, supabase: any) {
+  const startTime = Date.now()
+
+  console.log('[MP Webhook Bundle] Processing bundle payment:', {
+    paymentId: payment.id,
+    externalReference,
+    amount: payment.transaction_amount,
+    status: payment.status,
+  })
+
+  try {
+    // Parse external_reference to get phone number
+    // Format: bundle_{userId}_{phone} or bundle_guest_{email}_{phone}
+    const parts = externalReference.split('_')
+    const phone = parts[parts.length - 1] // Phone is always the last part
+
+    const isGuestBundle = externalReference.startsWith('bundle_guest_')
+
+    // Get the PIX payment record
+    const { data: pixPayment, error: pixError } = await supabase
+      .from('pix_payments')
+      .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle')
+      .eq('payment_intent_id', payment.id.toString())
+      .maybeSingle()
+
+    if (pixError || !pixPayment) {
+      console.error('[MP Webhook Bundle] PIX payment not found:', pixError)
+      return
+    }
+
+    // Verify this is a bundle payment
+    if (!pixPayment.is_bundle) {
+      console.warn('[MP Webhook Bundle] Payment is not marked as bundle:', payment.id)
+    }
+
+    const whatsappPhone = pixPayment.whatsapp_phone || phone
+
+    // For guest payments: mark as approved (will be linked on registration)
+    const isGuestPayment = !pixPayment.user_id
+    const targetStatus = isGuestPayment ? 'approved' : 'paid'
+
+    // Update PIX payment status
+    const { error: updateError } = await supabase
+      .from('pix_payments')
+      .update({
+        status: targetStatus,
+        paid_at: payment.date_approved || new Date().toISOString(),
+      })
+      .eq('payment_intent_id', payment.id.toString())
+
+    if (updateError) {
+      console.error('[MP Webhook Bundle] Error updating PIX payment:', updateError)
+    }
+
+    // =============================
+    // STEP 1: Activate Julinho Premium
+    // =============================
+    console.log('[MP Webhook Bundle] Activating Julinho subscription for phone:', whatsappPhone)
+
+    const julinhoResult = await activateJulinhoSubscription(whatsappPhone, 30)
+
+    // Update julinho activation status in database
+    await supabase
+      .from('pix_payments')
+      .update({
+        julinho_activated: julinhoResult.success,
+        julinho_activation_error: julinhoResult.error || null,
+      })
+      .eq('payment_intent_id', payment.id.toString())
+
+    if (julinhoResult.success) {
+      console.log('[MP Webhook Bundle] Julinho activation successful:', {
+        phone: whatsappPhone,
+        end_date: julinhoResult.data?.subscription_end_date,
+      })
+    } else {
+      console.error('[MP Webhook Bundle] Julinho activation failed (will retry later):', {
+        phone: whatsappPhone,
+        error: julinhoResult.error,
+      })
+      // Don't block CorretorIA activation if Julinho fails
+    }
+
+    // =============================
+    // STEP 2: Activate CorretorIA Premium
+    // =============================
+    if (isGuestPayment) {
+      console.log('[MP Webhook Bundle] Guest bundle payment - will activate CorretorIA on registration:', {
+        email: pixPayment.email,
+        phone: whatsappPhone,
+        julinhoActivated: julinhoResult.success,
+      })
+      return
+    }
+
+    // For authenticated users, activate CorretorIA Premium
+    const userId = pixPayment.user_id
+    const paidAtIso = payment.date_approved || new Date().toISOString()
+    const { startDateIso, expiresAtIso } = calculateSubscriptionWindow('monthly', paidAtIso)
+
+    // Check if user already has an active subscription
+    const { data: existingSubscription } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .in('status', ['authorized', 'active'])
+      .maybeSingle()
+
+    if (existingSubscription) {
+      console.log('[MP Webhook Bundle] User already has active subscription, extending...')
+    }
+
+    // Create subscription record
+    const { data: newSubscription, error: insertError } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        mp_subscription_id: `bundle_${payment.id}`,
+        mp_payer_id: payment.payer?.id,
+        status: 'authorized',
+        start_date: startDateIso,
+        next_payment_date: expiresAtIso,
+        amount: payment.transaction_amount,
+        currency: payment.currency_id || 'BRL',
+        payment_method_id: 'pix',
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('[MP Webhook Bundle] Error creating subscription:', insertError)
+      return
+    }
+
+    // Activate subscription via RPC
+    const { error: activateError } = await supabase.rpc('activate_subscription', {
+      p_user_id: userId,
+      p_subscription_id: newSubscription.id,
+    })
+
+    if (activateError) {
+      console.error('[MP Webhook Bundle] Error activating subscription:', activateError)
+    }
+
+    // Update profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        plan_type: 'pro',
+        subscription_status: 'active',
+        subscription_expires_at: expiresAtIso,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+
+    if (profileError) {
+      console.error('[MP Webhook Bundle] Error updating profile:', profileError)
+    }
+
+    // Mark payment as consumed
+    await supabase
+      .from('pix_payments')
+      .update({ status: 'consumed' })
+      .eq('payment_intent_id', payment.id.toString())
+
+    // Send payment confirmation email
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (userProfile?.email) {
+      try {
+        const appUrl = getPublicConfig().APP_URL
+        await sendPaymentApprovedEmail({
+          to: { email: userProfile.email, name: userProfile.full_name || 'Usuário' },
+          name: userProfile.full_name || 'Usuário',
+          amount: payment.transaction_amount,
+          planType: 'bundle' as any,
+          activationLink: `${appUrl}/dashboard`,
+        })
+        console.log('[MP Webhook Bundle] Payment email sent to:', userProfile.email)
+      } catch (emailError) {
+        console.error('[MP Webhook Bundle] Error sending email:', emailError)
+      }
+    }
+
+    const duration = Date.now() - startTime
+    console.log(`[MP Webhook Bundle] Bundle processed successfully in ${duration}ms:`, {
+      paymentId: payment.id,
+      userId,
+      whatsappPhone,
+      corretoraActivated: !activateError && !profileError,
+      julinhoActivated: julinhoResult.success,
+      expiresAt: expiresAtIso,
+    })
+  } catch (error) {
+    console.error('[MP Webhook Bundle] Error processing bundle payment:', {
+      paymentId: payment.id,
+      externalReference,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      processing_time_ms: Date.now() - startTime,
+    })
   }
 }
 

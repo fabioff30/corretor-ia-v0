@@ -8,6 +8,7 @@ import {
 } from "@/lib/email/templates"
 import { giftInvitationEmailTemplate } from "@/lib/email/templates/gift-invitation"
 import { giftBuyerRewardEmailTemplate } from "@/lib/email/templates/gift-buyer-reward"
+import { newYearBundleEmailTemplate } from "@/lib/email/templates/new-year-bundle"
 
 type BasicContext = {
   to: EmailRecipient
@@ -179,5 +180,27 @@ export async function sendGiftBuyerRewardEmail({
     subject: template.subject,
     htmlContent: template.html,
     textContent: template.text,
+  })
+}
+
+type NewYearBundleContext = {
+  to: EmailRecipient
+  name?: string | null
+  isFreePlan: boolean
+  isCancelled: boolean
+}
+
+export async function sendNewYearBundleEmail({
+  to,
+  name,
+  isFreePlan,
+  isCancelled,
+}: NewYearBundleContext) {
+  const template = newYearBundleEmailTemplate({ name, isFreePlan, isCancelled })
+  await sendBrevoEmail({
+    to: [to],
+    subject: template.subject,
+    htmlContent: template.htmlContent,
+    textContent: template.textContent,
   })
 }

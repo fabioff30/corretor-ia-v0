@@ -9,30 +9,54 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
+import { validateWhatsAppPhone, normalizePhoneNumber } from '@/lib/julinho/client'
 
 export const maxDuration = 60
 
 interface CreatePixPaymentRequest {
-  planType: 'monthly' | 'annual'
+  planType: 'monthly' | 'annual' | 'bundle_monthly'
   userId?: string
   userEmail?: string
   guestEmail?: string // Email for guest (non-logged) users
   couponCode?: string // Optional coupon code for discounts
+  whatsappPhone?: string // Required for bundle purchases (Julinho activation)
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, couponCode } = body
+    const { planType, userId, couponCode, whatsappPhone } = body
     const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : undefined
     const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : undefined
 
-    if (!planType || !['monthly', 'annual'].includes(planType)) {
+    if (!planType || !['monthly', 'annual', 'bundle_monthly'].includes(planType)) {
       return NextResponse.json(
         { error: 'Tipo de plano inválido' },
         { status: 400 }
       )
+    }
+
+    // Bundle requires WhatsApp phone for Julinho activation
+    const isBundle = planType === 'bundle_monthly'
+    let normalizedWhatsApp: string | null = null
+
+    if (isBundle) {
+      if (!whatsappPhone) {
+        return NextResponse.json(
+          { error: 'Número de WhatsApp é obrigatório para o pacote CorretorIA + Julinho' },
+          { status: 400 }
+        )
+      }
+
+      if (!validateWhatsAppPhone(whatsappPhone)) {
+        return NextResponse.json(
+          { error: 'Número de WhatsApp inválido. Use o formato: +55 (XX) XXXXX-XXXX' },
+          { status: 400 }
+        )
+      }
+
+      normalizedWhatsApp = normalizePhoneNumber(whatsappPhone)
     }
 
     // Try to get authenticated user (optional)
@@ -61,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Define pricing
-    const pricing = {
+    const pricing: Record<string, { amount: number; description: string }> = {
       monthly: {
         amount: 29.90,
         description: 'Plano Premium Mensal - CorretorIA'
@@ -69,13 +93,18 @@ export async function POST(request: NextRequest) {
       annual: {
         amount: 238.80,
         description: 'Plano Premium Anual - CorretorIA (12x R$19,90)'
+      },
+      bundle_monthly: {
+        amount: 19.90,
+        description: 'Pacote Fim de Ano - CorretorIA + Julinho Premium'
       }
     }
 
     const plan = pricing[planType]
 
     // Apply discount if coupon code is provided (ZhX6Oy78 = 50% off)
-    const discountPercent = couponCode === 'ZhX6Oy78' ? 50 : 0
+    // Note: bundle_monthly already has promotional price, no additional discount
+    const discountPercent = (couponCode === 'ZhX6Oy78' && !isBundle) ? 50 : 0
     const finalAmount = plan.amount * (1 - discountPercent / 100)
 
     // Initialize clients
@@ -144,7 +173,16 @@ export async function POST(request: NextRequest) {
 
     // Create PIX payment with Mercado Pago
     // Use email as external_reference for guest payments
-    const externalReference = finalUserId || `guest_${finalUserEmail}`
+    // For bundle: include phone number for Julinho activation
+    let externalReference: string
+    if (isBundle) {
+      // Format: bundle_{userId}_{phone} or bundle_guest_{email}_{phone}
+      externalReference = finalUserId
+        ? `bundle_${finalUserId}_${normalizedWhatsApp}`
+        : `bundle_guest_${finalUserEmail}_${normalizedWhatsApp}`
+    } else {
+      externalReference = finalUserId || `guest_${finalUserEmail}`
+    }
 
     const payment = await mpClient.createPixPayment(
       finalAmount,
@@ -169,6 +207,10 @@ export async function POST(request: NextRequest) {
         pix_code: payment.point_of_interaction?.transaction_data?.qr_code,
         status: 'pending',
         expires_at: payment.date_of_expiration,
+        // Bundle-specific fields
+        whatsapp_phone: normalizedWhatsApp,
+        is_bundle: isBundle,
+        julinho_activated: false,
       })
 
     if (insertError) {
@@ -192,6 +234,9 @@ export async function POST(request: NextRequest) {
       amount: finalAmount,
       payerEmail: finalUserEmail,
       isGuest: isGuestPayment,
+      // Bundle info
+      isBundle,
+      whatsappPhone: normalizedWhatsApp,
     })
   } catch (error) {
     console.error('[MP PIX] Error creating payment:', error)
