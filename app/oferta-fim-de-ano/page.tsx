@@ -80,104 +80,101 @@ export default function OfertaFimDeAnoPage() {
             </div>
           </section>
 
-          {/* Products Section */}
-          <section className="grid md:grid-cols-2 gap-6">
-            {/* CorretorIA Card */}
-            <div className="group relative p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 hover:border-primary/40 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <PenTool className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">CorretorIA Premium</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Correção de texto com IA
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="space-y-3">
-                  {[
-                    "Correções ilimitadas por dia",
-                    "Até 20.000 caracteres por texto",
-                    "Análise de estilo e tom",
-                    "Reescrita inteligente",
-                    "Detector de IA avançado",
-                    "Sem anúncios",
-                  ].map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="text-foreground/80">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="pt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">R$ 29,90</span>
-                  <span className="text-sm text-muted-foreground">/mês</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Julinho Card */}
-            <div className="group relative p-6 rounded-2xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 hover:border-green-500/40 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-green-500/10">
-                    <MessageCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">Julinho Premium</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Assistente no WhatsApp
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="space-y-3">
-                  {[
-                    "Mensagens ilimitadas",
-                    "Correção via WhatsApp",
-                    "Respostas instantâneas",
-                    "Disponível 24/7",
-                    "Suporte prioritário",
-                    "Atualizações exclusivas",
-                  ].map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      <span className="text-foreground/80">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="pt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">R$ 9,90</span>
-                  <span className="text-sm text-muted-foreground">/mês</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Combine Arrow */}
-          <div className="flex flex-col items-center gap-4 py-4">
-            <div className="flex items-center gap-4">
-              <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-400/50" />
-              <div className="p-3 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-500/20 border border-amber-400/30">
-                <Gift className="h-6 w-6 text-amber-400" />
-              </div>
-              <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-400/50" />
-            </div>
-            <p className="text-sm font-medium text-amber-400">
-              Juntos por apenas R$ 19,90/mês
-            </p>
-          </div>
-
-          {/* Pricing Card */}
+          {/* Pricing Card - OFERTA EXCLUSIVA */}
           <section id="checkout">
             <BundlePricingCard />
+          </section>
+
+          {/* What's Included Section */}
+          <section className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                O que você recebe
+              </h2>
+              <p className="text-muted-foreground">
+                Dois produtos completos pelo preço de um
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* CorretorIA Card */}
+              <div className="group relative p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 hover:border-primary/40 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <PenTool className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">CorretorIA Premium</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Correção de texto com IA
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {[
+                      "Correções ilimitadas por dia",
+                      "Até 20.000 caracteres por texto",
+                      "Análise de estilo e tom",
+                      "Reescrita inteligente",
+                      "Detector de IA avançado",
+                      "Sem anúncios",
+                    ].map((feature) => (
+                      <li key={feature} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-foreground/80">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="pt-2 flex items-baseline gap-2">
+                    <span className="text-lg text-muted-foreground line-through">R$ 29,90</span>
+                    <span className="text-xs text-muted-foreground">/mês</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Julinho Card */}
+              <div className="group relative p-6 rounded-2xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 hover:border-green-500/40 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-green-500/10">
+                      <MessageCircle className="h-6 w-6 text-green-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Julinho Premium</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Assistente no WhatsApp
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {[
+                      "Mensagens ilimitadas",
+                      "Correção via WhatsApp",
+                      "Respostas instantâneas",
+                      "Disponível 24/7",
+                      "Suporte prioritário",
+                      "Atualizações exclusivas",
+                    ].map((feature) => (
+                      <li key={feature} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-foreground/80">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="pt-2 flex items-baseline gap-2">
+                    <span className="text-lg text-muted-foreground line-through">R$ 9,90</span>
+                    <span className="text-xs text-muted-foreground">/mês</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* Benefits Section */}
