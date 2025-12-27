@@ -691,17 +691,41 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
     // =============================
     // STEP 2: Activate CorretorIA Premium
     // =============================
-    if (isGuestPayment) {
-      console.log('[MP Webhook Bundle] Guest bundle payment - will activate CorretorIA on registration:', {
-        email: pixPayment.email,
-        phone: whatsappPhone,
-        julinhoActivated: julinhoResult.success,
-      })
-      return
+    let userId = pixPayment.user_id
+
+    // If guest payment, check if user with that email already exists
+    if (isGuestPayment && pixPayment.email) {
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', pixPayment.email)
+        .maybeSingle()
+
+      if (existingUser) {
+        // User exists! Link payment and activate premium
+        userId = existingUser.id
+        console.log('[MP Webhook Bundle] Guest has existing account, linking payment:', {
+          email: pixPayment.email,
+          userId,
+        })
+
+        // Update pix_payment to link to user
+        await supabase
+          .from('pix_payments')
+          .update({ user_id: userId })
+          .eq('payment_intent_id', payment.id.toString())
+      } else {
+        // Truly a new guest - will activate on registration
+        console.log('[MP Webhook Bundle] Guest bundle payment - will activate CorretorIA on registration:', {
+          email: pixPayment.email,
+          phone: whatsappPhone,
+          julinhoActivated: julinhoResult.success,
+        })
+        return
+      }
     }
 
-    // For authenticated users, activate CorretorIA Premium
-    const userId = pixPayment.user_id
+    // For authenticated users (or guests with existing accounts), activate CorretorIA Premium
     const paidAtIso = payment.date_approved || new Date().toISOString()
     const { startDateIso, expiresAtIso } = calculateSubscriptionWindow('monthly', paidAtIso)
 
