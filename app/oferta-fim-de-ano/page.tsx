@@ -29,8 +29,8 @@ export const metadata: Metadata = {
   },
 }
 
-// End date: January 6, 2025 at 23:59:59 BRT (UTC-3)
-const OFFER_END_DATE = new Date("2025-01-07T02:59:59Z")
+// End date: January 1, 2026 at 23:59:59 BRT (UTC-3)
+const OFFER_END_DATE = new Date("2026-01-02T02:59:59Z")
 
 export default function OfertaFimDeAnoPage() {
   return (
@@ -256,14 +256,14 @@ export default function OfertaFimDeAnoPage() {
                     "Sim! Você pode cancelar sua assinatura quando quiser, sem multas ou taxas adicionais. O acesso continua até o fim do período já pago.",
                 },
                 {
-                  question: "O pagamento é só via PIX?",
+                  question: "Quais formas de pagamento são aceitas?",
                   answer:
-                    "Sim, esta oferta especial de fim de ano está disponível apenas via PIX. O pagamento é processado instantaneamente e a ativação é imediata.",
+                    "Aceitamos PIX (pagamento instantâneo) e cartão de crédito. Ambos os métodos oferecem ativação imediata após a confirmação do pagamento.",
                 },
                 {
                   question: "Até quando vale a promoção?",
                   answer:
-                    "A oferta é válida até 06/01/2025 às 23:59 (horário de Brasília). Após essa data, os produtos voltam aos preços normais.",
+                    "A oferta é válida até 01/01/2026 às 23:59 (horário de Brasília). Após essa data, os produtos voltam aos preços normais.",
                 },
               ].map((faq) => (
                 <div

@@ -175,7 +175,7 @@ export function newYearBundleEmailTemplate({
                 <tr>
                   <td style="padding: 15px; text-align: center;">
                     <p style="color: #ef4444; font-size: 14px; font-weight: bold; margin: 0;">
-                      ⏰ Oferta válida até 06/01/2025 às 23:59
+                      ⏰ Oferta válida até 01/01/2026 às 23:59
                     </p>
                   </td>
                 </tr>
@@ -230,7 +230,7 @@ O que você recebe:
 
 👉 Acesse agora: https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2024
 
-⏰ Oferta válida até 06/01/2025 às 23:59
+⏰ Oferta válida até 01/01/2026 às 23:59
 
 ---
 Você está recebendo este email porque se cadastrou no CorretorIA.
