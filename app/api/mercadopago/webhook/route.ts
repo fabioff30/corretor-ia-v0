@@ -428,7 +428,17 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       return
     }
 
-    // Handle regular subscription payments (non-PIX)
+    // For PIX payments that are not approved yet, just return
+    // We'll process them when they become approved
+    if (payment.payment_method_id === 'pix') {
+      console.log('[MP Webhook Payment] PIX payment not yet approved, skipping:', {
+        paymentId: payment.id,
+        status: payment.status,
+      })
+      return
+    }
+
+    // Handle regular subscription payments (non-PIX, e.g., credit card)
     // Find subscription by payer email or external reference
     const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
