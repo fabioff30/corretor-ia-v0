@@ -12,6 +12,7 @@ import {
   Gift,
   Zap,
   Crown,
+  CreditCard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
   const [email, setEmail] = useState("")
   const [whatsapp, setWhatsapp] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isCardLoading, setIsCardLoading] = useState(false)
   const [isPixModalOpen, setIsPixModalOpen] = useState(false)
   const [paymentData, setPaymentData] = useState<any>(null)
   const [emailError, setEmailError] = useState("")
@@ -139,6 +141,92 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
     setIsPixModalOpen(false)
     pixGeneratedRef.current = false
     setPaymentData(null)
+  }
+
+  const handleCardPayment = async () => {
+    // Prevent double submission
+    if (isCardLoading || isLoading) return
+
+    // Reset errors
+    setEmailError("")
+    setWhatsappError("")
+
+    // Validate email
+    if (!email.trim()) {
+      setEmailError("Digite seu email")
+      return
+    }
+    if (!validateEmail(email)) {
+      setEmailError("Email inválido")
+      return
+    }
+
+    // Validate WhatsApp
+    const whatsappValidation = validateWhatsAppPhone(whatsapp)
+    if (!whatsappValidation.isValid) {
+      setWhatsappError(whatsappValidation.message || "WhatsApp inválido")
+      return
+    }
+
+    // Track begin checkout
+    sendGTMEvent({
+      event: "begin_checkout",
+      currency: "BRL",
+      value: 19.90,
+      items: [
+        { item_name: "CorretorIA Premium", item_category: "bundle" },
+        { item_name: "Julinho Premium", item_category: "bundle" },
+      ],
+      coupon: "FIMDEANO2024",
+      payment_method: "card",
+    })
+
+    setIsCardLoading(true)
+
+    try {
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planType: "bundle_monthly",
+          guestEmail: user ? undefined : email,
+          userEmail: user ? email : undefined,
+          userId: user?.id,
+          whatsappPhone: whatsapp,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao criar sessão de pagamento")
+      }
+
+      // Track payment info
+      sendGTMEvent({
+        event: "add_payment_info",
+        payment_type: "card",
+        value: 19.90,
+        currency: "BRL",
+      })
+
+      // Redirect to Stripe Checkout
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+      } else {
+        throw new Error("URL de checkout não recebida")
+      }
+    } catch (error) {
+      console.error("Error creating card payment:", error)
+      toast({
+        variant: "destructive",
+        title: "Erro ao iniciar pagamento",
+        description:
+          error instanceof Error ? error.message : "Tente novamente em instantes",
+      })
+    } finally {
+      setIsCardLoading(false)
+    }
   }
 
   const features = [
@@ -285,27 +373,60 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
                 disabled={isLoading}
               />
 
-              {/* Submit button */}
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:via-amber-300 hover:to-amber-400 text-black shadow-lg shadow-amber-500/25 transition-all duration-300 hover:shadow-amber-500/40 hover:scale-[1.02]"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Gerando PIX...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="mr-2 h-5 w-5" />
-                    Pagar com PIX
-                  </>
-                )}
-              </Button>
+              {/* Payment buttons */}
+              <div className="space-y-3">
+                {/* PIX button (primary) */}
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isLoading || isCardLoading}
+                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:via-amber-300 hover:to-amber-400 text-black shadow-lg shadow-amber-500/25 transition-all duration-300 hover:shadow-amber-500/40 hover:scale-[1.02]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Gerando PIX...
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="mr-2 h-5 w-5" />
+                      Pagar com PIX
+                    </>
+                  )}
+                </Button>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-background px-2 text-muted-foreground">ou</span>
+                  </div>
+                </div>
+
+                {/* Card button (secondary) */}
+                <Button
+                  onClick={handleCardPayment}
+                  disabled={isLoading || isCardLoading}
+                  variant="outline"
+                  className="w-full h-12 text-base font-semibold border-white/20 hover:bg-white/5 hover:border-white/30 transition-all duration-300"
+                >
+                  {isCardLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirecionando...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pagar com Cartão
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                Pagamento único. Acesso imediato após confirmação.
+                Assinatura mensal. Acesso imediato após confirmação.
               </p>
             </div>
           </CardContent>

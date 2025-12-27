@@ -18,6 +18,7 @@ export const STRIPE_PRICES = {
   MONTHLY: 'price_1SKPXfAaDWyHAlqlOF5UHXPK', // R$ 29,90/mês (Production)
   ANNUAL: 'price_1SacDvAaDWyHAlql5FHTMJzI',  // R$ 238,80/ano - 12x R$19,90 (Production)
   LIFETIME: 'price_1SX9iCAaDWyHAlqlcLPoTjZy', // R$ 99,90 Black Friday (Production)
+  BUNDLE_MONTHLY: 'price_1Siz5IAaDWyHAlqlRbQ7iTHL', // R$ 19,90/mês - CorretorIA + Julinho Bundle (Production)
 } as const
 
 // Lifetime (Black Friday) product configuration
@@ -79,15 +80,24 @@ export async function createCheckoutSession(
   successUrl: string,
   cancelUrl: string,
   isGuestCheckout: boolean = false,
-  couponCode?: string
+  couponCode?: string,
+  whatsappPhone?: string // For bundle purchases - used to activate Julinho
 ): Promise<Stripe.Checkout.Session> {
   // Get or create customer
   const customerId = await getOrCreateStripeCustomer(userId, email)
 
+  // Determine if this is a bundle purchase
+  const isBundle = priceId === STRIPE_PRICES.BUNDLE_MONTHLY
+
   // Prepare metadata
-  const metadata = userId
+  const baseMetadata = userId
     ? { userId }
     : { guestEmail: email, isGuestCheckout: 'true' }
+
+  // Add bundle-specific metadata
+  const metadata = isBundle && whatsappPhone
+    ? { ...baseMetadata, isBundle: 'true', whatsappPhone }
+    : baseMetadata
 
   // Create checkout session
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {

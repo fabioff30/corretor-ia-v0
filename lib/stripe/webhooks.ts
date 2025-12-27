@@ -6,6 +6,7 @@
 import Stripe from 'stripe'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendCancellationEmail, sendPremiumUpgradeEmail } from '@/lib/email/send'
+import { activateJulinhoSubscription } from '@/lib/julinho/client'
 
 /**
  * Handle checkout.session.completed event
@@ -21,6 +22,10 @@ export async function handleCheckoutCompleted(
   if (purchaseType === 'lifetime') {
     return handleLifetimePaymentCompleted(session)
   }
+
+  // Check if this is a bundle purchase (CorretorIA + Julinho)
+  const isBundle = session.metadata?.isBundle === 'true'
+  const whatsappPhone = session.metadata?.whatsappPhone
 
   const supabase = createServiceRoleClient()
   const userId = session.metadata?.userId
@@ -69,11 +74,30 @@ export async function handleCheckoutCompleted(
         amount: (subscription.items.data[0].price.unit_amount || 0) / 100,
         currency: subscription.currency.toUpperCase(),
         payment_status: session.payment_status,
+        is_bundle: isBundle || false,
+        whatsapp_phone: whatsappPhone || null,
       })
 
     if (insertError) {
       console.error('[Stripe Webhook] Error inserting pending subscription:', insertError)
       // Continue anyway - subscription is in Stripe
+    }
+
+    // For bundle guest checkouts, activate Julinho immediately (it's phone-based, doesn't need account)
+    if (isBundle && whatsappPhone) {
+      console.log('[Stripe Webhook] Guest bundle purchase, activating Julinho for:', whatsappPhone)
+
+      try {
+        const julinhoResult = await activateJulinhoSubscription(whatsappPhone, 30)
+
+        if (julinhoResult.success) {
+          console.log('[Stripe Webhook] Julinho activated for guest:', whatsappPhone)
+        } else {
+          console.error('[Stripe Webhook] Failed to activate Julinho for guest:', julinhoResult.error)
+        }
+      } catch (julinhoError) {
+        console.error('[Stripe Webhook] Error calling Julinho API for guest:', julinhoError)
+      }
     }
 
     console.log('[Stripe Webhook] Guest subscription saved. Will be linked when user logs in.')
@@ -135,6 +159,25 @@ export async function handleCheckoutCompleted(
     }
 
     console.log('[Stripe Webhook] Subscription activated for user:', userId)
+
+    // If this is a bundle purchase, also activate Julinho
+    if (isBundle && whatsappPhone) {
+      console.log('[Stripe Webhook] Bundle purchase detected, activating Julinho for:', whatsappPhone)
+
+      try {
+        const julinhoResult = await activateJulinhoSubscription(whatsappPhone, 30)
+
+        if (julinhoResult.success) {
+          console.log('[Stripe Webhook] Julinho activated successfully for:', whatsappPhone)
+        } else {
+          console.error('[Stripe Webhook] Failed to activate Julinho:', julinhoResult.error)
+          // Note: We don't throw here - CorretorIA is activated, Julinho failure is logged
+        }
+      } catch (julinhoError) {
+        console.error('[Stripe Webhook] Error calling Julinho API:', julinhoError)
+        // CorretorIA is still activated - don't block the user
+      }
+    }
   }
 }
 
