@@ -91,6 +91,48 @@ export default async function RootLayout({
           `}
         </Script>
 
+        {/* Structured Data for CorretorIA Premium Product */}
+        <Script id="structured-data-product" type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              "name": "CorretorIA Premium",
+              "image": "https://www.corretordetextoonline.com.br/og-home.png",
+              "description": "Desbloqueie todo o potencial da correção de textos com IA. Correções ilimitadas, análise avançada e sem anúncios.",
+              "brand": {
+                "@type": "Brand",
+                "name": "CorretorIA"
+              },
+              "offers": [
+                {
+                  "@type": "Offer",
+                  "name": "Plano Mensal",
+                  "price": "29.90",
+                  "priceCurrency": "BRL",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.corretordetextoonline.com.br/premium",
+                  "priceValidUntil": "2026-12-31"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Plano Anual",
+                  "price": "238.80",
+                  "priceCurrency": "BRL",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.corretordetextoonline.com.br/premium",
+                  "priceValidUntil": "2026-12-31"
+                }
+              ],
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "reviewCount": "1200"
+              }
+            }
+          `}
+        </Script>
+
         {/* Meta Pixel Code */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
