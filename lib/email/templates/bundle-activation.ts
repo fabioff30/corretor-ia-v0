@@ -2,7 +2,7 @@
  * Bundle Activation Confirmation Email Template
  *
  * Sent after successful payment for CorretorIA + Julinho bundle
- * Includes CTA to chat with Julinho on WhatsApp
+ * Simple, personal email from Fábio
  */
 
 interface BundleActivationEmailParams {
@@ -16,151 +16,86 @@ export function bundleActivationEmailTemplate({
   name,
   whatsappPhone,
 }: BundleActivationEmailParams) {
-  const recipientName = name || "Usuário"
-  const julinhoLink = `https://wa.me/${JULINHO_WHATSAPP}?text=Ol%C3%A1%20Julinho!%20Acabei%20de%20ativar%20meu%20plano%20Premium.`
+  const recipientName = name || "amigo(a)"
+  const firstName = recipientName.split(' ')[0]
+  const julinhoLink = `https://wa.me/${JULINHO_WHATSAPP}?text=Oi%20Julinho!%20Acabei%20de%20ativar%20meu%20plano%20Premium.`
 
-  const subject = `Seu plano Premium está ativo! Conheça o Julinho`
+  const subject = `${firstName}, seu acesso Premium tá liberado!`
 
   const htmlContent = `<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Plano Premium Ativado - CorretorIA + Julinho</title>
+  <title>Seu acesso Premium está liberado!</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #0a0a0a;">
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f5;">
     <tr>
       <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+        <table role="presentation" style="width: 100%; max-width: 560px; border-collapse: collapse;">
 
           <!-- Header with Logo -->
           <tr>
-            <td align="center" style="padding: 20px 0;">
-              <img src="https://corretordetextoonline.com.br/logo-dark.png" alt="CorretorIA" width="180" style="display: block;" />
+            <td align="center" style="padding: 0 0 30px 0;">
+              <img src="https://corretordetextoonline.com.br/images/logo-corretoria.png" alt="CorretorIA" width="160" style="display: block;" />
             </td>
           </tr>
 
-          <!-- Success Badge -->
+          <!-- Main Content -->
           <tr>
-            <td align="center" style="padding: 20px 0;">
-              <table role="presentation" style="border-collapse: collapse;">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 12px 28px; border-radius: 50px; font-weight: bold; font-size: 14px; letter-spacing: 1px;">
-                    ✓ PLANO PREMIUM ATIVADO
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+            <td style="background-color: #ffffff; border-radius: 12px; padding: 40px 35px;">
 
-          <!-- Main Content Card -->
-          <tr>
-            <td style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(34, 197, 94, 0.3); padding: 40px 30px;">
+              <p style="color: #18181b; font-size: 18px; line-height: 1.7; margin: 0 0 20px 0;">
+                E aí, ${firstName}!
+              </p>
 
-              <!-- Greeting -->
+              <p style="color: #3f3f46; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+                Passando aqui rapidinho pra te avisar: <strong>seu acesso Premium tá liberado!</strong>
+              </p>
+
+              <p style="color: #3f3f46; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+                Agora você pode usar o CorretorIA e o Julinho sem limite nenhum. Correções ilimitadas, textos maiores, e o Julinho disponível 24h no seu WhatsApp pra te ajudar.
+              </p>
+
+              <p style="color: #3f3f46; font-size: 16px; line-height: 1.7; margin: 0 0 30px 0;">
+                Pra começar a usar o Julinho, é só mandar um "oi" pra ele. Ele já tá te esperando!
+              </p>
+
+              <!-- CTA Button -->
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="color: #ffffff; font-size: 24px; font-weight: bold; line-height: 1.4; padding-bottom: 20px;">
-                    Parabéns, ${recipientName}!
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color: #a1a1aa; font-size: 16px; line-height: 1.6; padding-bottom: 30px;">
-                    Seu plano <strong style="color: #22c55e;">CorretorIA Premium + Julinho Premium</strong> foi ativado com sucesso!
-                    Agora você tem acesso ilimitado aos dois produtos.
-                  </td>
-                </tr>
-              </table>
-
-              <!-- What's included -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.05); border-radius: 12px; margin-bottom: 30px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <p style="color: #ffffff; font-size: 16px; font-weight: bold; margin: 0 0 15px 0;">
-                      O que você pode fazer agora:
-                    </p>
-                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Correções ilimitadas no CorretorIA
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Textos de até 20.000 caracteres
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Análise de estilo e tom avançada
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Mensagens ilimitadas com o Julinho no WhatsApp
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Sem anúncios em toda a plataforma
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Julinho CTA -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background: linear-gradient(135deg, rgba(37, 211, 102, 0.15), rgba(37, 211, 102, 0.05)); border-radius: 12px; border: 1px solid rgba(37, 211, 102, 0.3); margin-bottom: 30px;">
-                <tr>
-                  <td style="padding: 25px; text-align: center;">
-                    <p style="color: #25D366; font-size: 18px; font-weight: bold; margin: 0 0 10px 0;">
-                      💬 Conheça o Julinho!
-                    </p>
-                    <p style="color: #a1a1aa; font-size: 14px; margin: 0 0 20px 0;">
-                      Seu assistente de correção está pronto para te ajudar no WhatsApp.
-                      Envie qualquer texto e receba correções instantâneas!
-                    </p>
+                  <td align="center" style="padding: 10px 0 30px 0;">
                     <a href="${julinhoLink}"
-                       style="display: inline-block; background: linear-gradient(135deg, #25D366, #128C7E); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">
-                      Conversar com Julinho →
+                       style="display: inline-block; background-color: #25D366; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                      Falar com o Julinho no WhatsApp
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <!-- CorretorIA CTA -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                <tr>
-                  <td align="center">
-                    <a href="https://corretordetextoonline.com.br/dashboard?utm_source=email&utm_medium=transactional&utm_campaign=bundle_activation"
-                       style="display: inline-block; background: linear-gradient(135deg, #534BD1, #4338ca); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">
-                      Acessar o CorretorIA →
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              <p style="color: #3f3f46; font-size: 16px; line-height: 1.7; margin: 0 0 8px 0;">
+                Qualquer dúvida, é só responder esse email que eu mesmo respondo.
+              </p>
 
-              <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="color: #71717a; font-size: 13px; text-align: center;">
-                    Seu preço promocional está travado enquanto a assinatura estiver ativa.
-                  </td>
-                </tr>
-              </table>
+              <p style="color: #3f3f46; font-size: 16px; line-height: 1.7; margin: 0 0 0 0;">
+                Valeu pela confiança!
+              </p>
+
+              <p style="color: #18181b; font-size: 16px; line-height: 1.7; margin: 25px 0 0 0;">
+                Um abraço,<br/>
+                <strong>Fábio</strong><br/>
+                <span style="color: #71717a; font-size: 14px;">Criador do CorretorIA</span>
+              </p>
 
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 30px 20px; text-align: center;">
-              <p style="color: #71717a; font-size: 12px; margin: 0 0 10px 0;">
-                Dúvidas? Responda este email ou entre em contato conosco.
-              </p>
-              <p style="color: #3f3f46; font-size: 11px; margin: 20px 0 0 0;">
-                © 2025 CorretorIA. Todos os direitos reservados.
+            <td style="padding: 25px 20px; text-align: center;">
+              <p style="color: #a1a1aa; font-size: 12px; margin: 0;">
+                © 2025 CorretorIA · corretordetextoonline.com.br
               </p>
             </td>
           </tr>
@@ -172,33 +107,25 @@ export function bundleActivationEmailTemplate({
 </body>
 </html>`
 
-  const textContent = `
-Parabéns, ${recipientName}!
+  const textContent = `E aí, ${firstName}!
 
-Seu plano CorretorIA Premium + Julinho Premium foi ativado com sucesso!
-Agora você tem acesso ilimitado aos dois produtos.
+Passando aqui rapidinho pra te avisar: seu acesso Premium tá liberado!
 
-O QUE VOCÊ PODE FAZER AGORA:
-✅ Correções ilimitadas no CorretorIA
-✅ Textos de até 20.000 caracteres
-✅ Análise de estilo e tom avançada
-✅ Mensagens ilimitadas com o Julinho no WhatsApp
-✅ Sem anúncios em toda a plataforma
+Agora você pode usar o CorretorIA e o Julinho sem limite nenhum. Correções ilimitadas, textos maiores, e o Julinho disponível 24h no seu WhatsApp pra te ajudar.
 
-💬 CONHEÇA O JULINHO!
-Seu assistente de correção está pronto para te ajudar no WhatsApp.
-Envie qualquer texto e receba correções instantâneas!
+Pra começar a usar o Julinho, é só mandar um "oi" pra ele:
+${julinhoLink}
 
-👉 Conversar com Julinho: ${julinhoLink}
+Qualquer dúvida, é só responder esse email que eu mesmo respondo.
 
-👉 Acessar o CorretorIA: https://corretordetextoonline.com.br/dashboard
+Valeu pela confiança!
 
-Seu preço promocional está travado enquanto a assinatura estiver ativa.
+Um abraço,
+Fábio
+Criador do CorretorIA
 
 ---
-Dúvidas? Responda este email ou entre em contato conosco.
-
-© 2025 CorretorIA. Todos os direitos reservados.
+© 2025 CorretorIA · corretordetextoonline.com.br
 `
 
   return {
