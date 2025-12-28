@@ -619,6 +619,8 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
     // ATOMIC IDEMPOTENCY - Claim payment with UPDATE + WHERE
     // This prevents race conditions when MP sends multiple webhooks simultaneously
     // =============================
+    console.log('[MP Webhook Bundle] Attempting atomic claim for payment:', payment.id.toString())
+
     const { data: claimedPayment, error: claimError } = await supabase
       .from('pix_payments')
       .update({
@@ -627,11 +629,21 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
       })
       .eq('payment_intent_id', payment.id.toString())
       .in('status', ['pending', 'created']) // Only claim if NOT already processing/consumed
-      .neq('julinho_activated', true) // Also check julinho flag
+      .is('julinho_activated', false) // Only if not yet activated (handles NULL and false)
       .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle')
       .maybeSingle()
 
-    // If we couldn't claim, another webhook already got it
+    // Log claim result for debugging
+    console.log('[MP Webhook Bundle] Claim result:', {
+      paymentId: payment.id,
+      claimed: !!claimedPayment,
+      error: claimError?.message || null,
+      errorCode: claimError?.code || null,
+    })
+
+    // If we couldn't claim, check why and retry if needed
+    let pixPayment = claimedPayment
+
     if (!claimedPayment) {
       // Check if it's already processed or just doesn't exist
       const { data: existingPayment } = await supabase
@@ -641,23 +653,52 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
         .maybeSingle()
 
       if (existingPayment) {
-        console.log('[MP Webhook Bundle] Payment already claimed by another webhook (atomic check):', {
-          paymentId: payment.id,
-          currentStatus: existingPayment.status,
-          julinho_activated: existingPayment.julinho_activated,
-        })
+        // If status is still pending but claim failed, something is wrong - try simpler query
+        if (existingPayment.status === 'pending' && existingPayment.julinho_activated !== true) {
+          console.warn('[MP Webhook Bundle] Claim failed but payment is eligible, retrying with simpler query...')
+
+          const { data: retryClaimedPayment, error: retryError } = await supabase
+            .from('pix_payments')
+            .update({
+              status: 'processing',
+              processing_started_at: new Date().toISOString(),
+            })
+            .eq('payment_intent_id', payment.id.toString())
+            .eq('status', 'pending')
+            .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle')
+            .maybeSingle()
+
+          if (retryClaimedPayment) {
+            console.log('[MP Webhook Bundle] Retry claim successful!')
+            pixPayment = retryClaimedPayment
+            // Continue processing below
+          } else {
+            console.error('[MP Webhook Bundle] Retry claim also failed:', retryError?.message)
+            console.log('[MP Webhook Bundle] Payment already claimed by another webhook (atomic check):', {
+              paymentId: payment.id,
+              currentStatus: existingPayment.status,
+              julinho_activated: existingPayment.julinho_activated,
+            })
+            return
+          }
+        } else {
+          console.log('[MP Webhook Bundle] Payment already claimed by another webhook (atomic check):', {
+            paymentId: payment.id,
+            currentStatus: existingPayment.status,
+            julinho_activated: existingPayment.julinho_activated,
+          })
+          return
+        }
       } else {
         console.error('[MP Webhook Bundle] PIX payment not found:', payment.id)
+        return
       }
-      return
+    } else {
+      console.log('[MP Webhook Bundle] Successfully claimed payment for processing:', {
+        paymentId: payment.id,
+        claimedAt: new Date().toISOString(),
+      })
     }
-
-    console.log('[MP Webhook Bundle] Successfully claimed payment for processing:', {
-      paymentId: payment.id,
-      claimedAt: new Date().toISOString(),
-    })
-
-    const pixPayment = claimedPayment
 
     // Verify this is a bundle payment
     if (!pixPayment.is_bundle) {
