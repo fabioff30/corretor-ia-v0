@@ -615,30 +615,49 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
 
     const isGuestBundle = externalReference.startsWith('bundle_guest_')
 
-    // Get the PIX payment record
-    const { data: pixPayment, error: pixError } = await supabase
+    // =============================
+    // ATOMIC IDEMPOTENCY - Claim payment with UPDATE + WHERE
+    // This prevents race conditions when MP sends multiple webhooks simultaneously
+    // =============================
+    const { data: claimedPayment, error: claimError } = await supabase
       .from('pix_payments')
-      .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle, julinho_activated, status')
+      .update({
+        status: 'processing',
+        processing_started_at: new Date().toISOString(),
+      })
       .eq('payment_intent_id', payment.id.toString())
+      .in('status', ['pending', 'created']) // Only claim if NOT already processing/consumed
+      .neq('julinho_activated', true) // Also check julinho flag
+      .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle')
       .maybeSingle()
 
-    if (pixError || !pixPayment) {
-      console.error('[MP Webhook Bundle] PIX payment not found:', pixError)
+    // If we couldn't claim, another webhook already got it
+    if (!claimedPayment) {
+      // Check if it's already processed or just doesn't exist
+      const { data: existingPayment } = await supabase
+        .from('pix_payments')
+        .select('status, julinho_activated')
+        .eq('payment_intent_id', payment.id.toString())
+        .maybeSingle()
+
+      if (existingPayment) {
+        console.log('[MP Webhook Bundle] Payment already claimed by another webhook (atomic check):', {
+          paymentId: payment.id,
+          currentStatus: existingPayment.status,
+          julinho_activated: existingPayment.julinho_activated,
+        })
+      } else {
+        console.error('[MP Webhook Bundle] PIX payment not found:', payment.id)
+      }
       return
     }
 
-    // =============================
-    // IDEMPOTENCY CHECK - Prevent duplicate processing
-    // =============================
-    // If already consumed or julinho already activated, this is a duplicate webhook
-    if (pixPayment.status === 'consumed' || pixPayment.julinho_activated === true) {
-      console.log('[MP Webhook Bundle] Payment already processed (idempotency check):', {
-        paymentId: payment.id,
-        status: pixPayment.status,
-        julinho_activated: pixPayment.julinho_activated,
-      })
-      return
-    }
+    console.log('[MP Webhook Bundle] Successfully claimed payment for processing:', {
+      paymentId: payment.id,
+      claimedAt: new Date().toISOString(),
+    })
+
+    const pixPayment = claimedPayment
 
     // Verify this is a bundle payment
     if (!pixPayment.is_bundle) {
@@ -651,7 +670,7 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
     const isGuestPayment = !pixPayment.user_id
     const targetStatus = isGuestPayment ? 'approved' : 'paid'
 
-    // Update PIX payment status
+    // Update PIX payment status to target status
     const { error: updateError } = await supabase
       .from('pix_payments')
       .update({

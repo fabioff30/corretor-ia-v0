@@ -96,8 +96,19 @@ export async function activateJulinhoSubscription(
   phone: string,
   days: number = 30
 ): Promise<JulinhoActivationResult> {
+  const startTime = Date.now()
+
+  console.log('[Julinho] ========== ACTIVATION START ==========')
+  console.log('[Julinho] activateJulinhoSubscription called:', {
+    phone: phone ? `${phone.slice(0, 4)}****` : 'undefined',
+    days,
+    hasSecret: !!JULINHO_DASHBOARD_SECRET,
+    secretLength: JULINHO_DASHBOARD_SECRET?.length || 0,
+    apiUrl: JULINHO_API_URL
+  })
+
   if (!JULINHO_DASHBOARD_SECRET) {
-    console.error('[Julinho] JULINHO_DASHBOARD_SECRET not configured')
+    console.error('[Julinho] ❌ JULINHO_DASHBOARD_SECRET not configured in environment')
     return {
       success: false,
       error: 'Julinho integration not configured'
@@ -106,7 +117,17 @@ export async function activateJulinhoSubscription(
 
   const normalizedPhone = normalizePhoneNumber(phone)
 
+  console.log('[Julinho] Phone normalized:', {
+    original: phone ? `${phone.slice(0, 4)}****` : 'undefined',
+    normalized: normalizedPhone ? `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}` : 'undefined',
+    length: normalizedPhone?.length
+  })
+
   if (!validateWhatsAppPhone(normalizedPhone)) {
+    console.error('[Julinho] ❌ Invalid phone number validation failed:', {
+      phone: normalizedPhone ? `${normalizedPhone.slice(0, 4)}****` : 'undefined',
+      length: normalizedPhone?.length
+    })
     return {
       success: false,
       error: `Invalid phone number: ${phone}`
@@ -115,25 +136,38 @@ export async function activateJulinhoSubscription(
 
   try {
     const credentials = Buffer.from(`admin:${JULINHO_DASHBOARD_SECRET}`).toString('base64')
+    const url = `${JULINHO_API_URL}/api/webhook/subscription/${normalizedPhone}/activate`
 
-    const response = await fetch(
-      `${JULINHO_API_URL}/api/webhook/subscription/${normalizedPhone}/activate`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${credentials}`,
-        },
-        body: JSON.stringify({ days, source: 'corretoria-bundle' }),
-      }
-    )
+    console.log('[Julinho] Making HTTP POST request:', {
+      url: url.replace(normalizedPhone, `${normalizedPhone.slice(0, 4)}****`),
+      method: 'POST',
+      hasAuth: true,
+      body: { days, source: 'corretoria-bundle' }
+    })
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`,
+      },
+      body: JSON.stringify({ days, source: 'corretoria-bundle' }),
+    })
+
+    console.log('[Julinho] HTTP response received:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      duration_ms: Date.now() - startTime
+    })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Julinho] Activation failed:', {
+      console.error('[Julinho] ❌ Activation failed:', {
         status: response.status,
         error: errorText,
-        phone: `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}`
+        phone: `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}`,
+        duration_ms: Date.now() - startTime
       })
 
       return {
@@ -144,18 +178,27 @@ export async function activateJulinhoSubscription(
 
     const data = await response.json()
 
-    console.log('[Julinho] Activation successful:', {
+    console.log('[Julinho] ✅ Activation successful:', {
       phone: `${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-4)}`,
       days,
-      end_date: data.data?.subscription_end_date
+      end_date: data.data?.subscription_end_date,
+      verified_status: data.data?.verified?.status,
+      duration_ms: Date.now() - startTime
     })
+    console.log('[Julinho] ========== ACTIVATION END ==========')
 
     return {
       success: true,
       data: data.data
     }
   } catch (error) {
-    console.error('[Julinho] Network error:', error)
+    console.error('[Julinho] ❌ Network/fetch error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' | ') : undefined,
+      phone: `${normalizedPhone.slice(0, 4)}****`,
+      duration_ms: Date.now() - startTime
+    })
+    console.log('[Julinho] ========== ACTIVATION END (ERROR) ==========')
 
     return {
       success: false,
