@@ -618,12 +618,25 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
     // Get the PIX payment record
     const { data: pixPayment, error: pixError } = await supabase
       .from('pix_payments')
-      .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle')
+      .select('id, user_id, email, plan_type, whatsapp_phone, is_bundle, julinho_activated, status')
       .eq('payment_intent_id', payment.id.toString())
       .maybeSingle()
 
     if (pixError || !pixPayment) {
       console.error('[MP Webhook Bundle] PIX payment not found:', pixError)
+      return
+    }
+
+    // =============================
+    // IDEMPOTENCY CHECK - Prevent duplicate processing
+    // =============================
+    // If already consumed or julinho already activated, this is a duplicate webhook
+    if (pixPayment.status === 'consumed' || pixPayment.julinho_activated === true) {
+      console.log('[MP Webhook Bundle] Payment already processed (idempotency check):', {
+        paymentId: payment.id,
+        status: pixPayment.status,
+        julinho_activated: pixPayment.julinho_activated,
+      })
       return
     }
 
@@ -658,8 +671,8 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
 
     const julinhoResult = await activateJulinhoSubscription(whatsappPhone, 30)
 
-    // Update julinho activation status in database
-    await supabase
+    // Update julinho activation status in database IMMEDIATELY to prevent duplicates
+    const { error: julinhoUpdateError } = await supabase
       .from('pix_payments')
       .update({
         julinho_activated: julinhoResult.success,
@@ -667,13 +680,17 @@ async function handleBundlePayment(payment: any, externalReference: string, supa
       })
       .eq('payment_intent_id', payment.id.toString())
 
+    if (julinhoUpdateError) {
+      console.error('[MP Webhook Bundle] Error updating julinho activation status:', julinhoUpdateError)
+    }
+
     if (julinhoResult.success) {
       console.log('[MP Webhook Bundle] Julinho activation successful:', {
         phone: whatsappPhone,
         end_date: julinhoResult.data?.subscription_end_date,
       })
 
-      // Send WhatsApp template message "pagamento_aprovado"
+      // Send WhatsApp template message "pagamento_aprovado" - ONLY ONCE due to idempotency check above
       const templateResult = await sendJulinhoTemplateMessage(whatsappPhone, 'pagamento_aprovado')
       if (templateResult.success) {
         console.log('[MP Webhook Bundle] Template message "pagamento_aprovado" sent to:', whatsappPhone)
