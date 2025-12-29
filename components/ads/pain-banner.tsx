@@ -55,6 +55,9 @@ const painConfig = {
 }
 
 export function PainBanner({ painBanner, open, onOpenChange, onCtaClick }: PainBannerProps) {
+  // TEMPORARIAMENTE DESATIVADO
+  return null
+
   const config = painConfig[painBanner.id]
 
   // Track banner shown event
