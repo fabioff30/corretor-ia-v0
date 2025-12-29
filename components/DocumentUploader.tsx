@@ -88,14 +88,26 @@ export function DocumentUploader({ isPremium }: Props) {
     });
 
     try {
-      // Get Supabase session
       const supabase = createClient();
+
+      // ✅ First verify user authenticity with getUser() (contacts Supabase server)
+      // getSession() only reads from storage and could be tampered with
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("Você precisa estar logado para converter documentos");
+      }
+
+      // Get session for access_token (safe to use after getUser() verification)
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        throw new Error("Você precisa estar logado para converter documentos");
+      if (!session?.access_token) {
+        throw new Error("Sessão expirada. Faça login novamente.");
       }
 
       // Upload to API
