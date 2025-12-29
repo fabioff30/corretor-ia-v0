@@ -1,14 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getRatingDetails } from "@/utils/rating-storage"
-import { protectedAdminApiHandler } from "@/middleware/admin-auth"
+import { getCurrentUserWithProfile } from "@/utils/auth-helpers"
 
 // Prevent static generation for this dynamic route
 export const dynamic = 'force-dynamic'
 
-// Protected admin endpoint using secure session-based auth
-const handler = protectedAdminApiHandler(async (request: NextRequest, session) => {
-
+export async function GET(request: NextRequest) {
   try {
+    // Verify admin access
+    const { user, profile } = await getCurrentUserWithProfile()
+
+    if (!user || !profile || profile.plan_type !== 'admin') {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin access required' },
+        { status: 401 }
+      )
+    }
+
     // Obter parâmetros de paginação da query string
     const searchParams = request.nextUrl.searchParams
     const limit = Number.parseInt(searchParams.get("limit") || "50", 10)
@@ -36,7 +44,4 @@ const handler = protectedAdminApiHandler(async (request: NextRequest, session) =
       { status: 500 },
     )
   }
-})
-
-// Export the protected handler as GET
-export const GET = handler
+}
