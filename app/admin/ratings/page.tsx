@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Star, ChevronLeft, ChevronRight, Search, AlertTriangle, Loader2 } from "lucide-react"
+import { Star, ChevronLeft, ChevronRight, Search, AlertTriangle, Loader2, MessageSquare, Filter } from "lucide-react"
 import { BackgroundGradient } from "@/components/background-gradient"
 import { useUser } from "@/components/providers/user-provider"
 import Link from "next/link"
@@ -36,6 +36,18 @@ export default function AdminRatingsPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showOnlyWithFeedback, setShowOnlyWithFeedback] = useState(false)
+
+  // Filtrar avaliações com feedback escrito
+  const filteredRatings = showOnlyWithFeedback
+    ? ratings.filter(r => r.feedback && r.feedback.trim().length > 0)
+    : ratings
+
+  // Estatísticas
+  const ratingsWithFeedback = ratings.filter(r => r.feedback && r.feedback.trim().length > 0).length
+  const averageRating = ratings.length > 0
+    ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
+    : "0"
 
   const fetchRatings = async () => {
     setIsLoading(true)
@@ -171,8 +183,56 @@ export default function AdminRatingsPage() {
       <div className="container max-w-6xl mx-auto py-12 px-4">
         <h1 className="text-3xl font-bold mb-8 gradient-text">Painel de Avaliações</h1>
 
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Média</p>
+                  <p className="text-2xl font-bold">{averageRating}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{ratings.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-green-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Com Feedback</p>
+                  <p className="text-2xl font-bold">{ratingsWithFeedback}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Mostrando</p>
+                  <p className="text-2xl font-bold">{filteredRatings.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar avaliações..." className="pl-9 w-[300px]" disabled={isLoading} />
@@ -195,6 +255,15 @@ export default function AdminRatingsPage() {
                 <option value="100">100 por página</option>
               </select>
             </div>
+            <Button
+              variant={showOnlyWithFeedback ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowOnlyWithFeedback(!showOnlyWithFeedback)}
+              className="gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              {showOnlyWithFeedback ? "Mostrando só com feedback" : "Filtrar com feedback"}
+            </Button>
           </div>
           <Link href="/admin">
             <Button variant="outline">Voltar ao Admin</Button>
@@ -214,19 +283,32 @@ export default function AdminRatingsPage() {
               Tentar novamente
             </Button>
           </div>
-        ) : ratings.length === 0 ? (
+        ) : filteredRatings.length === 0 ? (
           <div className="text-center py-12 bg-muted/30 rounded-lg">
-            <p className="text-lg text-muted-foreground">Nenhuma avaliação encontrada</p>
+            <p className="text-lg text-muted-foreground">
+              {showOnlyWithFeedback
+                ? "Nenhuma avaliação com feedback escrito encontrada"
+                : "Nenhuma avaliação encontrada"}
+            </p>
+            {showOnlyWithFeedback && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => setShowOnlyWithFeedback(false)}
+              >
+                Mostrar todas as avaliações
+              </Button>
+            )}
           </div>
         ) : (
           <>
             <div className="grid gap-4">
-              {ratings.map((rating) => (
-                <Card key={rating.id} className="overflow-hidden">
+              {filteredRatings.map((rating) => (
+                <Card key={rating.id} className={`overflow-hidden ${rating.feedback ? 'ring-2 ring-green-500/20' : ''}`}>
                   <div className={`h-1 ${getRatingColorClass(rating.rating)}`}></div>
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <div className="flex">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
@@ -238,13 +320,22 @@ export default function AdminRatingsPage() {
                           ))}
                         </div>
                         <span className="font-medium">{rating.rating}/5</span>
+                        {rating.feedback && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                            <MessageSquare className="h-3 w-3" />
+                            Com feedback
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">{formatDate(rating.timestamp)}</div>
                     </div>
 
                     {rating.feedback && (
-                      <div className="bg-muted/30 p-4 rounded-md mb-4">
-                        <p className="italic">"{rating.feedback}"</p>
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-md mb-4">
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                          <p className="text-green-900 dark:text-green-100">"{rating.feedback}"</p>
+                        </div>
                       </div>
                     )}
 
