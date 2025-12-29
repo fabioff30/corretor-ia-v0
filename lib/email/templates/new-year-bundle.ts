@@ -19,13 +19,13 @@ export function newYearBundleEmailTemplate({
 
   // Dynamic subject based on user status
   const subject = isCancelled
-    ? `🎆 ${recipientName}, sentimos sua falta! Volte com 50% OFF`
-    : `🎆 Oferta de Ano Novo: CorretorIA + Julinho por R$19,90/mês`
+    ? `🎆 ${recipientName}, a gente sentiu sua falta! Volta com 50% OFF?`
+    : `🎆 Ei ${recipientName}! Última chance de 2025 - 50% OFF no CorretorIA + Julinho`
 
-  // Dynamic opening based on user status
+  // Dynamic opening based on user status - Tom pessoal e brincalhão
   const openingLine = isCancelled
-    ? `Notamos que você não está mais usando o CorretorIA Premium. Que tal começar 2025 com uma oferta especial?`
-    : `Preparamos uma oferta exclusiva de fim de ano para você começar 2025 escrevendo ainda melhor!`
+    ? `Ei, sumiu pra onde? 😅 A gente tava com saudade aqui... E olha, resolvi te dar mais uma chance de voltar pro time com uma oferta especial de fim de ano.`
+    : `Cara, eu não ia deixar 2025 acabar sem te dar uma última chance de parar de errar português de vez. 😅 Então preparei algo especial:`
 
   const htmlContent = `<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
@@ -68,7 +68,7 @@ export function newYearBundleEmailTemplate({
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="color: #ffffff; font-size: 16px; line-height: 1.6; padding-bottom: 20px;">
-                    Olá, <strong>${recipientName}</strong>!
+                    E aí, <strong>${recipientName}</strong>! 👋
                   </td>
                 </tr>
                 <tr>
@@ -162,9 +162,9 @@ export function newYearBundleEmailTemplate({
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                   <td align="center">
-                    <a href="https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2024&utm_content=cta"
+                    <a href="https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2025&utm_content=cta"
                        style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: bold; font-size: 16px;">
-                      QUERO APROVEITAR A OFERTA →
+                      BORA, QUERO ISSO! 🚀
                     </a>
                   </td>
                 </tr>
@@ -177,6 +177,17 @@ export function newYearBundleEmailTemplate({
                     <p style="color: #ef4444; font-size: 14px; font-weight: bold; margin: 0;">
                       ⏰ Oferta válida até 01/01/2026 às 23:59
                     </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Personal Signature -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-top: 30px;">
+                <tr>
+                  <td style="color: #a1a1aa; font-size: 14px; line-height: 1.6;">
+                    <p style="margin: 0 0 10px 0;">Um abraço,</p>
+                    <p style="margin: 0; color: #ffffff; font-weight: bold;">Fábio</p>
+                    <p style="margin: 5px 0 0 0; color: #71717a; font-size: 12px;">Criador do CorretorIA</p>
                   </td>
                 </tr>
               </table>
@@ -209,7 +220,7 @@ export function newYearBundleEmailTemplate({
 </html>`
 
   const textContent = `
-Olá, ${recipientName}!
+E aí, ${recipientName}! 👋
 
 ${openingLine}
 
@@ -228,9 +239,13 @@ O que você recebe:
 ✅ Sem anúncios
 ✅ Preço travado enquanto manter a assinatura
 
-👉 Acesse agora: https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2024
+👉 BORA! Acesse agora: https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2025
 
 ⏰ Oferta válida até 01/01/2026 às 23:59
+
+Um abraço,
+Fábio
+Criador do CorretorIA
 
 ---
 Você está recebendo este email porque se cadastrou no CorretorIA.

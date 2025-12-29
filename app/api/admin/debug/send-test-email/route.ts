@@ -11,11 +11,12 @@ import {
   sendCancellationEmail,
   sendPasswordResetEmail,
   sendPaymentApprovedEmail,
+  sendNewYearBundleEmail,
 } from '@/lib/email/send'
 
 export const maxDuration = 15
 
-type EmailTemplate = 'welcome' | 'premium-upgrade' | 'cancellation' | 'password-reset' | 'payment-approved'
+type EmailTemplate = 'welcome' | 'premium-upgrade' | 'cancellation' | 'password-reset' | 'payment-approved' | 'new-year-bundle'
 
 interface SendTestEmailRequest {
   template: EmailTemplate
@@ -25,6 +26,9 @@ interface SendTestEmailRequest {
   amount?: number
   planType?: 'monthly' | 'annual'
   activationLink?: string
+  // New Year Bundle specific
+  isFreePlan?: boolean
+  isCancelled?: boolean
 }
 
 export async function POST(request: Request) {
@@ -52,7 +56,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body: SendTestEmailRequest = await request.json()
-    const { template, to, name, resetLink, amount, planType, activationLink } = body
+    const { template, to, name, resetLink, amount, planType, activationLink, isFreePlan, isCancelled } = body
 
     if (!template || !to) {
       return NextResponse.json(
@@ -123,6 +127,17 @@ export async function POST(request: Request) {
         })
         emailSent = true
         emailDetails = 'Email de pagamento aprovado enviado'
+        break
+
+      case 'new-year-bundle':
+        await sendNewYearBundleEmail({
+          to: recipient,
+          name: recipient.name,
+          isFreePlan: isFreePlan ?? true,
+          isCancelled: isCancelled ?? false
+        })
+        emailSent = true
+        emailDetails = 'Email de oferta de fim de ano enviado'
         break
 
       default:
@@ -220,6 +235,13 @@ export async function GET() {
           name: 'Recuperação de Senha',
           description: 'Email enviado quando um usuário solicita recuperação de senha',
           requiredFields: ['to', 'name', 'resetLink'],
+        },
+        {
+          id: 'new-year-bundle',
+          name: 'Oferta de Fim de Ano',
+          description: 'Email promocional da campanha de fim de ano - CorretorIA + Julinho por R$19,90/mês',
+          requiredFields: ['to', 'name'],
+          optionalFields: ['isFreePlan', 'isCancelled'],
         },
       ],
     })
