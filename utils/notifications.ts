@@ -4,7 +4,7 @@
 
 // URL do webhook para notificações (pode ser Discord, Slack, ou um serviço personalizado)
 const NOTIFICATION_WEBHOOK_URL =
-  process.env.NOTIFICATION_WEBHOOK_URL || "https://auto.ffmedia.com.br/webhook-test/avaliacao"
+  process.env.NOTIFICATION_WEBHOOK_URL || "https://auto.ffmedia.com.br/webhook/avaliacao-122312234234"
 
 /**
  * Envia uma notificação para o webhook configurado

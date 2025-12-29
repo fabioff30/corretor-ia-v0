@@ -55,7 +55,7 @@ export function validateEnvVars(): EnvConfig {
     return {
       NODE_ENV: 'development' as 'development',
       NEXT_PUBLIC_APP_URL: "https://www.corretordetextoonline.com.br",
-      NOTIFICATION_WEBHOOK_URL: "https://auto.ffmedia.com.br/webhook-test/avaliacao",
+      NOTIFICATION_WEBHOOK_URL: "https://auto.ffmedia.com.br/webhook/avaliacao-122312234234",
     }
   }
 
@@ -135,7 +135,7 @@ export function validateEnvVars(): EnvConfig {
     NEXT_PUBLIC_ADMIN_PASSWORD: env.NEXT_PUBLIC_ADMIN_PASSWORD, // Will be deprecated
     
     // Notifications
-    NOTIFICATION_WEBHOOK_URL: env.NOTIFICATION_WEBHOOK_URL || "https://auto.ffmedia.com.br/webhook-test/avaliacao",
+    NOTIFICATION_WEBHOOK_URL: env.NOTIFICATION_WEBHOOK_URL || "https://auto.ffmedia.com.br/webhook/avaliacao-122312234234",
     
     // Node environment
     NODE_ENV: (env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
