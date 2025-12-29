@@ -34,136 +34,80 @@ export function newYearBundleEmailTemplate({
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Oferta de Fim de Ano - CorretorIA + Julinho</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #0a0a0a;">
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
 
           <!-- Header with Logo -->
           <tr>
-            <td align="center" style="padding: 20px 0;">
-              <img src="https://corretordetextoonline.com.br/logo-dark.png" alt="CorretorIA" width="180" style="display: block;" />
+            <td align="center" style="padding: 20px 0 30px 0;">
+              <img src="https://corretordetextoonline.com.br/logo.png" alt="CorretorIA" width="160" style="display: block;" />
             </td>
           </tr>
 
-          <!-- Special Offer Badge -->
+          <!-- Main Content -->
           <tr>
-            <td align="center" style="padding: 20px 0;">
-              <table role="presentation" style="border-collapse: collapse;">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; padding: 10px 24px; border-radius: 50px; font-weight: bold; font-size: 14px; letter-spacing: 1px;">
-                    ✨ OFERTA ESPECIAL DE FIM DE ANO ✨
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Main Content Card -->
-          <tr>
-            <td style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.3); padding: 40px 30px;">
+            <td style="padding: 0 20px;">
 
               <!-- Greeting -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="color: #ffffff; font-size: 16px; line-height: 1.6; padding-bottom: 20px;">
-                    E aí, <strong>${recipientName}</strong>! 👋
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color: #a1a1aa; font-size: 16px; line-height: 1.6; padding-bottom: 30px;">
-                    ${openingLine}
-                  </td>
-                </tr>
-              </table>
+              <p style="color: #1a1a1a; font-size: 18px; line-height: 1.6; margin: 0 0 20px 0;">
+                E aí, <strong>${recipientName}</strong>! 👋
+              </p>
 
-              <!-- Bundle Offer -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background: rgba(245, 158, 11, 0.1); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2); margin-bottom: 30px;">
+              <p style="color: #4a4a4a; font-size: 16px; line-height: 1.7; margin: 0 0 30px 0;">
+                ${openingLine}
+              </p>
+
+              <!-- Offer Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 30px;">
                 <tr>
-                  <td style="padding: 30px; text-align: center;">
-                    <p style="color: #f59e0b; font-size: 18px; font-weight: bold; margin: 0 0 15px 0;">
+                  <td style="padding: 25px; text-align: center;">
+                    <p style="color: #f59e0b; font-size: 14px; font-weight: bold; margin: 0 0 15px 0; letter-spacing: 1px;">
+                      🎆 OFERTA DE FIM DE ANO
+                    </p>
+
+                    <p style="color: #1a1a1a; font-size: 16px; font-weight: 600; margin: 0 0 20px 0;">
                       2 Produtos pelo Preço de 1
                     </p>
 
-                    <!-- Products -->
-                    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                      <tr>
-                        <td style="width: 50%; padding: 10px; vertical-align: top;">
-                          <p style="color: #534BD1; font-weight: bold; margin: 0 0 5px 0;">📝 CorretorIA Premium</p>
-                          <p style="color: #71717a; font-size: 12px; margin: 0;">Correção ilimitada no site</p>
-                        </td>
-                        <td style="width: 50%; padding: 10px; vertical-align: top;">
-                          <p style="color: #22c55e; font-weight: bold; margin: 0 0 5px 0;">💬 Julinho Premium</p>
-                          <p style="color: #71717a; font-size: 12px; margin: 0;">Correção via WhatsApp</p>
-                        </td>
-                      </tr>
-                    </table>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                      📝 <strong>CorretorIA Premium</strong> + 💬 <strong>Julinho Premium</strong>
+                    </p>
 
-                    <!-- Pricing -->
-                    <p style="color: #71717a; font-size: 14px; text-decoration: line-through; margin: 0;">
+                    <p style="color: #9ca3af; font-size: 14px; text-decoration: line-through; margin: 15px 0 5px 0;">
                       De R$ 39,80/mês
                     </p>
-                    <p style="color: #ffffff; font-size: 48px; font-weight: 900; margin: 10px 0;">
-                      R$ 19,90<span style="font-size: 16px; font-weight: normal; color: #71717a;">/mês</span>
+                    <p style="color: #1a1a1a; font-size: 36px; font-weight: 900; margin: 0;">
+                      R$ 19,90<span style="font-size: 14px; font-weight: normal; color: #6b7280;">/mês</span>
                     </p>
-                    <table role="presentation" style="margin: 0 auto;">
-                      <tr>
-                        <td style="background-color: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;">
-                          50% OFF
-                        </td>
-                      </tr>
-                    </table>
+                    <p style="color: #22c55e; font-size: 14px; font-weight: bold; margin: 10px 0 0 0;">
+                      50% OFF
+                    </p>
                   </td>
                 </tr>
               </table>
 
-              <!-- Benefits List -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                <tr>
-                  <td style="color: #ffffff; font-size: 16px; font-weight: bold; padding-bottom: 15px;">
-                    O que você recebe:
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Correções ilimitadas no CorretorIA
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Mensagens ilimitadas no Julinho
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Até 20.000 caracteres por texto
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Sem anúncios
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #d4d4d8; font-size: 14px;">
-                          ✅ Preço travado enquanto manter a assinatura
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+              <!-- Benefits -->
+              <p style="color: #1a1a1a; font-size: 16px; font-weight: 600; margin: 0 0 15px 0;">
+                O que você recebe:
+              </p>
+
+              <p style="color: #4a4a4a; font-size: 15px; line-height: 2; margin: 0 0 25px 0;">
+                ✅ Correções ilimitadas no CorretorIA<br/>
+                ✅ Mensagens ilimitadas no Julinho (WhatsApp)<br/>
+                ✅ Até 20.000 caracteres por texto<br/>
+                ✅ Sem anúncios<br/>
+                ✅ Preço travado enquanto manter a assinatura
+              </p>
 
               <!-- CTA Button -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                 <tr>
                   <td align="center">
                     <a href="https://corretordetextoonline.com.br/oferta-fim-de-ano?utm_source=email&utm_medium=campaign&utm_campaign=fimdeano2025&utm_content=cta"
-                       style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: bold; font-size: 16px;">
+                       style="display: inline-block; background-color: #f59e0b; color: #000000; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: bold; font-size: 16px;">
                       BORA, QUERO ISSO! 🚀
                     </a>
                   </td>
@@ -171,42 +115,36 @@ export function newYearBundleEmailTemplate({
               </table>
 
               <!-- Urgency -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                <tr>
-                  <td style="padding: 15px; text-align: center;">
-                    <p style="color: #ef4444; font-size: 14px; font-weight: bold; margin: 0;">
-                      ⏰ Oferta válida até 01/01/2026 às 23:59
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <p style="color: #dc2626; font-size: 14px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+                ⏰ Oferta válida até 01/01/2026 às 23:59
+              </p>
 
-              <!-- Personal Signature -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-top: 30px;">
-                <tr>
-                  <td style="color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-                    <p style="margin: 0 0 10px 0;">Um abraço,</p>
-                    <p style="margin: 0; color: #ffffff; font-weight: bold;">Fábio</p>
-                    <p style="margin: 5px 0 0 0; color: #71717a; font-size: 12px;">Criador do CorretorIA</p>
-                  </td>
-                </tr>
-              </table>
+              <!-- Signature -->
+              <p style="color: #4a4a4a; font-size: 15px; line-height: 1.6; margin: 0 0 5px 0;">
+                Um abraço,
+              </p>
+              <p style="color: #1a1a1a; font-size: 15px; font-weight: 600; margin: 0 0 3px 0;">
+                Fábio
+              </p>
+              <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+                Criador do CorretorIA
+              </p>
 
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 30px 20px; text-align: center;">
-              <p style="color: #71717a; font-size: 12px; margin: 0 0 10px 0;">
+            <td style="padding: 40px 20px 20px 20px; text-align: center; border-top: 1px solid #e5e7eb; margin-top: 30px;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0 0 10px 0;">
                 Você está recebendo este email porque se cadastrou no CorretorIA.
               </p>
-              <p style="color: #52525b; font-size: 12px; margin: 0;">
-                <a href="https://corretordetextoonline.com.br/preferencias" style="color: #52525b;">Gerenciar preferências</a>
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                <a href="https://corretordetextoonline.com.br/preferencias" style="color: #6b7280;">Gerenciar preferências</a>
                 &nbsp;|&nbsp;
-                <a href="https://corretordetextoonline.com.br/descadastrar" style="color: #52525b;">Descadastrar</a>
+                <a href="https://corretordetextoonline.com.br/descadastrar" style="color: #6b7280;">Descadastrar</a>
               </p>
-              <p style="color: #3f3f46; font-size: 11px; margin: 20px 0 0 0;">
+              <p style="color: #d1d5db; font-size: 11px; margin: 15px 0 0 0;">
                 © 2025 CorretorIA. Todos os direitos reservados.
               </p>
             </td>
