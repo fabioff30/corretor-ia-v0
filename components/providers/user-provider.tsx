@@ -345,10 +345,15 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
   const signInWithGoogle = useCallback(async () => {
     try {
       setError(null)
+
+      // Capture current path to redirect back after OAuth
+      const currentPath = window.location.pathname
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`
+
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
