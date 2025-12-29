@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/supabase"
 import { supabase } from "@/lib/supabase/client"
 import { checkAndCleanup, monitorAuthErrors, RefreshLoopDetector, forceAuthCleanup } from "@/utils/auth-cleanup"
+import { sendGA4Event } from "@/utils/gtm-helper"
 
 // Monitor de refresh loops - apenas registra, não tenta corrigir
 // (A correção é feita pelo RefreshLoopDetector em auth-cleanup.ts)
@@ -39,6 +40,7 @@ interface UserContextValue {
   profile: Profile | null
   loading: boolean
   error: string | null
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<Profile>) => Promise<{ data: Profile | null; error: string | null }>
@@ -210,6 +212,13 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
       if (event === 'SIGNED_IN' && session) {
         refreshFailureCount = 0
+
+        // Track login event - GA4 recommended event
+        // https://developers.google.com/analytics/devguides/collection/ga4/reference/events#login
+        const provider = session.user?.app_metadata?.provider || 'email'
+        sendGA4Event('login', {
+          method: provider === 'email' ? 'email' : provider,
+        })
       }
 
       const nextUser = session?.user ?? null
@@ -320,6 +329,48 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
     },
     [user] // supabase is singleton
   )
+
+  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+    try {
+      setError(null)
+
+      // Capture current path to redirect back after email confirmation
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/'
+      const redirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`
+        : undefined
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name || '',
+          },
+          emailRedirectTo: redirectTo,
+        },
+      })
+
+      if (signUpError) {
+        setError(signUpError.message)
+        return { error: signUpError }
+      }
+
+      // Track sign_up event - GA4 recommended event
+      // https://developers.google.com/analytics/devguides/collection/ga4/reference/events#sign_up
+      if (data.user) {
+        sendGA4Event('sign_up', {
+          method: 'email',
+        })
+      }
+
+      return { error: null }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao criar conta'
+      setError(message)
+      return { error: error as Error }
+    }
+  }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -457,6 +508,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       profile,
       loading,
       error,
+      signUp,
       signIn,
       signInWithGoogle,
       updateProfile,
@@ -469,7 +521,7 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
       isFree: profile?.plan_type === "free",
       isLifetime: profile?.plan_type === "lifetime",
     }),
-    [error, loading, profile, refreshProfile, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, user]
+    [error, loading, profile, refreshProfile, signIn, signInWithGoogle, signOut, signUp, updateProfile, uploadAvatar, user]
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
