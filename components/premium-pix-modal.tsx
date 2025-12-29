@@ -84,21 +84,26 @@ export function PremiumPixModal({
 
     setStatus('success')
 
-    const planNames: Record<string, { id: string; name: string }> = {
-      monthly: { id: 'premium_monthly', name: 'Premium Mensal' },
-      annual: { id: 'premium_annual', name: 'Premium Anual' },
-      bundle_monthly: { id: 'bundle_monthly', name: 'CorretorIA + Julinho Mensal' },
+    const planNames: Record<string, { id: string; name: string; category: string }> = {
+      monthly: { id: 'premium_monthly', name: 'Premium Mensal', category: 'subscription' },
+      annual: { id: 'premium_annual', name: 'Premium Anual', category: 'subscription' },
+      bundle_monthly: { id: 'bundle_monthly', name: 'CorretorIA + Julinho Mensal', category: 'bundle' },
     }
     const planInfo = planNames[paymentData.planType] || planNames.monthly
+    const isBundle = paymentData.planType === 'bundle_monthly'
 
     sendGA4Event('purchase', {
       transaction_id: anonymizedPayment,
       value: paymentData.amount,
       currency: 'BRL',
       payment_method: 'pix',
+      // Include coupon for bundle purchases (New Year promo)
+      ...(isBundle && { coupon: 'FIMDEANO2025' }),
       items: [{
         item_id: planInfo.id,
         item_name: planInfo.name,
+        item_brand: 'CorretorIA',
+        item_category: planInfo.category,
         price: paymentData.amount,
         quantity: 1,
       }],

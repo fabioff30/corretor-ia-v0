@@ -80,7 +80,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
         { item_name: "CorretorIA Premium", item_category: "bundle" },
         { item_name: "Julinho Premium", item_category: "bundle" },
       ],
-      coupon: "FIMDEANO2024",
+      coupon: "FIMDEANO2025",
     })
 
     setIsLoading(true)
@@ -212,7 +212,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
         { item_name: "CorretorIA Premium", item_category: "bundle" },
         { item_name: "Julinho Premium", item_category: "bundle" },
       ],
-      coupon: "FIMDEANO2024",
+      coupon: "FIMDEANO2025",
       payment_method: "card",
     })
 
