@@ -19,7 +19,6 @@ import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
 import { GoogleAnalyticsWrapper } from "@/components/google-analytics-wrapper"
 import { BlackFridayBanner } from "@/components/black-friday/black-friday-banner"
-import { NewYearBanner } from "@/components/promo/new-year-banner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -239,7 +238,6 @@ export default async function RootLayout({
 
         <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <NewYearBanner />
             <BlackFridayBanner />
             <div className="flex min-h-screen flex-col">
               <Header />
