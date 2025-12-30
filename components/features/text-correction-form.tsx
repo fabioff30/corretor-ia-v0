@@ -217,6 +217,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const sseCorrection = useSSECorrection()
   const isAdmin = profile?.plan_type === "admin"
   const isPremium = profile?.plan_type === "pro" || isAdmin
+  // DEBUG: Log para verificar cálculo de isPremium
+  console.log('[TextCorrectionForm] profile:', profile?.plan_type, 'isPremium:', isPremium, 'isAdmin:', isAdmin)
   const resolvedCharacterLimit =
     isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
