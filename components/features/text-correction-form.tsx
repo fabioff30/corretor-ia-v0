@@ -210,15 +210,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const { toast } = useToast()
   const [showRating, setShowRating] = useState(false)
   const [correctionId, setCorrectionId] = useState<string>("")
-  const { user, profile } = useUser()
+  // IMPORTANTE: Usar isPro e isAdmin diretamente do useUser() para evitar race conditions
+  // O UserProvider usa useMemo para garantir valores estáveis durante re-renderizações
+  const { user, profile, isPro, isAdmin } = useUser()
   const { limits, loading: limitsLoading, error: limitsError } = usePlanLimits()
 
   // Hook para SSE streaming (usado para textos grandes)
   const sseCorrection = useSSECorrection()
-  const isAdmin = profile?.plan_type === "admin"
-  const isPremium = profile?.plan_type === "pro" || isAdmin
-  // DEBUG: Log para verificar cálculo de isPremium
-  console.log('[TextCorrectionForm] profile:', profile?.plan_type, 'isPremium:', isPremium, 'isAdmin:', isAdmin)
+  // Usar isPro do context em vez de calcular localmente - resolve bug de blur em mobile
+  const isPremium = isPro
   const resolvedCharacterLimit =
     isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1

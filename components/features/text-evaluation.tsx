@@ -34,9 +34,6 @@ interface TextEvaluationProps {
 }
 
 export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvaluationProps) {
-  // DEBUG: Log para verificar valor de isPremiumUser
-  console.log('[TextEvaluation] isPremiumUser:', isPremiumUser, 'errorStats:', evaluation.errorStats, 'personalizedTip:', evaluation.personalizedTip)
-
   const router = useRouter()
   const [showUpsellModal, setShowUpsellModal] = useState(false)
   const [upsellFeatureName, setUpsellFeatureName] = useState("Analises Avancadas")
