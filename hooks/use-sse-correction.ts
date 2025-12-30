@@ -16,6 +16,19 @@ export interface CorrectionEvaluation {
   improvements?: string[]
   analysis?: string
   model?: string
+  // Novos campos premium
+  improve?: string[]
+  errorStats?: {
+    total: number
+    byCategory: {
+      ortografia: number
+      gramatica: number
+      pontuacao: number
+      concordancia: number
+      regencia: number
+    }
+  }
+  personalizedTip?: string
 }
 
 export interface PainBanner {

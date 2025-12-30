@@ -140,8 +140,14 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
           <>
             {/* SECAO PREMIUM: Estatisticas de Erros */}
             {isCorrectionMode && (
-              isPremiumUser && errorStats ? (
-                <ErrorStatsSection errorStats={errorStats} />
+              isPremiumUser ? (
+                errorStats ? (
+                  <ErrorStatsSection errorStats={errorStats} />
+                ) : (
+                  <div className="text-muted-foreground text-sm p-4 text-center border rounded-lg bg-muted/30">
+                    Estatísticas de erros não disponíveis para este texto.
+                  </div>
+                )
               ) : (
                 <BlurredPremiumSection
                   onUpgradeClick={() => handleUpgradeClick("Estatisticas de Erros")}
@@ -155,8 +161,14 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
 
             {/* SECAO PREMIUM: Dica Personalizada */}
             {isCorrectionMode && (
-              isPremiumUser && personalizedTip ? (
-                <PersonalizedTipSection tip={personalizedTip} />
+              isPremiumUser ? (
+                personalizedTip ? (
+                  <PersonalizedTipSection tip={personalizedTip} />
+                ) : (
+                  <div className="text-muted-foreground text-sm p-4 text-center border rounded-lg bg-muted/30">
+                    Dica personalizada não disponível para este texto.
+                  </div>
+                )
               ) : (
                 <BlurredPremiumSection
                   onUpgradeClick={() => handleUpgradeClick("Dicas Personalizadas")}
@@ -213,8 +225,14 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
 
             {/* SECAO PREMIUM: Dicas de Melhoria */}
             {isCorrectionMode && (
-              isPremiumUser && improveTips && improveTips.length > 0 ? (
-                <ImproveTipsSection tips={improveTips} />
+              isPremiumUser ? (
+                improveTips && improveTips.length > 0 ? (
+                  <ImproveTipsSection tips={improveTips} />
+                ) : (
+                  <div className="text-muted-foreground text-sm p-4 text-center border rounded-lg bg-muted/30">
+                    Dicas de melhoria não disponíveis para este texto.
+                  </div>
+                )
               ) : (
                 <BlurredPremiumSection
                   onUpgradeClick={() => handleUpgradeClick("Dicas de Melhoria")}
