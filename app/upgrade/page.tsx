@@ -80,8 +80,8 @@ export default function UpgradePage() {
   const features = [
     {
       name: "Limite de caracteres",
-      free: "1.500 caracteres",
-      premium: "10.000 caracteres",
+      free: "1.000 caracteres",
+      premium: "20.000 caracteres",
       icon: FileText
     },
     {
@@ -319,8 +319,8 @@ export default function UpgradePage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                No plano gratuito, você pode corrigir até 1.500 caracteres por vez. 
-                Com o Pro, esse limite aumenta para 10.000 caracteres, suficiente 
+                No plano gratuito, voce pode corrigir ate 1.000 caracteres por vez.
+                Com o Pro, esse limite aumenta para 20.000 caracteres, suficiente
                 para textos longos e documentos completos.
               </p>
             </CardContent>

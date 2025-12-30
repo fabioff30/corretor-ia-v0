@@ -105,7 +105,7 @@ export default function RewriteTextPage() {
               "@type": "Offer",
               price: "0",
               priceCurrency: "BRL",
-              description: "Versão gratuita com limite de 1500 caracteres"
+              description: "Versao gratuita com limite de 1000 caracteres"
             },
             featureList: [
               "Reescrita em 5 estilos diferentes",
@@ -146,7 +146,7 @@ export default function RewriteTextPage() {
                 name: "Quantas palavras posso reescrever por vez?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Usuários gratuitos podem reescrever até 1.500 caracteres por vez. Com o plano Premium, esse limite aumenta para 5.000 caracteres, permitindo reescrever textos mais longos de uma só vez."
+                  text: "Usuarios gratuitos podem reescrever ate 1.000 caracteres por vez. Com o plano Premium, esse limite aumenta para 20.000 caracteres, permitindo reescrever textos mais longos de uma so vez."
                 }
               },
               {

@@ -35,7 +35,7 @@ export function PremiumRewriteUpsellModal({
 
   const freeFeatures = [
     { icon: Sparkles, text: "5 estilos de reescrita", free: true },
-    { icon: CheckCircle, text: "Até 1.500 caracteres", free: true },
+    { icon: CheckCircle, text: "Ate 1.000 caracteres", free: true },
     { icon: CheckCircle, text: "Reescrita básica", free: true },
     { icon: X, text: "Sem anúncios", free: false },
     { icon: X, text: "7 estilos premium", free: false },

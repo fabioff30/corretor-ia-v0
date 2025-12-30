@@ -52,7 +52,7 @@ export function DonationTiers() {
       benefits: [
         "Nome destacado com badge especial",
         "Sem anúncios por 6 meses",
-        "Limite de 5.000 caracteres",
+        "Limite de 20.000 caracteres",
         "Acesso a todos os recursos beta",
         "Suporte prioritário por email",
       ],

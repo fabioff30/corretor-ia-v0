@@ -143,7 +143,7 @@ export function CopyPromoBanner({ onClose }: CopyPromoBannerProps) {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">✓</span>
-                <span>Correções ilimitadas de até 5.000 caracteres</span>
+                <span>Correcoes ilimitadas de ate 20.000 caracteres</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">✓</span>

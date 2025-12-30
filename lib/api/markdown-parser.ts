@@ -9,6 +9,18 @@
  * - New Markdown format with ## sections for evaluation
  */
 
+// Interface para errorStats
+interface ParsedErrorStats {
+  total: number
+  byCategory: {
+    ortografia: number
+    gramatica: number
+    pontuacao: number
+    concordancia: number
+    regencia: number
+  }
+}
+
 export interface ParsedEvaluation {
   strengths: string[]
   weaknesses: string[]
@@ -21,6 +33,10 @@ export interface ParsedEvaluation {
   improvements?: string[]
   analysis?: string
   model?: string
+  // New premium fields (DeepSeek)
+  improve?: string[]
+  errorStats?: ParsedErrorStats
+  personalizedTip?: string
 }
 
 export interface ParsedCorrectionResponse {
@@ -319,6 +335,65 @@ export function parseMarkdownEvaluation(raw: string): ParsedEvaluation {
     }
   }
 
+  // New premium fields (DeepSeek)
+
+  // Extract Dicas de Melhoria (improve) - format: "O QUE: x | POR QUE: y | COMO: z"
+  const improveSection = extractMarkdownSection(raw, 'Dicas de Melhoria')
+  if (improveSection) {
+    const items = extractListItems(improveSection)
+    if (items.length > 0) {
+      evaluation.improve = items
+    }
+  }
+
+  // Extract Estatisticas de Erros (errorStats)
+  const errorStatsSection = extractMarkdownSection(raw, 'Estatisticas de Erros') || extractMarkdownSection(raw, 'Estatísticas de Erros')
+  if (errorStatsSection) {
+    const stats: ParsedErrorStats = {
+      total: 0,
+      byCategory: {
+        ortografia: 0,
+        gramatica: 0,
+        pontuacao: 0,
+        concordancia: 0,
+        regencia: 0,
+      }
+    }
+
+    // Parse each line for category counts
+    const lines = errorStatsSection.split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim().toLowerCase()
+      const numMatch = line.match(/:\s*(\d+)/)
+      const value = numMatch ? parseInt(numMatch[1], 10) : 0
+
+      if (trimmed.includes('total')) {
+        stats.total = value
+      } else if (trimmed.includes('ortografia')) {
+        stats.byCategory.ortografia = value
+      } else if (trimmed.includes('gramatica') || trimmed.includes('gramática')) {
+        stats.byCategory.gramatica = value
+      } else if (trimmed.includes('pontuacao') || trimmed.includes('pontuação')) {
+        stats.byCategory.pontuacao = value
+      } else if (trimmed.includes('concordancia') || trimmed.includes('concordância')) {
+        stats.byCategory.concordancia = value
+      } else if (trimmed.includes('regencia') || trimmed.includes('regência')) {
+        stats.byCategory.regencia = value
+      }
+    }
+
+    evaluation.errorStats = stats
+  }
+
+  // Extract Dica Personalizada (personalizedTip)
+  const personalizedTipSection = extractMarkdownSection(raw, 'Dica Personalizada')
+  if (personalizedTipSection) {
+    const text = extractPlainText(personalizedTipSection)
+    if (text) {
+      evaluation.personalizedTip = text
+    }
+  }
+
   return evaluation
 }
 
@@ -353,6 +428,10 @@ export function parseCorrectionResponse(raw: string): ParsedCorrectionResponse {
             ...(parsed.improvements && { improvements: parsed.improvements }),
             ...(parsed.analysis && { analysis: parsed.analysis }),
             ...(parsed.model && { model: parsed.model }),
+            // New premium fields (DeepSeek)
+            ...(Array.isArray(parsed.improve) && { improve: parsed.improve }),
+            ...(parsed.errorStats && { errorStats: parsed.errorStats }),
+            ...(typeof parsed.personalizedTip === 'string' && { personalizedTip: parsed.personalizedTip }),
           }
         } catch {
           // JSON parse failed - try Markdown format within the section

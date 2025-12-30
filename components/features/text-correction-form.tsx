@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/features/text-evaluation"
+import type { ImproveTip } from "@/components/features/improve-tips-section"
+import type { ErrorStats } from "@/components/features/error-stats-section"
 import {
   Loader2,
   Send,
@@ -64,6 +66,9 @@ import { wasPainBannerDismissedThisSession, markPainBannerDismissed } from "@/ut
 // Importar componente de upload de arquivo
 import { FileToTextUploader } from "@/components/file-to-text-uploader"
 
+// Importar modal de limite de caracteres
+import { CharacterLimitModal } from "@/components/premium/character-limit-modal"
+
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
@@ -83,7 +88,19 @@ const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
 const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
 const SSE_THRESHOLD_CHARS = 5000 // Use SSE streaming for texts > 5k chars (matches worker PARALLEL_CHUNK_SIZE)
 
-// Interface para a avaliação de reescrita
+// Interface para errorStats vindo da API
+interface ApiErrorStats {
+  total: number
+  byCategory: {
+    ortografia: number
+    gramatica: number
+    pontuacao: number
+    concordancia: number
+    regencia: number
+  }
+}
+
+// Interface para a avaliação de reescrita/correção
 interface RewriteEvaluation {
   strengths: string[]
   weaknesses: string[]
@@ -94,6 +111,85 @@ interface RewriteEvaluation {
   changes?: string[]
   toneApplied?: string
   painBanner?: PainBannerData
+  // Campos premium existentes
+  improvements?: string[]
+  analysis?: string
+  model?: string
+  // Novos campos premium
+  improve?: string[]
+  errorStats?: ApiErrorStats
+  personalizedTip?: string
+}
+
+/**
+ * Converte array de strings "O QUE: x | POR QUE: y | COMO: z" para array de ImproveTip
+ */
+function parseImproveTips(improve?: string[]): ImproveTip[] {
+  if (!improve || improve.length === 0) return []
+
+  return improve
+    .map((item) => {
+      // Formato esperado: "O QUE: x | POR QUE: y | COMO: z"
+      const whatMatch = item.match(/O QUE:\s*['"]?([^|'"]+)['"]?\s*\|/i)
+      const whyMatch = item.match(/POR QUE:\s*([^|]+)\s*\|/i)
+      const howMatch = item.match(/COMO:\s*['"]?([^'"]+)['"]?\s*$/i)
+
+      if (whatMatch && whyMatch && howMatch) {
+        return {
+          what: whatMatch[1].trim(),
+          why: whyMatch[1].trim(),
+          how: howMatch[1].trim(),
+        }
+      }
+
+      // Fallback: se o formato nao bater, tenta dividir por |
+      const parts = item.split('|').map(p => p.trim())
+      if (parts.length >= 3) {
+        return {
+          what: parts[0].replace(/^O QUE:\s*/i, '').replace(/^['"]|['"]$/g, ''),
+          why: parts[1].replace(/^POR QUE:\s*/i, ''),
+          how: parts[2].replace(/^COMO:\s*/i, '').replace(/^['"]|['"]$/g, ''),
+        }
+      }
+
+      return null
+    })
+    .filter((tip): tip is ImproveTip => tip !== null)
+}
+
+/**
+ * Converte errorStats da API para formato do frontend
+ */
+function convertErrorStats(apiStats?: ApiErrorStats): ErrorStats | undefined {
+  if (!apiStats) return undefined
+
+  const categories: ErrorStats['categories'] = []
+  const total = apiStats.total || 0
+
+  if (total === 0) {
+    return { totalErrors: 0, categories: [] }
+  }
+
+  const categoryMap: Record<string, string> = {
+    ortografia: 'ortografia',
+    gramatica: 'gramatica',
+    pontuacao: 'pontuacao',
+    concordancia: 'concordancia',
+    regencia: 'regencia',
+  }
+
+  for (const [key, label] of Object.entries(categoryMap)) {
+    const count = apiStats.byCategory?.[key as keyof typeof apiStats.byCategory] || 0
+    if (count > 0) {
+      categories.push({
+        category: label,
+        count,
+        percentage: Math.round((count / total) * 100),
+      })
+    }
+  }
+
+  return { totalErrors: total, categories }
 }
 
 export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false }: TextCorrectionFormProps) {
@@ -150,6 +246,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
   const [showPainBanner, setShowPainBanner] = useState(false)
+
+  // Estado para controlar o modal de limite de caracteres
+  const [showCharacterLimitModal, setShowCharacterLimitModal] = useState(false)
 
   // Helper to get today's date in local timezone (not UTC)
   // This prevents the counter from resetting at midnight UTC instead of local midnight
@@ -331,12 +430,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         setIsTyping(false)
       }
     } else {
-      // Se o usuário tentar colar um texto maior que o limite, cortar para o tamanho máximo
+      // Se o usuario tentar colar um texto maior que o limite, cortar para o tamanho maximo
       setOriginalText(newText.slice(0, characterLimit || FREE_CHARACTER_LIMIT))
       setIsTyping(true)
       toast({
         title: "Limite de caracteres atingido",
-        description: `O texto foi limitado a ${characterLimit} caracteres. Assine o Premium para textos de até 5.000 caracteres sem limites!`,
+        description: `O texto foi limitado a ${characterLimit?.toLocaleString("pt-BR")} caracteres. Assine o Premium para textos de ate 20.000 caracteres!`,
         variant: "destructive",
         action: (
           <Link
@@ -477,12 +576,14 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       return
     }
 
-    // Verificar limite de caracteres
+    // Verificar limite de caracteres - mostrar modal para usuarios gratuitos
     if (!isUnlimited && characterLimit !== null && originalText.length > characterLimit) {
-      toast({
-        title: "Texto muito longo",
-        description: `Por favor, reduza o texto para no máximo ${characterLimit} caracteres.`,
-        variant: "destructive",
+      // Mostrar modal de limite de caracteres com opcao de upgrade
+      setShowCharacterLimitModal(true)
+      sendGTMEvent("character_limit_exceeded", {
+        current_count: originalText.length,
+        limit: characterLimit,
+        excess: originalText.length - characterLimit,
       })
       return
     }
@@ -796,6 +897,10 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               ...(data.evaluation.analysis && { analysis: data.evaluation.analysis }),
               ...(data.evaluation.model && { model: data.evaluation.model }),
               ...(data.evaluation.painBanner && { painBanner: data.evaluation.painBanner }),
+              // Novos campos premium
+              ...(data.evaluation.improve && { improve: data.evaluation.improve }),
+              ...(data.evaluation.errorStats && { errorStats: data.evaluation.errorStats }),
+              ...(data.evaluation.personalizedTip && { personalizedTip: data.evaluation.personalizedTip }),
             }
           }
         }
@@ -1076,6 +1181,19 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const handlePainBannerCta = () => {
     setShowPainBanner(false)
     router.push("/premium")
+  }
+
+  // Handler para reduzir texto ao limite quando modal e mostrado
+  const handleReduceText = () => {
+    if (characterLimit) {
+      const reducedText = originalText.slice(0, characterLimit)
+      setOriginalText(reducedText)
+      setCharCount(reducedText.length)
+      toast({
+        title: "Texto reduzido",
+        description: `Seu texto foi cortado para ${characterLimit.toLocaleString("pt-BR")} caracteres.`,
+      })
+    }
   }
 
   // Calcular a cor do contador de caracteres
@@ -1491,7 +1609,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                   <TooltipContent side="left" className="max-w-xs">
                     <p className="font-medium mb-1">Chegando no limite!</p>
                     <p className="text-xs">
-                      Com o Premium você pode usar até <strong>5.000 caracteres</strong> por texto.{" "}
+                      Com o Premium voce pode usar ate <strong>20.000 caracteres</strong> por texto.{" "}
                       <Link href="/premium" className="underline font-medium">
                         Saiba mais
                       </Link>
@@ -1740,7 +1858,14 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                   <Card>
                     <CardContent className="p-4 md:p-6">
                       {operationMode === "correct" ? (
-                        <TextEvaluation evaluation={result.evaluation} />
+                        <TextEvaluation
+                          evaluation={{
+                            ...result.evaluation,
+                            errorStats: convertErrorStats(result.evaluation.errorStats),
+                            improveTips: parseImproveTips(result.evaluation.improve),
+                          }}
+                          isPremiumUser={isPremium}
+                        />
                       ) : (
                         renderRewriteEvaluation()
                       )}
@@ -1830,6 +1955,15 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           onCtaClick={handlePainBannerCta}
         />
       )}
+
+      {/* Modal de Limite de Caracteres */}
+      <CharacterLimitModal
+        isOpen={showCharacterLimitModal}
+        onClose={() => setShowCharacterLimitModal(false)}
+        onReduceText={handleReduceText}
+        currentCount={charCount}
+        limit={characterLimit || FREE_CHARACTER_LIMIT}
+      />
     </>
   )
 }

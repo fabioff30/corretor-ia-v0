@@ -26,7 +26,7 @@ const faqData = [
   },
   {
     question: "Quantas palavras posso reescrever por vez?",
-    answer: "Usuários gratuitos podem reescrever até 1.500 caracteres por vez. Com o plano Premium, esse limite aumenta para 5.000 caracteres, permitindo reescrever textos mais longos de uma só vez."
+    answer: "Usuarios gratuitos podem reescrever ate 1.000 caracteres por vez. Com o plano Premium, esse limite aumenta para 20.000 caracteres, permitindo reescrever textos mais longos de uma so vez."
   },
   {
     question: "A reescrita preserva o significado original do texto?",

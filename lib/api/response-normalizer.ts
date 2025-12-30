@@ -21,6 +21,18 @@ export interface PainBannerData {
   highlight: string
 }
 
+// Interface para errorStats da API
+interface ApiErrorStats {
+  total: number
+  byCategory: {
+    ortografia: number
+    gramatica: number
+    pontuacao: number
+    concordancia: number
+    regencia: number
+  }
+}
+
 interface Evaluation {
   strengths: string[]
   weaknesses: string[]
@@ -34,6 +46,10 @@ interface Evaluation {
   improvements?: string[]
   analysis?: string
   model?: string
+  // New premium fields (DeepSeek)
+  improve?: string[]
+  errorStats?: ApiErrorStats
+  personalizedTip?: string
   // Pain detection field (for free users)
   painBanner?: PainBannerData
 }
@@ -275,10 +291,25 @@ function normalizeEvaluation(evaluation: any): Evaluation {
     ...(evaluation?.toneApplied && { toneApplied: evaluation.toneApplied }),
     ...(evaluation?.styleApplied && { styleApplied: evaluation.styleApplied }),
     ...(evaluation?.changes && { changes: evaluation.changes }),
-    // Premium fields
+    // Premium fields (existing)
     ...(Array.isArray(evaluation?.improvements) && { improvements: evaluation.improvements }),
     ...(typeof evaluation?.analysis === "string" && { analysis: evaluation.analysis }),
     ...(typeof evaluation?.model === "string" && { model: evaluation.model }),
+    // New premium fields (DeepSeek) - improve, errorStats, personalizedTip
+    ...(Array.isArray(evaluation?.improve) && { improve: evaluation.improve }),
+    ...(evaluation?.errorStats && typeof evaluation.errorStats === "object" && {
+      errorStats: {
+        total: evaluation.errorStats.total ?? 0,
+        byCategory: {
+          ortografia: evaluation.errorStats.byCategory?.ortografia ?? 0,
+          gramatica: evaluation.errorStats.byCategory?.gramatica ?? 0,
+          pontuacao: evaluation.errorStats.byCategory?.pontuacao ?? 0,
+          concordancia: evaluation.errorStats.byCategory?.concordancia ?? 0,
+          regencia: evaluation.errorStats.byCategory?.regencia ?? 0,
+        },
+      },
+    }),
+    ...(typeof evaluation?.personalizedTip === "string" && { personalizedTip: evaluation.personalizedTip }),
     // Pain detection field (for free users)
     ...(evaluation?.painBanner &&
       typeof evaluation.painBanner === "object" && {

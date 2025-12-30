@@ -114,9 +114,9 @@ export default function PremiumPage() {
               <div>
                 <h3 className="text-lg font-medium mb-2">Qual a diferença entre o plano gratuito e o premium?</h3>
                 <p className="text-foreground/80">
-                  O plano gratuito oferece correções, análises de IA e reescrita com limites diários (1.500 caracteres por texto). O plano
-                  premium oferece correções, análises e reescritas ilimitadas com até 20.000 caracteres por texto, processamento prioritário,
-                  histórico automático em "Meus textos" e acesso a recursos avançados. Em breve, também teremos a opção de caracteres ilimitados.
+                  O plano gratuito oferece correcoes, analises de IA e reescrita com limites diarios (1.000 caracteres por texto). O plano
+                  premium oferece correcoes, analises e reescritas ilimitadas com ate 20.000 caracteres por texto, processamento prioritario,
+                  historico automatico em "Meus textos" e acesso a recursos avancados. Em breve, tambem teremos a opcao de caracteres ilimitados.
                 </p>
               </div>
 

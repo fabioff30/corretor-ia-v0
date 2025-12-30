@@ -129,7 +129,7 @@ export default function AboutPageClient() {
                     </li>
                     <li className="flex items-start">
                       <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>Limite de 1.500 caracteres</span>
+                      <span>Limite de 1.000 caracteres</span>
                     </li>
                   </ul>
                 </CardContent>
