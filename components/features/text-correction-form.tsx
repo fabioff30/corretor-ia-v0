@@ -218,25 +218,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   // Hook para SSE streaming (usado para textos grandes)
   const sseCorrection = useSSECorrection()
 
-  // FIX: useRef para cachear isPremium - uma vez true, NUNCA volta a false durante a sessão
-  // Isso resolve o bug de blur em mobile onde profile fica undefined durante re-renders do SSE
-  const isPremiumCacheRef = useRef<boolean>(false)
-
-  // Atualiza o cache somente se isPro for true (never downgrade durante a sessão)
-  if (isPro) {
-    isPremiumCacheRef.current = true
-  }
-
-  // Fallback para localStorage (UserProvider salva plan_type lá)
-  if (!isPremiumCacheRef.current && typeof window !== "undefined") {
-    const storedPlan = localStorage.getItem("user-plan-type")
-    if (storedPlan === "pro" || storedPlan === "admin" || storedPlan === "lifetime") {
-      isPremiumCacheRef.current = true
-    }
-  }
-
-  // isPremium é true se: (1) cache é true OU (2) isPro do context é true
-  const isPremium = isPremiumCacheRef.current || isPro
+  // isPremium direto do context (TextEvaluation tem fallback próprio para localStorage)
+  const isPremium = isPro
   const resolvedCharacterLimit =
     isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1

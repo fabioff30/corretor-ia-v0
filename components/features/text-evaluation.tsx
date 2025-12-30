@@ -11,6 +11,13 @@ import { ImproveTipsSection, ImproveTip } from "@/components/features/improve-ti
 import { useRouter } from "next/navigation"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 
+// Helper simples para verificar premium via localStorage (fallback)
+const checkPremiumFromStorage = () => {
+  if (typeof window === "undefined") return false
+  const plan = localStorage.getItem("user-plan-type")
+  return plan === "pro" || plan === "admin" || plan === "lifetime"
+}
+
 interface TextEvaluationProps {
   evaluation: {
     strengths: string[]
@@ -37,6 +44,9 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
   const router = useRouter()
   const [showUpsellModal, setShowUpsellModal] = useState(false)
   const [upsellFeatureName, setUpsellFeatureName] = useState("Analises Avancadas")
+
+  // Simples: prop OU localStorage (resolve race conditions)
+  const isPremium = isPremiumUser || checkPremiumFromStorage()
 
   const {
     strengths,
@@ -113,7 +123,7 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
     <>
       <div className="space-y-6 text-foreground">
         {/* Premium Badge */}
-        {hasPremiumContent && isPremiumUser && (
+        {hasPremiumContent && isPremium && (
           <div className="flex justify-center mb-4">
             <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-none px-4 py-1.5">
               <Crown className="h-3.5 w-3.5 mr-1.5" />
@@ -140,7 +150,7 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
           <>
             {/* SECAO PREMIUM: Estatisticas de Erros */}
             {isCorrectionMode && (
-              isPremiumUser ? (
+              isPremium ? (
                 errorStats ? (
                   <ErrorStatsSection errorStats={errorStats} />
                 ) : (
@@ -161,7 +171,7 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
 
             {/* SECAO PREMIUM: Dica Personalizada */}
             {isCorrectionMode && (
-              isPremiumUser ? (
+              isPremium ? (
                 personalizedTip ? (
                   <PersonalizedTipSection tip={personalizedTip} />
                 ) : (
@@ -225,7 +235,7 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
 
             {/* SECAO PREMIUM: Dicas de Melhoria */}
             {isCorrectionMode && (
-              isPremiumUser ? (
+              isPremium ? (
                 improveTips && improveTips.length > 0 ? (
                   <ImproveTipsSection tips={improveTips} />
                 ) : (
@@ -363,7 +373,7 @@ export function TextEvaluation({ evaluation, isPremiumUser = false }: TextEvalua
         )}
 
         {/* Premium Footer */}
-        {hasPremiumContent && isPremiumUser && (
+        {hasPremiumContent && isPremium && (
           <div className="flex items-center justify-center pt-4 mt-6 border-t border-border/50">
             <div className="flex items-center gap-2 text-sm text-purple-500">
               <Sparkles className="h-4 w-4" />
