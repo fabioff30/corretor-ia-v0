@@ -77,10 +77,13 @@ function getCategoryLabel(category: string): string {
  * Mostra barras de progresso por categoria e total de erros.
  */
 export function ErrorStatsSection({ errorStats }: ErrorStatsSectionProps) {
-  const { totalErrors, categories } = errorStats
+  const { totalErrors = 0, categories = [] } = errorStats || {}
+
+  // Validação defensiva - garantir que categories é array
+  const safeCategories = Array.isArray(categories) ? categories : []
 
   // Ordenar categorias por contagem (maior primeiro)
-  const sortedCategories = [...categories].sort((a, b) => b.count - a.count)
+  const sortedCategories = [...safeCategories].sort((a, b) => b.count - a.count)
 
   return (
     <motion.div
