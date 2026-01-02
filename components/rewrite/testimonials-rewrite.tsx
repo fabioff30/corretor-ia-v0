@@ -1,8 +1,17 @@
+"use client"
+
 import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Star, Quote } from "lucide-react"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 const testimonials = [
   {
@@ -61,6 +70,43 @@ const testimonials = [
   }
 ]
 
+function TestimonialCard({ testimonial }: { testimonial: typeof testimonials[0] }) {
+  return (
+    <Card className="transition-all duration-300 hover:shadow-lg h-full">
+      <CardContent className="p-6 flex flex-col h-full">
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+              {testimonial.avatar}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h3 className="font-semibold">{testimonial.name}</h3>
+            <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+            <p className="text-xs text-muted-foreground">{testimonial.company}</p>
+          </div>
+          <div className="flex gap-0.5">
+            {Array.from({ length: testimonial.rating }).map((_, i) => (
+              <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            ))}
+          </div>
+        </div>
+
+        <div className="relative flex-1">
+          <Quote className="h-6 w-6 text-primary/20 absolute -top-2 -left-1" />
+          <p className="text-sm leading-relaxed mb-4 pl-4">
+            {testimonial.text}
+          </p>
+        </div>
+
+        <Badge variant="secondary" className="text-xs w-fit">
+          "{testimonial.highlight}"
+        </Badge>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function TestimonialsRewrite() {
   return (
     <section className="py-12">
@@ -72,44 +118,52 @@ export function TestimonialsRewrite() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {testimonials.map((testimonial, index) => (
-          <Card key={index} className="transition-all duration-300 hover:shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {testimonial.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-semibold">{testimonial.name}</h3>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  <p className="text-xs text-muted-foreground">{testimonial.company}</p>
-                </div>
-                <div className="flex gap-1">
-                  {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative">
-                <Quote className="h-6 w-6 text-primary/20 absolute -top-2 -left-1" />
-                <p className="text-sm leading-relaxed mb-4 pl-4">
-                  {testimonial.text}
-                </p>
-              </div>
-
-              <Badge variant="secondary" className="text-xs">
-                "{testimonial.highlight}"
-              </Badge>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Desktop: Carousel showing 3 at a time */}
+      <div className="hidden md:block px-12">
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-4">
+            {testimonials.map((testimonial, index) => (
+              <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                <TestimonialCard testimonial={testimonial} />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="-left-4" />
+          <CarouselNext className="-right-4" />
+        </Carousel>
       </div>
 
-      <div className="text-center">
+      {/* Mobile: Carousel showing 1 at a time */}
+      <div className="md:hidden px-4">
+        <Carousel
+          opts={{
+            align: "center",
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent>
+            {testimonials.map((testimonial, index) => (
+              <CarouselItem key={index}>
+                <TestimonialCard testimonial={testimonial} />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="flex justify-center gap-2 mt-4">
+            <CarouselPrevious className="static translate-y-0" />
+            <CarouselNext className="static translate-y-0" />
+          </div>
+        </Carousel>
+      </div>
+
+      {/* Stats */}
+      <div className="text-center mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
           <div className="text-center">
             <div className="text-3xl font-bold text-primary mb-2">50K+</div>

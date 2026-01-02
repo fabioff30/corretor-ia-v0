@@ -144,8 +144,8 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* Meta Pixel Code */}
-        <Script id="meta-pixel" strategy="afterInteractive">
+        {/* Meta Pixel Code - lazyOnload para melhor performance inicial */}
+        <Script id="meta-pixel" strategy="lazyOnload">
           {`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?

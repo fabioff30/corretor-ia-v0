@@ -142,6 +142,8 @@ export function MobileCorrectionInput({
       <div className="relative">
         <Textarea
           ref={textareaRef}
+          id="mobile-text-input"
+          name="text-input"
           value={value}
           onChange={handleChange}
           placeholder={!isLoggedIn && value === "" ? "" : placeholder}
