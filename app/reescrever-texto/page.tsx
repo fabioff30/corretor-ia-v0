@@ -255,11 +255,11 @@ export default function RewriteTextPage() {
         <section className="container mx-auto px-4 pt-8 pb-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Reescrever Texto com IA
+              Reescreva seus Textos com IA Grátis
             </h1>
 
             <p className="text-lg text-muted-foreground mb-6 max-w-3xl mx-auto">
-              Transforme qualquer texto em <strong>5 estilos diferentes</strong> mantendo o significado original.
+              Reescreva e <strong>humanize textos</strong> instantaneamente. Elimine plágio, adapte o tom e mantenha a originalidade — <strong>100% grátis</strong>.
             </p>
           </div>
         </section>
