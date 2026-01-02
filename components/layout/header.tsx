@@ -83,7 +83,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-2">
+        {/* Logo - temporariamente oculta no mobile para teste */}
+        <div className="hidden md:flex items-center gap-2">
           <Link href="/" className="flex items-center">
             <Image
               src="/images/logo-corretoria.png"
@@ -137,9 +138,10 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
+          {/* Botão Assine já - temporariamente oculto no mobile para teste */}
           <Button
             asChild
-            className="bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90 animate-pulse hover:animate-none relative"
+            className="hidden md:inline-flex bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:opacity-90 animate-pulse hover:animate-none relative"
           >
             <Link href="/premium">
               <Crown className="mr-2 h-4 w-4" />
