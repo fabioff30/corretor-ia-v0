@@ -23,6 +23,8 @@ import {
   CheckCircle,
   Crown,
   LayoutDashboard,
+  Zap,
+  HelpCircle,
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
@@ -42,6 +44,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { RetryButton } from "@/components/ui/retry-button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 
 // Importar o utilitário do Meta Pixel
@@ -231,6 +235,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   >("Padrão")
   const [customTone, setCustomTone] = useState<string>("")
   const [useAdvancedAI, setUseAdvancedAI] = useState(false)
+  const [quickMode, setQuickMode] = useState(false)
 
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
@@ -462,6 +467,24 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       console.log(`Tom personalizado definido: ${customInstruction}`)
     }
     console.log(`Tom selecionado: ${tone}`)
+  }
+
+  // Handler para IA Avançada com exclusividade mútua
+  const handleAdvancedAIToggle = (enabled: boolean) => {
+    setUseAdvancedAI(enabled)
+    // Modo rápido e IA Avançada são mutuamente exclusivos
+    if (enabled) {
+      setQuickMode(false)
+    }
+  }
+
+  // Handler para Modo Rápido com exclusividade mútua
+  const handleQuickModeToggle = (enabled: boolean) => {
+    setQuickMode(enabled)
+    // Modo rápido e IA Avançada são mutuamente exclusivos
+    if (enabled) {
+      setUseAdvancedAI(false)
+    }
   }
 
   // Função para lidar com a mudança de estilo de reescrita (novo sistema com validação premium)
@@ -780,9 +803,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       const signal = controller.signal
 
       // Determinar qual endpoint usar com base no modo de operação e tom selecionado
-      const currentTone = selectedTone === "Personalizado" ? customTone : selectedTone
+      // Modo rápido ignora o tom selecionado e usa "Padrão"
+      const currentTone = quickMode ? "Padrão" : (selectedTone === "Personalizado" ? customTone : selectedTone)
+      // Modo rápido sempre usa /api/correct (nunca /api/tone)
       const endpoint = operationMode === "correct"
-        ? (currentTone !== "Padrão" ? "/api/tone" : "/api/correct")
+        ? (quickMode ? "/api/correct" : (currentTone !== "Padrão" ? "/api/tone" : "/api/correct"))
         : "/api/rewrite"
 
       // Preparar o payload com base no modo de operação
@@ -790,7 +815,11 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         text: textToSend,
         isMobile: isMobile,
         ...(operationMode === "correct"
-          ? { tone: currentTone, useAdvancedAI: useAdvancedAI && isPremium }
+          ? {
+              tone: currentTone,
+              useAdvancedAI: useAdvancedAI && isPremium,
+              quickMode: quickMode
+            }
           : { style: selectedRewriteStyle }
         ),
       }
@@ -1440,10 +1469,50 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 <AdvancedAIToggle
                   isPremium={isPremium}
                   isEnabled={useAdvancedAI}
-                  onToggle={setUseAdvancedAI}
+                  onToggle={handleAdvancedAIToggle}
                   isLoading={isLoading}
                 />
               </div>
+            )}
+
+            {/* Toggle de Modo Rápido */}
+            {operationMode === "correct" && (
+              <TooltipProvider>
+                <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background to-background p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/10">
+                      <Zap className={`h-5 w-5 ${quickMode ? "text-amber-500 animate-pulse" : "text-amber-500/60"}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="quick-mode-toggle" className="font-semibold text-foreground cursor-pointer">
+                          Modo Rápido
+                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="focus:outline-none">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[220px] text-center">
+                            <p className="text-xs">Correção mais rápida, porém menos detalhada do texto</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Correção otimizada para velocidade
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="quick-mode-toggle"
+                    checked={quickMode}
+                    onCheckedChange={handleQuickModeToggle}
+                    disabled={isLoading || isConvertingFile}
+                    className="data-[state=checked]:bg-amber-500"
+                  />
+                </div>
+              </TooltipProvider>
             )}
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
