@@ -144,6 +144,7 @@ export function MobileCorrectionInput({
           ref={textareaRef}
           id="mobile-text-input"
           name="text-input"
+          aria-label="Campo de texto para correção"
           value={value}
           onChange={handleChange}
           placeholder={!isLoggedIn && value === "" ? "" : placeholder}

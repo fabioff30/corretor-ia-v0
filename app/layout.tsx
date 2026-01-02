@@ -67,7 +67,7 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
         <meta name="facebook-domain-verification" content="hprarr6g4519byzssy18zrs0vqdzta" />
         <meta name="msvalidate.01" content="88A6557DF364B50282E72FF4667CDC25" />
         <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
