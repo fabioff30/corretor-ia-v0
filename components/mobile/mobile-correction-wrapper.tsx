@@ -66,6 +66,7 @@ export function MobileCorrectionWrapper({
   const [customTone, setCustomTone] = useState<string>("")
   const [isConvertingFile, setIsConvertingFile] = useState(false)
   const [inputText, setInputText] = useState("")
+  const [quickMode, setQuickMode] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { toast } = useToast()
@@ -123,6 +124,18 @@ export function MobileCorrectionWrapper({
     // Permite marcar o toggle mesmo para usuários free
     // O bloqueio visual será feito pelo overlay no input
     setAIEnabled(enabled)
+    // Modo rápido e IA Avançada são mutuamente exclusivos
+    if (enabled) {
+      setQuickMode(false)
+    }
+  }
+
+  const handleQuickModeToggle = (enabled: boolean) => {
+    setQuickMode(enabled)
+    // Modo rápido e IA Avançada são mutuamente exclusivos
+    if (enabled) {
+      setAIEnabled(false)
+    }
   }
 
   const handleToneChange = (tone: string, customInstruction?: string) => {
@@ -365,11 +378,11 @@ export function MobileCorrectionWrapper({
         throw new Error(`O texto excede o limite de ${characterLimit} caracteres.`)
       }
 
-      // Determinar tom atual
-      const currentTone = selectedTone === "Personalizado" ? customTone : selectedTone
+      // Determinar tom atual (ignorado no modo rápido)
+      const currentTone = quickMode ? "Padrão" : (selectedTone === "Personalizado" ? customTone : selectedTone)
 
-      // Escolher endpoint baseado no tom
-      const endpoint = currentTone !== "Padrão" ? "/api/tone" : "/api/correct"
+      // Escolher endpoint baseado no tom (modo rápido sempre usa /api/correct)
+      const endpoint = quickMode ? "/api/correct" : (currentTone !== "Padrão" ? "/api/tone" : "/api/correct")
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT)
@@ -383,7 +396,8 @@ export function MobileCorrectionWrapper({
           text,
           isMobile: true,
           tone: currentTone,
-          useAdvancedAI: aiEnabled && isPremium
+          useAdvancedAI: aiEnabled && isPremium,
+          quickMode: quickMode
         }),
         signal: controller.signal
       })
@@ -488,6 +502,9 @@ export function MobileCorrectionWrapper({
         usageCount={freeCorrectionsCount}
         usageLimit={correctionsDailyLimit}
         onToneChange={handleToneChange}
+        showToneAdjuster={false}
+        quickMode={quickMode}
+        onQuickModeChange={handleQuickModeToggle}
         initialText={inputText}
         onTextChange={setInputText}
         isConvertingFile={isConvertingFile}

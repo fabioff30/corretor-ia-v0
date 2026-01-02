@@ -4,12 +4,18 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Loader2, Upload, Sparkles, ChevronRight, Crown } from "lucide-react"
+import { Loader2, Upload, Sparkles, ChevronRight, Crown, Zap, HelpCircle } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useCorrectionHaptic } from "@/hooks/use-haptic"
 import { cn } from "@/lib/utils"
 import { ToneAdjuster } from "@/components/tone-adjuster"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface MobileCorrectionInputProps {
   value: string
@@ -40,6 +46,9 @@ interface MobileCorrectionInputProps {
   // Tone adjustment
   onToneChange?: (tone: string, customInstruction?: string) => void
   showToneAdjuster?: boolean
+  // Quick mode (faster, less detailed corrections)
+  quickMode?: boolean
+  onQuickModeChange?: (enabled: boolean) => void
 }
 
 export function MobileCorrectionInput({
@@ -65,6 +74,8 @@ export function MobileCorrectionInput({
   usageLimit = 3,
   onToneChange,
   showToneAdjuster = true,
+  quickMode = false,
+  onQuickModeChange,
 }: MobileCorrectionInputProps) {
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -274,13 +285,44 @@ export function MobileCorrectionInput({
         )}
       </div>
 
-      {/* Tone Adjuster - antes do botão */}
-      {showToneAdjuster && !showStyleSelector && (
+      {/* Quick Mode Toggle - substitui ToneAdjuster provisoriamente */}
+      {!showStyleSelector && (
+        <TooltipProvider>
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-2">
+              <Zap className={cn("h-4 w-4", quickMode ? "text-amber-500" : "text-muted-foreground")} />
+              <Label htmlFor="quick-mode" className="text-sm font-medium">
+                Modo Rápido
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[220px] text-center">
+                  <p className="text-xs">Correção mais rápida, porém menos detalhada do texto</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Switch
+              id="quick-mode"
+              checked={quickMode}
+              onCheckedChange={onQuickModeChange}
+              disabled={isLoading || isAtDailyLimit}
+              className="data-[state=checked]:bg-amber-500"
+            />
+          </div>
+        </TooltipProvider>
+      )}
+
+      {/* Tone Adjuster - desabilitado provisoriamente */}
+      {/* {showToneAdjuster && !showStyleSelector && (
         <ToneAdjuster
           onToneChange={onToneChange}
           disabled={isLoading || isAtDailyLimit}
         />
-      )}
+      )} */}
 
       {/* Action Button */}
       <Button

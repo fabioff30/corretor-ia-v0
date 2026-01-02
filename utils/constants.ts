@@ -49,6 +49,9 @@ export const DEEPSEEK_STREAM_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir-str
 export const DEEPSEEK_LONG_TEXT_THRESHOLD = 5000 // Usar DeepSeek para textos >= 5k chars
 export const DEEPSEEK_CHUNK_THRESHOLD = 80000 // Chunking paralelo para textos >= 80k chars
 
+// Lite (Quick Mode) endpoint for faster, less detailed corrections
+export const LITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir-lite`
+
 // Authentication - Server-side only
 export const AUTH_TOKEN = typeof process !== 'undefined' ? (process.env.AUTH_TOKEN || "ex5B31uQHm2rPHsWt1RwUo9ct35qFAjczdKqbCIMZh5D1qovSmotGtQUQaRXJtvg") : ""
 

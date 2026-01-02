@@ -35,6 +35,9 @@ interface MobileHeroProps {
   // Tone adjustment props
   onToneChange?: (tone: string, customInstruction?: string) => void
   showToneAdjuster?: boolean
+  // Quick mode props
+  quickMode?: boolean
+  onQuickModeChange?: (enabled: boolean) => void
   // SEO: Allow pages with desktop H1 to use H2 on mobile
   headingAs?: 'h1' | 'h2'
   // File upload controlled state
@@ -69,6 +72,8 @@ export function MobileHero({
   usageLimit = 3,
   onToneChange,
   showToneAdjuster = true,
+  quickMode = false,
+  onQuickModeChange,
   headingAs = 'h1',
   initialText = "",
   onTextChange,
@@ -179,6 +184,8 @@ export function MobileHero({
             usageLimit={usageLimit}
             onToneChange={onToneChange}
             showToneAdjuster={showToneAdjuster}
+            quickMode={quickMode}
+            onQuickModeChange={onQuickModeChange}
           />
         </div>
       </motion.div>

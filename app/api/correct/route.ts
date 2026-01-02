@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN } from "@/utils/constants"
+import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, LITE_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN } from "@/utils/constants"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     } = validatedInput
     const customTone = typeof requestBody?.customTone === "string" ? requestBody.customTone : undefined
     const useAdvancedAI = typeof requestBody?.useAdvancedAI === "boolean" ? requestBody.useAdvancedAI : false
+    const quickMode = typeof requestBody?.quickMode === "boolean" ? requestBody.quickMode : false
 
     let isPremium = false
     let premiumContext: AuthContext | null = null
@@ -211,8 +212,18 @@ export async function POST(request: NextRequest) {
       webhookData.tone = tone
     }
 
-    const webhookUrl = isPremium ? PREMIUM_WEBHOOK_URL : WEBHOOK_URL
-    console.log(`API: Using ${isPremium ? 'PREMIUM' : 'regular'} webhook`, requestId)
+    // Webhook selection: Premium > Quick Mode (Lite) > Regular
+    let webhookUrl: string
+    if (isPremium) {
+      webhookUrl = PREMIUM_WEBHOOK_URL
+      console.log(`API: Using PREMIUM webhook`, requestId)
+    } else if (quickMode) {
+      webhookUrl = LITE_WEBHOOK_URL
+      console.log(`API: Using LITE webhook for quick mode`, requestId)
+    } else {
+      webhookUrl = WEBHOOK_URL
+      console.log(`API: Using regular webhook`, requestId)
+    }
 
     const response = await callWebhook({
       url: webhookUrl,
