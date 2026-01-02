@@ -75,6 +75,7 @@ interface TextCorrectionFormProps {
   onTextCorrected?: () => void
   initialMode?: OperationMode
   enableCrossNavigation?: boolean // Se habilitado, permite navegação entre páginas
+  defaultRewriteStyle?: RewriteStyle // Estilo de reescrita padrão
 }
 
 // Tipos para os modos de operação
@@ -192,7 +193,7 @@ function convertErrorStats(apiStats?: ApiErrorStats): ErrorStats | undefined {
   return { totalErrors: total, categories }
 }
 
-export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false }: TextCorrectionFormProps) {
+export default function TextCorrectionForm({ onTextCorrected, initialMode, enableCrossNavigation = false, defaultRewriteStyle = "formal" }: TextCorrectionFormProps) {
   const router = useRouter()
   const [originalText, setOriginalText] = useState("")
   const [charCount, setCharCount] = useState(0)
@@ -233,8 +234,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
 
   // Novos estados para a funcionalidade de reescrita
   const [operationMode, setOperationMode] = useState<OperationMode>(initialMode || "correct")
-  const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>("formal")
-  const [selectedRewriteStyleInternal, setSelectedRewriteStyleInternal] = useState<RewriteStyleInternal>("formal")
+  const [selectedRewriteStyle, setSelectedRewriteStyle] = useState<RewriteStyle>(defaultRewriteStyle)
+  const [selectedRewriteStyleInternal, setSelectedRewriteStyleInternal] = useState<RewriteStyleInternal>(defaultRewriteStyle)
   const [showPremiumUpsellModal, setShowPremiumUpsellModal] = useState(false)
   const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
