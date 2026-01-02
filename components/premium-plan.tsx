@@ -65,6 +65,35 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     { name: "Extensão para navegador", included: false, comingSoon: true },
   ]
 
+  // Helper para disparar evento begin_checkout padrão GA4
+  const fireBeginCheckoutEvent = (planType: PlanType, paymentMethod: 'card' | 'pix') => {
+    const amount = planType === 'monthly'
+      ? (showDiscount ? monthlyPriceWithDiscount : monthlyPrice)
+      : (showDiscount ? annualPriceWithDiscount : annualPrice)
+
+    const itemName = planType === 'monthly' ? 'CorretorIA Premium Mensal' : 'CorretorIA Premium Anual'
+
+    // GA4 standard begin_checkout event
+    sendGTMEvent('begin_checkout', {
+      currency: 'BRL',
+      value: amount,
+      coupon: couponCode || undefined,
+      payment_type: paymentMethod,
+      items: [
+        {
+          item_id: `premium_${planType}`,
+          item_name: itemName,
+          price: amount,
+          quantity: 1,
+          item_category: 'subscription',
+          item_variant: planType,
+        },
+      ],
+    })
+
+    console.log('[GA4] begin_checkout fired:', { planType, paymentMethod, amount, couponCode })
+  }
+
   const handleSubscribe = async (planType: PlanType) => {
     // Check if already subscribed (only if logged in)
     if (user && (isPro || isActive)) {
@@ -75,6 +104,9 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       router.push('/dashboard/subscription')
       return
     }
+
+    // Fire begin_checkout event immediately on button click
+    fireBeginCheckoutEvent(planType, 'card')
 
     // If not logged in, open register dialog to create account BEFORE payment (same as PIX)
     if (!user) {
@@ -101,12 +133,12 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         currency: 'BRL',
       }
 
-      // Track event
-      sendGTMEvent({
-        event: 'subscribe_premium_clicked',
+      // Track legacy event for backwards compatibility
+      sendGTMEvent('subscribe_premium_clicked', {
         user_id: user.id,
         email: user.email,
         plan: planType,
+        payment_type: 'card',
       })
       sendGTMEvent('add_to_cart', {
         ...analyticsPayload,
@@ -126,20 +158,6 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       if (!result) {
         throw new Error('Failed to create subscription')
       }
-
-      // Track checkout initiated
-      sendGTMEvent({
-        event: 'begin_checkout',
-        ...analyticsPayload,
-        items: [
-          {
-            item_id: `premium_${planType}`,
-            item_name: planType === 'monthly' ? 'CorretorIA Premium Mensal' : 'CorretorIA Premium Anual',
-            price: amount,
-            quantity: 1,
-          },
-        ],
-      })
 
       console.log('[Stripe] Redirecting to checkout:', result.checkoutUrl)
 
@@ -180,6 +198,9 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       router.push('/dashboard/subscription')
       return
     }
+
+    // Fire begin_checkout event immediately on button click
+    fireBeginCheckoutEvent(planType, 'pix')
 
     // If not logged in, open register dialog to create account BEFORE generating PIX
     if (!user) {
@@ -318,14 +339,18 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     setIsPlanSelectionOpen(false)
 
     // Se não logado no mobile, mostrar formulário inline
+    // O evento begin_checkout será disparado quando o usuário se registrar e prosseguir
     if (!user && isMobile) {
+      // Fire begin_checkout event for mobile non-logged users (won't go through handleSubscribe/handlePixPayment)
+      fireBeginCheckoutEvent(planType, paymentMethod)
       setPendingPlanType(planType)
       setPendingPaymentMethod(paymentMethod)
       setShowInlineRegister(true)
       return
     }
 
-    // Usuário logado ou desktop - processar normalmente
+    // Usuário logado - processar normalmente
+    // handleSubscribe e handlePixPayment já disparam o evento begin_checkout
     setTimeout(() => {
       if (paymentMethod === 'card') {
         handleSubscribe(planType)
