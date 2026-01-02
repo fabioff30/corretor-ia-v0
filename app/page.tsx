@@ -11,7 +11,7 @@ import Script from "next/script"
 
 // Atualizar os metadados da página inicial
 export const metadata: Metadata = {
-  title: "Corretor de Texto Online Grátis | Corretor Ortográfico com IA - CorretorIA",
+  title: "Corretor de Texto Ortográfico Grátis - CorretorIA",
   description:
     "Corretor de texto e verificador gramatical online grátis. Corrija erros de gramática, ortografia e estilo em português com IA. Ferramenta rápida, precisa e sem cadastro.",
   keywords:
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "https://www.corretordetextoonline.com.br",
   },
   openGraph: {
-    title: "Corretor de Texto Online Grátis | Corretor Ortográfico com IA - CorretorIA",
+    title: "Corretor de Texto Ortográfico Grátis - CorretorIA",
     description:
       "Corretor de texto e verificador gramatical online grátis. Corrija erros de gramática, ortografia e estilo em português com IA.",
     url: "https://www.corretordetextoonline.com.br",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Corretor de Texto Online Grátis | CorretorIA",
+    title: "Corretor de Texto Ortográfico Grátis - CorretorIA",
     description: "Corrija textos em português com IA. Verificador gramatical e ortográfico gratuito.",
     images: ["https://www.corretordetextoonline.com.br/og-home.png"],
     creator: "@corretoria_br",
