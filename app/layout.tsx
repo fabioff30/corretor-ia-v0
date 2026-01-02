@@ -186,29 +186,26 @@ export default async function RootLayout({
         `}
         </Script>
 
-        {/* Hotjar Tracking Code for Corretor de Texto Online (lazyOnload para melhor LCP) */}
-        <Script id="hotjar-tracking" strategy="lazyOnload">
+        {/* Microsoft Clarity - Analytics (lazyOnload para melhor LCP) */}
+        <Script id="clarity-tracking" strategy="lazyOnload">
           {`
-            // Verificar consentimento de cookies antes de inicializar o Hotjar
-            function initializeHotjar() {
-              var hotjarConsent = localStorage.getItem('cookie-consent');
-              if (hotjarConsent === 'accepted') {
-                (function(h,o,t,j,a,r){
-                    h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-                    h._hjSettings={hjid:6431343,hjsv:6};
-                    a=o.getElementsByTagName('head')[0];
-                    r=o.createElement('script');r.async=1;
-                    r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
-                    a.appendChild(r);
-                })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            // Verificar consentimento de cookies antes de inicializar o Clarity
+            function initializeClarity() {
+              var clarityConsent = localStorage.getItem('cookie-consent');
+              if (clarityConsent === 'accepted') {
+                (function(c,l,a,r,i,t,y){
+                    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+                    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+                })(window, document, "clarity", "script", "uva3ddcx6g");
               }
             }
-            
+
             // Inicializar se já houver consentimento
-            initializeHotjar();
-            
+            initializeClarity();
+
             // Escutar mudanças no consentimento
-            window.addEventListener('storage', initializeHotjar);
+            window.addEventListener('storage', initializeClarity);
           `}
         </Script>
 
