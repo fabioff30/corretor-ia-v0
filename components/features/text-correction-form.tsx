@@ -1475,45 +1475,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               </div>
             )}
 
-            {/* Toggle de Modo Rápido */}
-            {operationMode === "correct" && (
-              <TooltipProvider>
-                <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background to-background p-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/10">
-                      <Zap className={`h-5 w-5 ${quickMode ? "text-amber-500 animate-pulse" : "text-amber-500/60"}`} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="quick-mode-toggle" className="font-semibold text-foreground cursor-pointer">
-                          Modo Rápido
-                        </Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="focus:outline-none">
-                              <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[220px] text-center">
-                            <p className="text-xs">Correção mais rápida, porém menos detalhada do texto</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Correção otimizada para velocidade
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="quick-mode-toggle"
-                    checked={quickMode}
-                    onCheckedChange={handleQuickModeToggle}
-                    disabled={isLoading || isConvertingFile}
-                    className="data-[state=checked]:bg-amber-500"
-                  />
-                </div>
-              </TooltipProvider>
-            )}
+            {/* Toggle de Modo Rápido - movido para baixo do textarea, no lugar do ToneAdjuster */}
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               {isPremium ? (
@@ -1707,12 +1669,52 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               </div>
             )}
 
-            {/* Adicionar o componente de ajuste de tom */}
+            {/* Toggle de Modo Rápido - substitui ToneAdjuster provisoriamente */}
             {operationMode === "correct" && (
+              <TooltipProvider>
+                <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background to-background p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/10">
+                      <Zap className={`h-5 w-5 ${quickMode ? "text-amber-500 animate-pulse" : "text-amber-500/60"}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="quick-mode-toggle" className="font-semibold text-foreground cursor-pointer">
+                          Modo Rápido
+                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="focus:outline-none">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[220px] text-center">
+                            <p className="text-xs">Correção mais rápida, porém menos detalhada do texto</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Correção otimizada para velocidade
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="quick-mode-toggle"
+                    checked={quickMode}
+                    onCheckedChange={handleQuickModeToggle}
+                    disabled={isLoading || isConvertingFile}
+                    className="data-[state=checked]:bg-amber-500"
+                  />
+                </div>
+              </TooltipProvider>
+            )}
+
+            {/* ToneAdjuster desabilitado provisoriamente */}
+            {/* {operationMode === "correct" && (
               <div className="mb-4">
                 <ToneAdjuster onToneChange={handleToneChange} disabled={isLoading || isConvertingFile} />
               </div>
-            )}
+            )} */}
 
             {/* Melhorar a responsividade dos botões */}
             <div className="flex flex-wrap gap-3 justify-end">
