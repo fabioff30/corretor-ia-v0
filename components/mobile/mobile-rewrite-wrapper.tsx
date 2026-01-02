@@ -289,8 +289,8 @@ export function MobileRewriteWrapper({
                 onFileUpload={onFileUpload}
                 isLoading={isLoading}
                 headingAs="h1"
-                title="Reescrever Texto com IA"
-                subtitle="Reescreva textos em diferentes estilos mantendo o significado original."
+                title="Reescreva seus Textos com IA Grátis"
+                subtitle="Reescreva e humanize textos instantaneamente. Elimine plágio, adapte o tom e mantenha a originalidade — 100% grátis."
                 badges={[
                     { text: "5 Estilos", icon: "🎨", color: "text-purple-500" },
                     { text: "Original", icon: "✨", color: "text-blue-500" },
