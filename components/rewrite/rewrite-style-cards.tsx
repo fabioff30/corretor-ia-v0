@@ -148,7 +148,7 @@ export function RewriteStyleCards() {
       </div>
 
       {/* Free Styles - Always rendered */}
-      <div className="mb-16">
+      <div className="mb-16 lg:w-[70%] lg:mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-3xl font-bold flex items-center gap-2">
