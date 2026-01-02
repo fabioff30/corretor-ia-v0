@@ -443,6 +443,7 @@ export function MobileCorrectionWrapper({
         score: data.evaluation?.score || 0,
         is_premium: isPremium,
         tone: currentTone,
+        quick_mode: quickMode,
       })
 
     } catch (error: any) {

@@ -1079,6 +1079,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           score: processedData.evaluation.score || 0,
           is_premium: isPremium,
           tone: currentTone,
+          quick_mode: quickMode,
         })
       } else {
         sendGTMEvent("rewrite_text", {
