@@ -13,13 +13,8 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
-  webpack: (config, { dev }) => {
-    if (!dev) {
-      config.optimization.minimize = false
-    }
-    return config
-  },
-  swcMinify: false,
+  // Minificação habilitada por padrão no Next.js 15 (SWC)
+  // Removido webpack override que desabilitava minimize
   async redirects() {
     return [
       {
@@ -49,7 +44,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Otimização de imagens habilitada para melhor performance
+    formats: ['image/avif', 'image/webp'],
   },
 };
 

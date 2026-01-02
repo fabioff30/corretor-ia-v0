@@ -10,15 +10,14 @@ import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
 import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
-import { JulinhoAssistant } from "@/components/julinho-assistant"
 import { UserProvider } from "@/components/providers/user-provider"
 import { AdSenseLoaderWithRoutes } from "@/components/ads/adsense-loader-with-routes"
 import { CleverWebServerLoader } from "@/components/ads/clever-webserver-loader"
-import { GoogleOneTap } from "@/components/google-one-tap"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/supabase"
 import { GoogleAnalyticsWrapper } from "@/components/google-analytics-wrapper"
 import { BlackFridayBanner } from "@/components/black-friday/black-friday-banner"
+import { LazyJulinhoAssistant, LazyGoogleOneTap } from "@/components/layout/lazy-components"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -169,8 +168,8 @@ export default async function RootLayout({
         {/* A implementação foi movida para o componente GoogleAnalyticsWrapper */}
         {/* que respeita o consentimento de cookies do usuário */}
 
-        {/* Google Tag Manager - Script */}
-        <Script id="google-tag-manager" strategy="afterInteractive">
+        {/* Google Tag Manager - Script (lazyOnload para melhor LCP) */}
+        <Script id="google-tag-manager" strategy="lazyOnload">
           {`
           window.dataLayer = window.dataLayer || [];
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -178,7 +177,7 @@ export default async function RootLayout({
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','${GTM_ID}');
-          
+
           // Verificar consentimento existente
           var gtmConsent = localStorage.getItem('cookie-consent');
           if (gtmConsent === 'declined') {
@@ -187,8 +186,8 @@ export default async function RootLayout({
         `}
         </Script>
 
-        {/* Hotjar Tracking Code for Corretor de Texto Online */}
-        <Script id="hotjar-tracking" strategy="afterInteractive">
+        {/* Hotjar Tracking Code for Corretor de Texto Online (lazyOnload para melhor LCP) */}
+        <Script id="hotjar-tracking" strategy="lazyOnload">
           {`
             // Verificar consentimento de cookies antes de inicializar o Hotjar
             function initializeHotjar() {
@@ -248,8 +247,8 @@ export default async function RootLayout({
             </div>
             <Toaster />
             <CookieConsent />
-            <JulinhoAssistant />
-            <GoogleOneTap />
+            <LazyJulinhoAssistant />
+            <LazyGoogleOneTap />
             <GoogleAnalyticsWrapper />
             {/* <CleverWebServerLoader /> */}
           </ThemeProvider>
