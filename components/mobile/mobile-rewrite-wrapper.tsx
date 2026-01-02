@@ -288,8 +288,8 @@ export function MobileRewriteWrapper({
                 onSubmit={handleRewrite}
                 onFileUpload={onFileUpload}
                 isLoading={isLoading}
-                headingAs="h2"
-                title="Reescrever Texto IA"
+                headingAs="h1"
+                title="Reescrever Texto com IA"
                 subtitle="Reescreva textos em diferentes estilos mantendo o significado original."
                 badges={[
                     { text: "5 Estilos", icon: "🎨", color: "text-purple-500" },

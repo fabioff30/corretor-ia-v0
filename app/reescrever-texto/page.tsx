@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Script from "next/script"
 import { RewriteStyleCards } from "@/components/rewrite/rewrite-style-cards"
-import { FAQRewrite } from "@/components/rewrite/faq-rewrite"
+import { FAQRewrite, faqData } from "@/components/rewrite/faq-rewrite"
 import { UseCasesByAudience } from "@/components/rewrite/use-cases-by-audience"
 import { ComparisonTable } from "@/components/rewrite/comparison-table"
-import { TestimonialsRewrite } from "@/components/rewrite/testimonials-rewrite"
+import { TestimonialsRewrite, testimonials } from "@/components/rewrite/testimonials-rewrite"
+import Link from "next/link"
 import {
   Sparkles,
   Zap,
@@ -132,32 +133,78 @@ export default function RewriteTextPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            mainEntity: [
+            mainEntity: faqData.map(faq => ({
+              "@type": "Question",
+              name: faq.question,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: faq.answer
+              }
+            }))
+          })
+        }}
+      />
+
+      {/* BreadcrumbList Schema */}
+      <Script
+        id="schema-breadcrumb"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
               {
-                "@type": "Question",
-                name: "Como funciona a reescrita de texto com inteligência artificial?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Nossa IA analisa seu texto original compreendendo o contexto, significado e estrutura. Em seguida, ela reescreve o conteúdo adaptando o vocabulário, tom e estilo conforme sua escolha, mantendo sempre o significado original intacto."
-                }
+                "@type": "ListItem",
+                position: 1,
+                name: "Início",
+                item: "https://www.corretordetextoonline.com.br"
               },
               {
-                "@type": "Question",
-                name: "Quantas palavras posso reescrever por vez?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Usuarios gratuitos podem reescrever ate 1.000 caracteres por vez. Com o plano Premium, esse limite aumenta para 20.000 caracteres, permitindo reescrever textos mais longos de uma so vez."
-                }
-              },
-              {
-                "@type": "Question",
-                name: "A reescrita preserva o significado original do texto?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Sim, nossa prioridade é manter o significado intacto. A IA reformula apenas a forma de expressão - vocabulário, estrutura das frases e tom - sem alterar as ideias e informações originais do seu texto."
-                }
+                "@type": "ListItem",
+                position: 2,
+                name: "Reescrever Texto",
+                item: "https://www.corretordetextoonline.com.br/reescrever-texto"
               }
             ]
+          })
+        }}
+      />
+
+      {/* Review Schema for Testimonials */}
+      <Script
+        id="schema-reviews"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "CorretorIA - Ferramenta de Reescrita de Texto",
+            description: "Ferramenta de IA para reescrever textos em diferentes estilos mantendo o significado original.",
+            brand: {
+              "@type": "Brand",
+              name: "CorretorIA"
+            },
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: "4.8",
+              reviewCount: "2150",
+              bestRating: "5",
+              worstRating: "1"
+            },
+            review: testimonials.map(t => ({
+              "@type": "Review",
+              author: {
+                "@type": "Person",
+                name: t.name
+              },
+              reviewRating: {
+                "@type": "Rating",
+                ratingValue: t.rating.toString(),
+                bestRating: "5"
+              },
+              reviewBody: t.text
+            }))
           })
         }}
       />
@@ -255,7 +302,7 @@ export default function RewriteTextPage() {
         </section>
 
         {/* Form Section */}
-        <section className="container mx-auto px-4 mb-12">
+        <section id="ferramenta" className="container mx-auto px-4 mb-12">
           <div className="max-w-4xl mx-auto">
             <Card className="shadow-2xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
               <CardHeader className="text-center pb-4">
@@ -278,7 +325,7 @@ export default function RewriteTextPage() {
         <RewriteStyleCards />
 
         {/* Benefits Section */}
-        <section className="container mx-auto px-4 py-12">
+        <section id="beneficios" className="container mx-auto px-4 py-12">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Por Que Escolher Nossa Ferramenta?</h2>
@@ -359,7 +406,7 @@ export default function RewriteTextPage() {
         </section>
 
         {/* How It Works Section */}
-        <section className="container mx-auto px-4 py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
+        <section id="como-funciona" className="container mx-auto px-4 py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Como Funciona a Reescrita Inteligente?</h2>
@@ -435,16 +482,22 @@ export default function RewriteTextPage() {
         </section>
 
         {/* Use Cases by Audience */}
-        <UseCasesByAudience />
+        <div id="casos-de-uso">
+          <UseCasesByAudience />
+        </div>
 
         {/* Comparison Table */}
-        <ComparisonTable />
+        <div id="comparacao">
+          <ComparisonTable />
+        </div>
 
         {/* Testimonials */}
-        <TestimonialsRewrite />
+        <div id="depoimentos">
+          <TestimonialsRewrite />
+        </div>
 
         {/* Advanced Tips Section */}
-        <section className="container mx-auto px-4 py-12">
+        <section id="dicas" className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center">Dicas Avançadas para Melhores Resultados</h2>
 
@@ -553,7 +606,60 @@ export default function RewriteTextPage() {
         </section>
 
         {/* FAQ Section */}
-        <FAQRewrite />
+        <div id="faq">
+          <FAQRewrite />
+        </div>
+
+        {/* Related Tools Section - Internal Linking */}
+        <section id="ferramentas-relacionadas" className="container mx-auto px-4 py-12 bg-muted/30">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 text-center">Explore Outras Ferramentas</h2>
+            <p className="text-center text-muted-foreground mb-8">
+              Conheça nossas outras ferramentas de IA para aprimorar ainda mais seus textos
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Link href="/" className="group">
+                <Card className="p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-primary transition-colors">Corretor de Texto</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Corrija erros de gramática, ortografia e concordância instantaneamente com nossa IA especializada em português.
+                  </p>
+                </Card>
+              </Link>
+              <Link href="/detector-ia" className="group">
+                <Card className="p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Shield className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-primary transition-colors">Detector de IA</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Verifique se um texto foi gerado por IA ou escrito por humanos com análise avançada de padrões.
+                  </p>
+                </Card>
+              </Link>
+              <Link href="/conversor" className="group">
+                <Card className="p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-primary/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-primary transition-colors">Conversor de Arquivos</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Converta documentos PDF, Word e imagens para texto editável com extração inteligente.
+                  </p>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {/* Call to Action Final */}
         <section className="container mx-auto px-4 py-16">

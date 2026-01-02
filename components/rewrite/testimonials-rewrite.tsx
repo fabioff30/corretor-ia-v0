@@ -13,7 +13,8 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 
-const testimonials = [
+// Exported for use in JSON-LD schema
+export const testimonials = [
   {
     name: "Ana Carolina Silva",
     role: "Jornalista",

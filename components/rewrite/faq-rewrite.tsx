@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { HelpCircle, ChevronDown } from "lucide-react"
 
-const faqData = [
+// Exported for use in JSON-LD schema
+export const faqData = [
   {
     question: "Como funciona a reescrita de texto com inteligência artificial?",
     answer: "Nossa IA analisa seu texto original compreendendo o contexto, significado e estrutura. Em seguida, ela reescreve o conteúdo adaptando o vocabulário, tom e estilo conforme sua escolha, mantendo sempre o significado original intacto."
