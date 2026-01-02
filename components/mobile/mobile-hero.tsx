@@ -35,6 +35,8 @@ interface MobileHeroProps {
   // Tone adjustment props
   onToneChange?: (tone: string, customInstruction?: string) => void
   showToneAdjuster?: boolean
+  // SEO: Allow pages with desktop H1 to use H2 on mobile
+  headingAs?: 'h1' | 'h2'
 }
 
 export function MobileHero({
@@ -63,7 +65,9 @@ export function MobileHero({
   usageLimit = 3,
   onToneChange,
   showToneAdjuster = true,
+  headingAs = 'h1',
 }: MobileHeroProps) {
+  const HeadingTag = headingAs
   const [text, setText] = useState("")
   const { user, profile } = useUser()
 
@@ -99,9 +103,9 @@ export function MobileHero({
             priority
             className="h-10 w-auto mx-auto"
           />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight pb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <HeadingTag className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight pb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             {title}
-          </h1>
+          </HeadingTag>
           <p className="text-sm text-muted-foreground max-w-[280px] mx-auto">
             {subtitle}
           </p>

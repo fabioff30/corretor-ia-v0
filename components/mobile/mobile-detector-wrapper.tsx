@@ -131,6 +131,7 @@ export function MobileDetectorWrapper({
                 onSubmit={handleDetect}
                 onFileUpload={onFileUpload}
                 isLoading={isLoading}
+                headingAs="h2"
                 title="Detector de IA"
                 subtitle="Identifique se um texto foi escrito por humanos ou inteligência artificial."
                 badges={[

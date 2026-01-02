@@ -103,14 +103,23 @@ export async function POST(request: NextRequest) {
 
     // For guest checkouts, redirect to login/register page after success
     // For all plans, redirect to dashboard after success
+    // Include plan type and value for GA4 purchase tracking
+    const planPrices: Record<string, number> = {
+      monthly: 29.90,
+      annual: 238.80,
+      bundle_monthly: 19.90,
+      bundle_monthly_test: 19.90,
+    }
+    const planValue = planPrices[planType] || 29.90
+
     let successUrl: string
     if (isGuestCheckout) {
       successUrl = isBundlePlan
-        ? `${baseUrl}/login?payment_success=true&bundle=true&email=${encodeURIComponent(finalEmail)}`
-        : `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}`
+        ? `${baseUrl}/login?payment_success=true&bundle=true&email=${encodeURIComponent(finalEmail)}&value=${planValue}`
+        : `${baseUrl}/login?payment_success=true&email=${encodeURIComponent(finalEmail)}&plan=${planType}&value=${planValue}`
     } else {
-      // Authenticated users go to dashboard
-      successUrl = `${baseUrl}/dashboard?payment_success=true&plan=${planType}`
+      // Authenticated users go to dashboard with GA4 tracking params
+      successUrl = `${baseUrl}/dashboard?payment_success=true&plan=${planType}&value=${planValue}&session_id={CHECKOUT_SESSION_ID}`
     }
 
     const cancelUrl = isBundlePlan

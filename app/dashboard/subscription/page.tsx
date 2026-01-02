@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState, useRef } from "react"
+import { Suspense, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -30,7 +30,7 @@ import {
 import { useSubscription } from "@/hooks/use-subscription"
 import { useUser } from "@/hooks/use-user"
 import { useToast } from "@/hooks/use-toast"
-import { sendGTMEvent } from "@/utils/gtm-helper"
+import { usePurchaseTracking } from "@/hooks/use-purchase-tracking"
 
 function SubscriptionContent() {
   const router = useRouter()
@@ -52,55 +52,42 @@ function SubscriptionContent() {
   } = useSubscription()
 
   const [isCanceling, setIsCanceling] = useState(false)
-  const purchaseTrackedRef = useRef(false)
 
-  // Handle payment success/failure from redirect
-  useEffect(() => {
-    const paymentStatus = searchParams.get('payment')
-    const checkoutSuccess = searchParams.get('success')
-    const isSuccess = paymentStatus === 'success' || checkoutSuccess === 'true'
-
-    if (isSuccess) {
-      if (!purchaseTrackedRef.current) {
-        const purchaseValue = amount ?? 0
-        const purchaseCurrency = currency ?? 'BRL'
-
-        sendGTMEvent('purchase', {
-          transaction_id: `sub_${Date.now()}`,
-          value: purchaseValue,
-          currency: purchaseCurrency,
-          payment_method: 'card',
-          items: [{
-            item_id: 'premium_subscription',
-            item_name: 'Premium Subscription',
-            price: purchaseValue,
-            quantity: 1,
-          }],
-        })
-
-        purchaseTrackedRef.current = true
-      }
-
+  // Track purchase events from redirects (Stripe, Mercado Pago)
+  usePurchaseTracking({
+    onPurchaseTracked: (data) => {
       toast({
-        title: "Pagamento processado!",
-        description: "Seu pagamento está sendo processado. Em breve você terá acesso ao plano Premium.",
+        title: "Pagamento confirmado!",
+        description: `Seu plano ${data.planType === 'monthly' ? 'Mensal' : data.planType === 'annual' ? 'Anual' : 'Premium'} foi ativado com sucesso.`,
       })
-      // Refresh subscription data
+      // Refresh subscription data and clean URL
       refreshSubscription()
       router.replace('/dashboard/subscription')
-    } else if (paymentStatus === 'failure') {
+    }
+  })
+
+  // Handle payment failure/pending states
+  const paymentStatusHandledRef = useRef(false)
+  const paymentStatus = searchParams.get('payment')
+
+  useEffect(() => {
+    if (paymentStatusHandledRef.current) return
+
+    if (paymentStatus === 'failure') {
+      paymentStatusHandledRef.current = true
       toast({
         title: "Pagamento falhou",
         description: "Houve um problema com seu pagamento. Tente novamente.",
         variant: "destructive",
       })
     } else if (paymentStatus === 'pending') {
+      paymentStatusHandledRef.current = true
       toast({
         title: "Pagamento pendente",
         description: "Seu pagamento está pendente. Aguarde a confirmação.",
       })
     }
-  }, [searchParams, amount, currency, subscription, profile?.plan_type, refreshSubscription, router])
+  }, [paymentStatus, toast])
 
   const handleCancelSubscription = async () => {
     try {

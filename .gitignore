@@ -30,3 +30,6 @@ next-env.d.ts
 # Google Cloud credentials
 utils/corretor-de-texto-*.json
 *-service-account.json
+
+# SEO reports (internal)
+SEO-REPORT-*.md

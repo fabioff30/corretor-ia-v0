@@ -25,10 +25,10 @@ import {
 import { MobileRewriteWrapper } from "@/components/mobile/mobile-rewrite-wrapper"
 
 export const metadata: Metadata = {
-  title: "Reescrever Texto Online com IA - Ferramenta Gratuita de Reescrita | CorretorIA",
+  title: "Reescreva Seus Textos Grátis com IA - Retire Plágio Online | CorretorIA",
   description:
-    "Reescreva textos instantaneamente com IA em 5 estilos: formal, humanizado, acadêmico, criativo e infantil. Ferramenta gratuita que mantém o significado e corrige erros. Experimente agora!",
-  keywords: "reescrever texto, reescrita de texto, parafrasear texto, IA para texto, texto formal, texto acadêmico, texto criativo, reescrever online, ferramenta de reescrita, inteligência artificial texto, corretor de texto, reformulação de texto, português brasileiro",
+    "Reescreva textos com IA e retire plágio automaticamente. 5 estilos: formal, humanizado, acadêmico, criativo e infantil. Ferramenta gratuita que parafraseia mantendo o significado. Sem cadastro!",
+  keywords: "reescrever texto, reescrita de texto, parafrasear texto, retirar plágio, remover plágio, IA para texto, texto formal, texto acadêmico, texto criativo, reescrever online, ferramenta de reescrita, inteligência artificial texto, corretor de texto, reformulação de texto, português brasileiro, antiplágio",
   authors: [{ name: "CorretorIA" }],
   creator: "CorretorIA",
   publisher: "CorretorIA",
@@ -51,8 +51,8 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Reescrever Texto Online com IA - Ferramenta Gratuita | CorretorIA",
-    description: "Reescreva textos instantaneamente com IA em 5 estilos diferentes. Ferramenta gratuita que mantém o significado original e corrige erros automaticamente.",
+    title: "Reescreva Seus Textos Grátis com IA - Retire Plágio | CorretorIA",
+    description: "Reescreva textos com IA e retire plágio automaticamente. 5 estilos diferentes para parafrasear mantendo o significado. Ferramenta gratuita e sem cadastro.",
     url: "https://www.corretordetextoonline.com.br/reescrever-texto",
     siteName: "CorretorIA - Corretor de Texto com IA",
     locale: "pt_BR",
@@ -68,8 +68,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Reescrever Texto Online com IA - CorretorIA",
-    description: "Reescreva textos em 5 estilos diferentes com IA. Ferramenta gratuita e instantânea.",
+    title: "Reescreva Seus Textos Grátis com IA | CorretorIA",
+    description: "Reescreva textos com IA e retire plágio automaticamente. 5 estilos para parafrasear. Grátis e sem cadastro!",
     images: ["https://www.corretordetextoonline.com.br/og-reescrever-texto.jpg"],
     creator: "@corretoria_br",
     site: "@corretoria_br",

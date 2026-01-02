@@ -4,6 +4,8 @@
 
 'use client'
 
+import { Suspense, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { UsageLimitCard } from '@/components/dashboard/UsageLimitCard'
@@ -15,14 +17,31 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useUser } from '@/hooks/use-user'
 import { useUsageLimits } from '@/hooks/use-usage-limits'
 import { usePendingPixPayment } from '@/hooks/use-pending-pix-payment'
-import { FileText, Wand2, Sparkles, TrendingUp } from 'lucide-react'
+import { usePurchaseTracking } from '@/hooks/use-purchase-tracking'
+import { useToast } from '@/hooks/use-toast'
+import { FileText, Wand2, Sparkles, TrendingUp, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { profile } = useUser()
   const { stats, loading, showAds, maxCharacters, error } = useUsageLimits()
   const { hasPendingPayment, pendingPayment, loading: pendingLoading, refetch } = usePendingPixPayment()
+  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Track purchase events from Stripe redirects
+  const { isTracked } = usePurchaseTracking({
+    onPurchaseTracked: (data) => {
+      toast({
+        title: "Pagamento confirmado!",
+        description: `Seu plano ${data.planType === 'monthly' ? 'Mensal' : data.planType === 'annual' ? 'Anual' : 'Premium'} foi ativado com sucesso.`,
+      })
+      // Clean up URL params after tracking
+      router.replace('/dashboard')
+    }
+  })
 
   const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
 
@@ -234,5 +253,17 @@ export default function DashboardPage() {
         </Card>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
