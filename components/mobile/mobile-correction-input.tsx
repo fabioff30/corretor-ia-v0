@@ -147,7 +147,7 @@ export function MobileCorrectionInput({
           aria-label="Campo de texto para correção"
           value={value}
           onChange={handleChange}
-          placeholder={!isLoggedIn && value === "" ? "" : placeholder}
+          placeholder={value === "" && onFileUpload ? "" : placeholder}
           disabled={isLoading || (!isPremium && aiEnabled) || isOverLimit || isAtDailyLimit}
           className={cn(
             "min-h-[60vh] text-lg leading-relaxed resize-none",
@@ -162,11 +162,41 @@ export function MobileCorrectionInput({
         {!isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit && (
           <div className="absolute inset-0 p-6 pointer-events-none flex items-start z-[5]">
             <span className="text-muted-foreground text-lg">
-              Cole, digite seu texto ou{" "}
+              Cole, digite seu texto,{" "}
+              {onFileUpload && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onFileUpload}
+                    className="text-primary hover:underline pointer-events-auto font-medium inline-flex items-center gap-1"
+                  >
+                    <Upload className="h-4 w-4" />
+                    suba um arquivo
+                  </button>
+                  {" "}ou{" "}
+                </>
+              )}
               <Link href="/login" className="text-primary hover:underline pointer-events-auto font-medium">
                 faça login
               </Link>{" "}
               para começar
+            </span>
+          </div>
+        )}
+
+        {/* Overlay for Logged Users when textarea is empty - show file upload option */}
+        {isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit && onFileUpload && (
+          <div className="absolute inset-0 p-6 pointer-events-none flex items-start z-[5]">
+            <span className="text-muted-foreground text-lg">
+              Cole, digite seu texto ou{" "}
+              <button
+                type="button"
+                onClick={onFileUpload}
+                className="text-primary hover:underline pointer-events-auto font-medium inline-flex items-center gap-1"
+              >
+                <Upload className="h-4 w-4" />
+                suba um arquivo
+              </button>
             </span>
           </div>
         )}

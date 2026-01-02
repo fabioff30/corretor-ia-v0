@@ -37,6 +37,10 @@ interface MobileHeroProps {
   showToneAdjuster?: boolean
   // SEO: Allow pages with desktop H1 to use H2 on mobile
   headingAs?: 'h1' | 'h2'
+  // File upload controlled state
+  initialText?: string
+  onTextChange?: (text: string) => void
+  isConvertingFile?: boolean
 }
 
 export function MobileHero({
@@ -66,10 +70,24 @@ export function MobileHero({
   onToneChange,
   showToneAdjuster = true,
   headingAs = 'h1',
+  initialText = "",
+  onTextChange,
+  isConvertingFile = false,
 }: MobileHeroProps) {
   const HeadingTag = headingAs
-  const [text, setText] = useState("")
+  const [localText, setLocalText] = useState("")
   const { user, profile } = useUser()
+
+  // Use controlled text if provided, otherwise use local state
+  const text = onTextChange ? initialText : localText
+  const setText = onTextChange || setLocalText
+
+  // Sync local state with initialText when it changes (for file upload)
+  React.useEffect(() => {
+    if (initialText && !onTextChange) {
+      setLocalText(initialText)
+    }
+  }, [initialText, onTextChange])
 
   const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin' || profile?.plan_type === 'lifetime'
   const characterLimit = isPremium ? PREMIUM_CHARACTER_LIMIT : FREE_CHARACTER_LIMIT

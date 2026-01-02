@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { MobileHero } from "./mobile-hero"
 import { MobileFAB } from "./mobile-fab"
@@ -11,8 +11,35 @@ import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT } from "@/utils/constants"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { createClient } from "@/lib/supabase/client"
+import {
+  uploadToStorage,
+  deleteFromStorage,
+  shouldUseStorageUpload,
+} from "@/lib/supabase/storage"
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
+
+// File upload constants
+const FREE_FORMATS = ["pdf", "docx", "txt", "html"]
+const PREMIUM_FORMATS = ["pdf", "docx", "xlsx", "pptx", "txt", "html", "csv", "xml", "json"]
+const FREE_MAX_SIZE_MB = 10
+const PREMIUM_MAX_SIZE_MB = 50
+
+/**
+ * Sanitizes text extracted from documents
+ */
+function sanitizeExtractedText(text: string): string {
+  if (!text) return text
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 interface MobileCorrectionWrapperProps {
   onCorrect?: (text: string) => void
@@ -37,6 +64,9 @@ export function MobileCorrectionWrapper({
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
   const [selectedTone, setSelectedTone] = useState<string>("Padrão")
   const [customTone, setCustomTone] = useState<string>("")
+  const [isConvertingFile, setIsConvertingFile] = useState(false)
+  const [inputText, setInputText] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { toast } = useToast()
   const { profile } = useUser()
@@ -110,6 +140,213 @@ export function MobileCorrectionWrapper({
   const handleHistoryClick = () => {
     // TODO: Navigate to history page or show history drawer
     console.log('History clicked')
+  }
+
+  // File upload handler
+  const allowedFormats = isPremium ? PREMIUM_FORMATS : FREE_FORMATS
+  const maxSizeMB = isPremium ? PREMIUM_MAX_SIZE_MB : FREE_MAX_SIZE_MB
+
+  const handleFileUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || !files[0]) return
+
+    const file = files[0]
+    const ext = file.name.toLowerCase().split(".").pop() || ""
+    const sizeMB = file.size / 1024 / 1024
+
+    // Validate format
+    if (!allowedFormats.includes(ext)) {
+      toast({
+        title: "Formato não suportado",
+        description: isPremium
+          ? `Formato .${ext} não é suportado.`
+          : `Formatos permitidos: ${FREE_FORMATS.join(", ").toUpperCase()}`,
+        variant: "destructive",
+      })
+      e.target.value = ""
+      return
+    }
+
+    // Validate size
+    if (sizeMB > maxSizeMB) {
+      toast({
+        title: "Arquivo muito grande",
+        description: `Tamanho máximo: ${maxSizeMB}MB. Seu arquivo: ${sizeMB.toFixed(1)}MB`,
+        variant: "destructive",
+      })
+      e.target.value = ""
+      return
+    }
+
+    // Start conversion
+    setIsConvertingFile(true)
+    const useStorageUpload = shouldUseStorageUpload(file.size)
+
+    sendGTMEvent('file_upload_started', {
+      file_type: ext,
+      file_size_mb: sizeMB.toFixed(2),
+      plan: isPremium ? 'premium' : 'free',
+      upload_method: useStorageUpload ? 'storage' : 'direct',
+      device: 'mobile',
+    })
+
+    let storagePath: string | undefined
+
+    try {
+      // Get session (optional)
+      let session = null
+      let userId: string | undefined
+
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          userId = user.id
+          const { data: sessionData } = await supabase.auth.getSession()
+          session = sessionData?.session || null
+        }
+      } catch {
+        // Continue as guest
+      }
+
+      let data: any
+
+      if (useStorageUpload) {
+        toast({
+          title: "Enviando arquivo...",
+          description: "Processando arquivo grande...",
+        })
+
+        const uploadResult = await uploadToStorage(file, userId)
+
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error("Falha no upload do arquivo")
+        }
+
+        storagePath = uploadResult.path
+
+        toast({
+          title: "Convertendo documento...",
+          description: "Extraindo texto do arquivo.",
+        })
+
+        const headers: HeadersInit = { 'Content-Type': 'application/json' }
+        if (session) {
+          headers.Authorization = `Bearer ${session.access_token}`
+        }
+
+        const response = await fetch("/api/convert-from-url", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            fileUrl: uploadResult.url,
+            filename: file.name,
+            storagePath: storagePath,
+          }),
+        })
+
+        const responseText = await response.text()
+        try {
+          data = JSON.parse(responseText)
+        } catch {
+          throw new Error("Erro ao processar resposta do servidor")
+        }
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || "Conversão falhou")
+        }
+      } else {
+        // Direct upload for small files
+        toast({
+          title: "Convertendo documento...",
+          description: "Extraindo texto do arquivo.",
+        })
+
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const headers: HeadersInit = {}
+        if (session) {
+          headers.Authorization = `Bearer ${session.access_token}`
+        }
+
+        const response = await fetch("/api/convert", {
+          method: "POST",
+          headers,
+          body: formData,
+        })
+
+        const responseText = await response.text()
+        try {
+          data = JSON.parse(responseText)
+        } catch {
+          if (response.status === 413) {
+            throw new Error(`Arquivo muito grande (${sizeMB.toFixed(1)}MB).`)
+          }
+          throw new Error("Erro ao processar resposta do servidor")
+        }
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || "Conversão falhou")
+        }
+      }
+
+      // Extract and set text
+      const extractedText = data.plain_text || data.markdown
+      const sanitizedText = sanitizeExtractedText(extractedText)
+
+      // Limit text if needed
+      const finalText = characterLimit && sanitizedText.length > characterLimit
+        ? sanitizedText.slice(0, characterLimit)
+        : sanitizedText
+
+      setInputText(finalText)
+
+      sendGTMEvent('file_upload_completed', {
+        file_type: ext,
+        file_size_mb: sizeMB.toFixed(2),
+        words_extracted: data.metadata?.words || 0,
+        plan: isPremium ? 'premium' : 'free',
+        device: 'mobile',
+      })
+
+      toast({
+        title: "Arquivo convertido!",
+        description: `${data.metadata?.words || 0} palavras extraídas`,
+      })
+
+      // Clean up storage file
+      if (storagePath) {
+        deleteFromStorage(storagePath).catch(() => {})
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido"
+
+      sendGTMEvent('file_upload_error', {
+        file_type: ext,
+        error_message: errorMessage,
+        plan: isPremium ? 'premium' : 'free',
+        device: 'mobile',
+      })
+
+      toast({
+        title: "Erro na conversão",
+        description: errorMessage,
+        variant: "destructive",
+      })
+
+      if (storagePath) {
+        deleteFromStorage(storagePath).catch(() => {})
+      }
+    } finally {
+      setIsConvertingFile(false)
+      e.target.value = ""
+    }
   }
 
   const handleCorrect = async (text: string) => {
@@ -231,21 +468,34 @@ export function MobileCorrectionWrapper({
 
   return (
     <div className="relative min-h-[100dvh]">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="sr-only"
+        accept={allowedFormats.map((f) => `.${f}`).join(",")}
+        onChange={handleFileChange}
+        disabled={isConvertingFile}
+      />
+
       {/* Main Content */}
       <MobileHero
         onSubmit={handleCorrect}
-        onFileUpload={onFileUpload}
-        isLoading={isLoading}
+        onFileUpload={handleFileUploadClick}
+        isLoading={isLoading || isConvertingFile}
         onAIToggle={handleAIToggle}
         aiEnabled={aiEnabled}
         usageCount={freeCorrectionsCount}
         usageLimit={correctionsDailyLimit}
         onToneChange={handleToneChange}
+        initialText={inputText}
+        onTextChange={setInputText}
+        isConvertingFile={isConvertingFile}
       />
 
       {/* Floating Action Button - desabilitado temporariamente */}
       {/* <MobileFAB
-        onFileUpload={onFileUpload}
+        onFileUpload={handleFileUploadClick}
         onAIToggle={() => handleAIToggle(!aiEnabled)}
         onHistoryClick={handleHistoryClick}
         onHelpClick={handleHelpClick}
