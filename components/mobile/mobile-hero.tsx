@@ -122,7 +122,7 @@ export function MobileHero({
         {showStats && (
           <MobileQuickStats
             rating={4.8}
-            reviewCount={1200}
+            reviewCount={5000}
             usageCount={usageCount}
             usageLimit={usageLimit}
             isPremium={isPremium}

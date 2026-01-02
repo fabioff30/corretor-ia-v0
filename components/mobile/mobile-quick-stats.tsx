@@ -12,7 +12,7 @@ interface MobileQuickStatsProps {
 
 export function MobileQuickStats({
   rating = 4.8,
-  reviewCount = 1200,
+  reviewCount = 5000,
   usageCount = 0,
   usageLimit = 3,
   isPremium = false,
