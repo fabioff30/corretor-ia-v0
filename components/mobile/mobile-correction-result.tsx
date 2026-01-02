@@ -6,9 +6,12 @@ import { TextDiff } from "@/components/text-diff"
 import { TextEvaluation } from "@/components/features/text-evaluation"
 import { StarRating } from "@/components/star-rating"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Copy, Check, RotateCcw, Zap } from "lucide-react"
+import { ArrowLeft, Copy, Check, RotateCcw, Zap, MessageCircle, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@/hooks/use-user"
+import { useRouter } from "next/navigation"
+
+const REWRITE_TRANSFER_KEY = "corretoria:rewrite-transfer-text"
 import { motion } from "framer-motion"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { isBlackFridayActive } from "@/utils/constants"
@@ -29,6 +32,7 @@ export function MobileCorrectionResult({
 }: MobileCorrectionResultProps) {
     const { toast } = useToast()
     const { isPro } = useUser()
+    const router = useRouter()
     const [copied, setCopied] = useState(false)
 
     const handleRatingSubmit = (rating: number) => {
@@ -47,6 +51,7 @@ export function MobileCorrectionResult({
                 title: "Texto copiado!",
                 description: "O texto corrigido foi copiado para a área de transferência.",
             })
+            sendGTMEvent("mobile_copy_text", { text_length: correctedText.length })
             setTimeout(() => setCopied(false), 2000)
         } catch (err) {
             toast({
@@ -55,6 +60,18 @@ export function MobileCorrectionResult({
                 variant: "destructive",
             })
         }
+    }
+
+    const handleShareWhatsApp = () => {
+        const text = encodeURIComponent(correctedText)
+        window.open(`https://wa.me/?text=${text}`, '_blank')
+        sendGTMEvent("mobile_share_whatsapp", { text_length: correctedText.length })
+    }
+
+    const handleRewrite = () => {
+        localStorage.setItem(REWRITE_TRANSFER_KEY, correctedText)
+        router.push('/reescrever-texto')
+        sendGTMEvent("mobile_navigate_rewrite", { text_length: correctedText.length })
     }
 
     return (
@@ -88,6 +105,22 @@ export function MobileCorrectionResult({
                         >
                             {correctedText}
                         </motion.div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-4">
+                            <Button variant="outline" size="sm" onClick={handleCopy} className="flex-1">
+                                {copied ? <Check className="h-4 w-4 mr-1 text-green-500" /> : <Copy className="h-4 w-4 mr-1" />}
+                                Copiar
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleShareWhatsApp} className="flex-1">
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                WhatsApp
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleRewrite} className="flex-1">
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Reescrever
+                            </Button>
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="diff" className="mt-0 px-4 pb-4">

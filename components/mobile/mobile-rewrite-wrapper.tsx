@@ -15,6 +15,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 
 const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
+const REWRITE_TRANSFER_KEY = "corretoria:rewrite-transfer-text"
 
 // Helper to get today's date in local timezone (not UTC)
 const getLocalDateString = () => {
@@ -69,6 +70,7 @@ export function MobileRewriteWrapper({
     const [isLoading, setIsLoading] = useState(propIsLoading)
     const [selectedTone, setSelectedTone] = useState("humanized")
     const [freeRewritesCount, setFreeRewritesCount] = useState(0)
+    const [transferredText, setTransferredText] = useState("")
 
     const { toast } = useToast()
     const { profile } = useUser()
@@ -86,6 +88,15 @@ export function MobileRewriteWrapper({
         const usage = readFreeRewriteUsage()
         setFreeRewritesCount(usage.count)
     }, [isPremium])
+
+    // Check for transferred text from correction page
+    useEffect(() => {
+        const text = localStorage.getItem(REWRITE_TRANSFER_KEY)
+        if (text) {
+            setTransferredText(text)
+            localStorage.removeItem(REWRITE_TRANSFER_KEY)
+        }
+    }, [])
     const resolvedCharacterLimit = isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
     const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
     const characterLimit = isUnlimited ? null : resolvedCharacterLimit
@@ -305,6 +316,8 @@ export function MobileRewriteWrapper({
                 onStyleClick={handleSettingsClick}
                 usageCount={freeRewritesCount}
                 usageLimit={rewritesDailyLimit}
+                initialText={transferredText}
+                onTextChange={setTransferredText}
             />
 
             {/* <MobileFAB
