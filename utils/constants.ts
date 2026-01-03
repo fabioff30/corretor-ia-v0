@@ -5,13 +5,17 @@ export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit) - 
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humanization
 
-// Daily usage limits (configured in Supabase plan_limits_config table)
-// Free plan: 3 corrections/day, 3 rewrites/day, 1 AI analysis/day
-// Pro plan: unlimited (-1) for all operations
-// These limits are enforced in /api/correct and /api/rewrite routes
-// via canUserPerformOperation() and incrementUserUsage() functions
-export const FREE_DAILY_CORRECTIONS_LIMIT = 3 // Hardcoded fallback - MUST match Supabase plan_limits_config
-export const FREE_DAILY_REWRITES_LIMIT = 3 // Hardcoded fallback - MUST match Supabase plan_limits_config
+// Usage limits by user type
+// Guest (not authenticated): 3 operations per MONTH (shared between corrections + rewrites)
+// Free (authenticated): 3 operations per WEEK (shared between corrections + rewrites)
+// Pro/Lifetime: unlimited
+export const GUEST_MONTHLY_LIMIT = 3 // Guest users: 3 ops/month (Redis-based)
+export const FREE_WEEKLY_LIMIT = 3 // Free users: 3 ops/week (Supabase-based)
+
+// Legacy daily limits (kept for backwards compatibility with Supabase plan_limits_config)
+// These are now superseded by weekly limits for free users
+export const FREE_DAILY_CORRECTIONS_LIMIT = 3 // Deprecated - use FREE_WEEKLY_LIMIT
+export const FREE_DAILY_REWRITES_LIMIT = 3 // Deprecated - use FREE_WEEKLY_LIMIT
 
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2

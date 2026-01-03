@@ -12,7 +12,9 @@ import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
-import { saveCorrection, canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker"
+import { saveCorrection, incrementUserUsage } from "@/utils/limit-checker"
+import { checkGuestMonthlyLimit } from "@/lib/api/guest-monthly-limit"
+import { checkFreeWeeklyLimit } from "@/lib/api/free-weekly-limit"
 import { isStylePremium } from "@/utils/rewrite-styles"
 
 export const dynamic = "force-dynamic"
@@ -85,42 +87,47 @@ export async function POST(request: NextRequest) {
       isPremium = true
     }
 
-    // Check usage limits for authenticated free users
+    // Check usage limits based on user type
     // Try to get current user even if not a premium request
     let currentUserContext: AuthContext | null = premiumContext
     if (!currentUserContext) {
       try {
         currentUserContext = await getCurrentUserWithProfile()
       } catch {
-        // Not authenticated, continue with regular flow
+        // Not authenticated, continue with guest flow
         currentUserContext = null
       }
     }
 
-    // If user is authenticated and not premium, check limits
+    // GUEST users (not authenticated) - check monthly limit
+    if (!currentUserContext?.user) {
+      const guestLimitResult = await checkGuestMonthlyLimit(request)
+      if (guestLimitResult) {
+        console.log(`API: Guest monthly limit exceeded`, requestId)
+        return guestLimitResult
+      }
+      console.log(`API: Guest user - monthly limit OK`, requestId)
+    }
+
+    // AUTHENTICATED users - check their plan
     if (currentUserContext?.user && !isPremium) {
       const userId = currentUserContext.user.id
       const userPlan = currentUserContext.profile?.plan_type
 
-      // Only check limits for free users
+      // Auto-detect premium status from user plan
+      if (userPlan === 'pro' || userPlan === 'admin' || userPlan === 'lifetime') {
+        isPremium = true
+        console.log(`API: Auto-detected premium user (${userPlan})`, requestId)
+      }
+
+      // FREE users - check weekly limit (3 ops/week shared between correct + rewrite)
       if (userPlan === 'free') {
-        const limitCheck = await canUserPerformOperation(userId, 'rewrite')
-
-        if (!limitCheck.allowed) {
-          return NextResponse.json(
-            {
-              error: "Limite diário excedido",
-              message: limitCheck.reason || "Você atingiu o limite diário de reescritas",
-              details: [
-                `Limite: ${limitCheck.limit} reescritas por dia`,
-                "Faça upgrade para o plano Premium para reescritas ilimitadas"
-              ]
-            },
-            { status: 429 }
-          )
+        const weeklyLimitResult = await checkFreeWeeklyLimit(request, userId)
+        if (weeklyLimitResult) {
+          console.log(`API: Free user ${userId} weekly limit exceeded`, requestId)
+          return weeklyLimitResult
         }
-
-        console.log(`API: Free user ${userId} - ${limitCheck.remaining}/${limitCheck.limit} rewrites remaining`, requestId)
+        console.log(`API: Free user ${userId} - weekly limit OK`, requestId)
       }
     }
 

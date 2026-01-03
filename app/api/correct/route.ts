@@ -12,7 +12,9 @@ import { callWebhook } from "@/lib/api/webhook-client"
 import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
-import { saveCorrection, canUserPerformOperation, incrementUserUsage } from "@/utils/limit-checker"
+import { saveCorrection, incrementUserUsage } from "@/utils/limit-checker"
+import { checkGuestMonthlyLimit } from "@/lib/api/guest-monthly-limit"
+import { checkFreeWeeklyLimit } from "@/lib/api/free-weekly-limit"
 import { safeJsonParse, extractValidJson } from "@/utils/safe-json-fetch"
 
 // Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
@@ -87,48 +89,47 @@ export async function POST(request: NextRequest) {
       isPremium = true
     }
 
-    // Check usage limits for authenticated free users
+    // Check usage limits based on user type
     // Try to get current user even if not a premium request
     let currentUserContext: AuthContext | null = premiumContext
     if (!currentUserContext) {
       try {
         currentUserContext = await getCurrentUserWithProfile()
       } catch {
-        // Not authenticated, continue with regular flow
+        // Not authenticated, continue with guest flow
         currentUserContext = null
       }
     }
 
-    // If user is authenticated, check their plan
+    // GUEST users (not authenticated) - check monthly limit
+    if (!currentUserContext?.user) {
+      const guestLimitResult = await checkGuestMonthlyLimit(request)
+      if (guestLimitResult) {
+        console.log(`API: Guest monthly limit exceeded`, requestId)
+        return guestLimitResult
+      }
+      console.log(`API: Guest user - monthly limit OK`, requestId)
+    }
+
+    // AUTHENTICATED users - check their plan
     if (currentUserContext?.user) {
       const userId = currentUserContext.user.id
       const userPlan = currentUserContext.profile?.plan_type
 
       // Auto-detect premium status from user plan
-      if (userPlan === 'pro' || userPlan === 'admin') {
+      if (userPlan === 'pro' || userPlan === 'admin' || userPlan === 'lifetime') {
         isPremium = true
         console.log(`API: Auto-detected premium user (${userPlan})`, requestId)
       }
 
-      // Only check limits for free users
+      // FREE users - check weekly limit (3 ops/week shared between correct + rewrite)
       if (userPlan === 'free' && !isPremium) {
-        const limitCheck = await canUserPerformOperation(userId, 'correct')
-
-        if (!limitCheck.allowed) {
-          return NextResponse.json(
-            {
-              error: "Limite diário excedido",
-              message: limitCheck.reason || "Você atingiu o limite diário de correções",
-              details: [
-                `Limite: ${limitCheck.limit} correções por dia`,
-                "Faça upgrade para o plano Premium para correções ilimitadas"
-              ]
-            },
-            { status: 429 }
-          )
+        const weeklyLimitResult = await checkFreeWeeklyLimit(request, userId)
+        if (weeklyLimitResult) {
+          console.log(`API: Free user ${userId} weekly limit exceeded`, requestId)
+          return weeklyLimitResult
         }
-
-        console.log(`API: Free user ${userId} - ${limitCheck.remaining}/${limitCheck.limit} corrections remaining`, requestId)
+        console.log(`API: Free user ${userId} - weekly limit OK`, requestId)
       }
     }
 
