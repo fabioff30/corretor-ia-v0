@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Admin Dashboard Summary
  * GET /api/admin/dashboard/summary
@@ -141,7 +140,7 @@ export async function GET(_request: NextRequest) {
             rewrites_per_day: limit.rewrites_per_day,
             ai_analyses_per_day: limit.ai_analyses_per_day,
             show_ads: limit.show_ads,
-            updated_at: limit.updated_at,
+            updated_at: limit.updated_at ?? new Date().toISOString(),
           }
         }
         return acc
@@ -162,6 +161,7 @@ export async function GET(_request: NextRequest) {
     }
 
     for (const entry of operationsLast7DaysRes.data || []) {
+      if (!entry.created_at) continue
       const key = new Date(entry.created_at).toISOString().slice(0, 10)
       if (!operationsMap.has(key)) continue
 
@@ -211,4 +211,3 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-// @ts-nocheck

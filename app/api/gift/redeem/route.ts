@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Redeem Gift
  * POST /api/gift/redeem
@@ -116,4 +115,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-// @ts-nocheck

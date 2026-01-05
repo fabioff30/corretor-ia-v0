@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: User History (Admin)
  * GET /api/admin/users/[id]/history
@@ -125,4 +124,3 @@ export async function GET(
     )
   }
 }
-// @ts-nocheck

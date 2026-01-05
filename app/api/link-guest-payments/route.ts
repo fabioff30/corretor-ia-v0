@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Link All Guest Payments to User Account
  * POST /api/link-guest-payments
@@ -258,13 +257,13 @@ export async function POST(request: NextRequest) {
         // Also update Stripe customer metadata
         await supabase
           .from('stripe_customers')
-          .insert({
+          .upsert({
             user_id: user.id,
             stripe_customer_id: stripeSubscription.stripe_customer_id,
             email: userEmail,
+          }, {
+            onConflict: 'stripe_customer_id'
           })
-          .onConflict('stripe_customer_id')
-          .merge()
 
         // Activate subscription
         await supabase.rpc('activate_subscription', {
@@ -401,4 +400,3 @@ function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: 
     expiresAtIso: expiresAt.toISOString(),
   }
 }
-// @ts-nocheck

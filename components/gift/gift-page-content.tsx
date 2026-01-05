@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import { useState, useEffect } from "react"
@@ -229,16 +228,16 @@ export function GiftPageContent() {
               <Card
                 key={plan.id}
                 className={`cursor-pointer transition-all hover:shadow-lg ${
-                  plan.popular ? 'border-primary shadow-md ring-2 ring-primary/20' : ''
+                  'popular' in plan && plan.popular ? 'border-primary shadow-md ring-2 ring-primary/20' : ''
                 }`}
                 onClick={() => handlePlanSelect(plan.id)}
               >
-                {plan.popular && (
+                {'popular' in plan && plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
                     MAIS POPULAR
                   </div>
                 )}
-                {'badge' in plan && plan.badge && !plan.popular && (
+                {'badge' in plan && plan.badge && !('popular' in plan && plan.popular) && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                     {plan.badge}
                   </div>
@@ -273,7 +272,7 @@ export function GiftPageContent() {
                   </ul>
                   <Button
                     className="w-full mt-4"
-                    variant={plan.popular ? 'default' : 'outline'}
+                    variant={'popular' in plan && plan.popular ? 'default' : 'outline'}
                   >
                     <Gift className="h-4 w-4 mr-2" />
                     Escolher este plano
@@ -389,18 +388,18 @@ export function GiftPageContent() {
               </div>
 
               {/* Selected Plan Summary */}
-              {selectedPlan && (
+              {selectedPlan && CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan] && (
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium">{CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan].name}</p>
+                      <p className="font-medium">{CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan]!.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan].description}
+                        {CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan]!.description}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-primary">
-                        {formatGiftPrice(CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan].price)}
+                        {formatGiftPrice(CHRISTMAS_GIFT_CONFIG.PLANS[selectedPlan]!.price)}
                       </p>
                     </div>
                   </div>
@@ -451,4 +450,3 @@ export function GiftPageContent() {
     </div>
   )
 }
-// @ts-nocheck

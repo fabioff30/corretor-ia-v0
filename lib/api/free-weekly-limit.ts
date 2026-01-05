@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { FREE_WEEKLY_LIMIT } from "@/utils/constants"
@@ -71,7 +70,7 @@ async function getWeeklyUsage(userId: string): Promise<{ used: number; error?: s
     }
 
     // Sum all corrections and rewrites for the week
-    const totalUsed = (data || []).reduce((sum, record) => {
+    const totalUsed = (data || []).reduce((sum: number, record: any) => {
       return sum + (record.corrections_used || 0) + (record.rewrites_used || 0)
     }, 0)
 
@@ -182,4 +181,3 @@ export async function getFreeWeeklyUsage(userId: string): Promise<WeeklyUsageRes
     }
   }
 }
-// @ts-nocheck

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for UserProvider refreshProfile() function
  * Tests the new refresh functionality that forces profile update from database

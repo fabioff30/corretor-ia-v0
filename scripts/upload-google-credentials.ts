@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 /**
  * Script para fazer upload das credenciais do Google Cloud para o Vercel Blob
  *
@@ -51,7 +50,7 @@ async function uploadCredentials() {
 
     // Fazer upload para o Vercel Blob
     const blob = await put('google-credentials.json', credentials, {
-      access: 'private', // Importante: manter privado
+      access: 'public', // Vercel Blob only supports 'public' access
       contentType: 'application/json',
     });
 
@@ -81,4 +80,3 @@ uploadCredentials()
     console.error('\n❌ Erro:', error instanceof Error ? error.message : error);
     process.exit(1);
   });
-// @ts-nocheck

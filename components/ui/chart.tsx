@@ -1,10 +1,27 @@
-// @ts-nocheck
 'use client'
 
 import * as React from 'react'
 import * as RechartsPrimitive from 'recharts'
 
 import { cn } from '@/lib/utils'
+
+// Recharts payload item type (generic for tooltip/legend)
+interface PayloadItem {
+  dataKey?: string | number
+  name?: string
+  value?: number | string
+  color?: string
+  fill?: string
+  payload?: Record<string, unknown>
+}
+
+// Legend payload item type
+interface LegendPayloadItem {
+  dataKey?: string | number
+  value?: string | number
+  color?: string
+  type?: string
+}
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const
@@ -105,8 +122,14 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<'div'> & {
+  React.ComponentProps<'div'> & {
+      active?: boolean
+      payload?: PayloadItem[]
+      label?: string | number
+      labelFormatter?: (value: unknown, payload: PayloadItem[]) => React.ReactNode
+      labelClassName?: string
+      formatter?: (value: unknown, name: string, item: PayloadItem, index: number, payload: Record<string, unknown>) => React.ReactNode
+      color?: string
       hideLabel?: boolean
       hideIndicator?: boolean
       indicator?: 'line' | 'dot' | 'dashed'
@@ -189,7 +212,7 @@ const ChartTooltipContent = React.forwardRef<
           {payload.map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || 'value'}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || item.payload?.fill || item.color
 
             return (
               <div
@@ -200,7 +223,7 @@ const ChartTooltipContent = React.forwardRef<
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                  formatter(item.value, item.name, item, index, item.payload ?? {})
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -261,8 +284,9 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'> &
-    Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> & {
+  React.ComponentProps<'div'> & {
+      payload?: LegendPayloadItem[]
+      verticalAlign?: 'top' | 'bottom' | 'middle'
       hideIcon?: boolean
       nameKey?: string
     }
@@ -364,4 +388,3 @@ export {
   ChartLegendContent,
   ChartStyle,
 }
-// @ts-nocheck

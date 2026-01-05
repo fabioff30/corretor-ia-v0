@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      return data as UserWithSubscription
+      return data as unknown as UserWithSubscription
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error)
       return null
@@ -462,4 +461,3 @@ export const useAuth = () => {
   }
   return context
 }
-// @ts-nocheck

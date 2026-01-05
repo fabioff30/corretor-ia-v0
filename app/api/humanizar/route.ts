@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
 import { HUMANIZAR_WEBHOOK_URL, HUMANIZAR_MAX_TEXT_LENGTH, HUMANIZAR_TIMEOUT } from "@/utils/constants"
 import { parseRequestBody, validateTextLength } from "@/lib/api/shared-handlers"
 import { callWebhook } from "@/lib/api/webhook-client"
-import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers"
+import { handleWebhookError } from "@/lib/api/error-handlers"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Handle non-OK responses
     if (!response.ok) {
-      return handleWebhookError(response, text, requestId, cfRay)
+      return handleWebhookError(response, requestId, ip)
     }
 
     // Parse response
@@ -167,7 +166,20 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    return handleGeneralError(error, requestId, ip, cfRay)
+    console.error(`API: Error processing humanization request`, requestId, error)
+    return NextResponse.json(
+      {
+        error: "Erro interno",
+        message: error instanceof Error ? error.message : "Erro ao processar solicitação",
+        details: ["Tente novamente mais tarde"]
+      },
+      {
+        status: 500,
+        headers: {
+          "X-Request-ID": requestId,
+          ...(cfRay && { "CF-Ray": cfRay }),
+        }
+      }
+    )
   }
 }
-// @ts-nocheck

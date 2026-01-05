@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Christmas Gift Feature Configuration
  * Allows users to purchase subscriptions as gifts for others
@@ -115,7 +114,7 @@ export function getGiftPlan(planId: GiftPlanId): GiftPlan | undefined {
 /**
  * Get all available gift plans as array
  */
-export function getGiftPlansArray(): Array<GiftPlan & { id: GiftPlanId }> {
+export function getGiftPlansArray() {
   return Object.entries(CHRISTMAS_GIFT_CONFIG.PLANS).map(([id, plan]) => ({
     ...plan,
     id: id as GiftPlanId,
@@ -144,10 +143,9 @@ export function formatGiftPrice(price: number): string {
 /**
  * Get discount percentage for plans with original_price
  */
-export function getDiscountPercentage(plan: GiftPlan): number | null {
-  if ('original_price' in plan && plan.original_price) {
+export function getDiscountPercentage(plan: { price: number; original_price?: number } | undefined | null): number | null {
+  if (plan && 'original_price' in plan && plan.original_price) {
     return Math.round(((plan.original_price - plan.price) / plan.original_price) * 100)
   }
   return null
 }
-// @ts-nocheck

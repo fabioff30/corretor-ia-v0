@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
 import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, LITE_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN } from "@/utils/constants"
@@ -493,4 +492,3 @@ export async function POST(request: NextRequest) {
     return handleGeneralError(error as Error, requestId, ip, requestBody?.text || "", startTime, "correction")
   }
 }
-// @ts-nocheck

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Server-side Authentication System
  * Secure replacement for client-side admin authentication
@@ -19,6 +18,7 @@ export interface AdminUser {
   role: 'admin'
   authenticated: boolean
   expiresAt: number
+  [key: string]: unknown // Index signature for JWT compatibility
 }
 
 /**
@@ -137,4 +137,3 @@ export async function requireAdmin(): Promise<AdminUser> {
   
   return session
 }
-// @ts-nocheck

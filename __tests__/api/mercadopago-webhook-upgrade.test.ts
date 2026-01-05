@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from "next/server"
 
 jest.mock("@/lib/mercadopago/webhook-validator", () => ({
@@ -98,11 +97,11 @@ function createSupabaseMock() {
 describe("Mercado Pago webhook - upgrade flow", () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    process.env.NODE_ENV = "test"
+    ;(process.env as any).NODE_ENV = "test"
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalEnv
+    ;(process.env as any).NODE_ENV = originalEnv
   })
 
   it("upgrades user to pro and creates subscription on approved PIX payment", async () => {

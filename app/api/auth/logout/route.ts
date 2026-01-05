@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Logout
  * POST /api/auth/logout
@@ -39,7 +38,6 @@ export async function POST() {
         cookieStore.delete({
           name: cookie.name,
           path: '/',
-          domain: cookie.domain || undefined,
         })
       }
     })
@@ -81,4 +79,3 @@ export async function OPTIONS() {
     },
   })
 }
-// @ts-nocheck

@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -80,8 +79,7 @@ export function SubscriptionBox() {
       }
 
       // Track event
-      sendGTMEvent({
-        event: 'subscribe_premium_clicked',
+      sendGTMEvent('subscribe_premium_clicked', {
         user_id: user.id,
         email: user.email,
         plan: planType,
@@ -107,8 +105,7 @@ export function SubscriptionBox() {
       }
 
       // Track checkout initiated
-      sendGTMEvent({
-        event: 'begin_checkout',
+      sendGTMEvent('begin_checkout', {
         ...analyticsPayload,
         items: [
           {
@@ -171,8 +168,7 @@ export function SubscriptionBox() {
       setPixLoadingPlan(planType)
 
       // Track event
-      sendGTMEvent({
-        event: 'pix_payment_initiated',
+      sendGTMEvent('pix_payment_initiated', {
         plan: planType,
         location: 'home_subscription_box',
       })
@@ -475,4 +471,3 @@ export function SubscriptionBox() {
     </section>
   )
 }
-// @ts-nocheck

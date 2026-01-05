@@ -11,7 +11,7 @@ import { JULINHO_DISABLED } from "@/utils/constants"
 
 interface JulinhoCTAProps {
   onOpenChat: () => void
-  position?: "bottom-right" | "bottom-left"
+  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left"
 }
 
 export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTAProps) {
@@ -93,9 +93,11 @@ export function JulinhoCTA({ onOpenChat, position = "bottom-right" }: JulinhoCTA
   }
 
   // Position classes
-  const positionClasses = {
+  const positionClasses: Record<NonNullable<JulinhoCTAProps['position']>, string> = {
     "bottom-right": "bottom-24 right-6",
     "bottom-left": "bottom-24 left-6",
+    "top-right": "top-24 right-6",
+    "top-left": "top-24 left-6",
   }
 
   if (!shouldRender || JULINHO_DISABLED) return null

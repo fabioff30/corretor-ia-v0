@@ -238,4 +238,3 @@ function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: 
     expiresAtIso: expiresAt.toISOString(),
   }
 }
-// @ts-nocheck

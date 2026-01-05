@@ -27,7 +27,7 @@ jest.mock("@/components/google-analytics-wrapper", () => ({
 
 describe("/upgrade page", () => {
   it("renders subscription options and highlight CTA", async () => {
-    render(<UpgradePage searchParams={Promise.resolve({})} />)
+    render(<UpgradePage />)
     expect(screen.getByText(/Upgrade para CorretorIA Pro/i)).toBeInTheDocument()
     expect(screen.getByText(/Assinar CorretorIA Pro/i)).toBeInTheDocument()
   })

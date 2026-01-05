@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Utility para verificar se deve mostrar anúncios para o usuário
  */
@@ -30,7 +29,7 @@ export async function shouldShowAds(userId: string | null): Promise<boolean> {
     }
 
     // Buscar configuração de anúncios do plano
-    const planType = profile.plan_type === 'admin' ? 'pro' : profile.plan_type
+    const planType = profile.plan_type === 'admin' ? 'pro' : (profile.plan_type ?? 'free')
 
     const { data: limits, error: limitsError } = await supabase
       .from('plan_limits_config')
@@ -60,4 +59,3 @@ export function shouldShowAdsClient(planType: 'free' | 'pro' | 'admin' | null): 
   if (planType === 'pro' || planType === 'admin') return false
   return true // Free mostra anúncios
 }
-// @ts-nocheck

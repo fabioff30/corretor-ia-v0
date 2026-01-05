@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -30,6 +29,9 @@ type PromotionCode = {
     duration: string
     durationInMonths: number | null
     percentOff: number | null
+    amountOff: number | null
+    currency: string | null
+    valid: boolean
   } | null
 }
 
@@ -376,4 +378,3 @@ export default function AdminCouponsPage() {
     </div>
   )
 }
-// @ts-nocheck

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Debug Endpoint: Check Mercado Pago Payment
  * GET /api/debug/check-mp-payment?paymentId=XXX
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
         transaction_amount: payment.transaction_amount,
         date_created: payment.date_created,
         date_approved: payment.date_approved,
-        date_last_updated: payment.date_last_updated,
+        date_last_updated: (payment as any).date_last_updated,
       })
 
       return NextResponse.json({
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
           payer: payment.payer,
           date_created: payment.date_created,
           date_approved: payment.date_approved,
-          date_last_updated: payment.date_last_updated,
+          date_last_updated: (payment as any).date_last_updated,
           external_reference: payment.external_reference,
         },
       })
@@ -77,4 +76,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-// @ts-nocheck

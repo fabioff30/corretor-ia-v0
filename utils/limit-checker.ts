@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Utilities para verificação de limites do usuário (server-side)
  */
@@ -212,7 +211,7 @@ export async function getUserLimits(userId: string): Promise<PlanLimitsConfig | 
     if (profileError || !profile) return null
 
     // Admin e Lifetime usam limites de Pro (ilimitado)
-    const planType = (profile.plan_type === 'admin' || profile.plan_type === 'lifetime') ? 'pro' : profile.plan_type
+    const planType = (profile.plan_type === 'admin' || profile.plan_type === 'lifetime') ? 'pro' : (profile.plan_type ?? 'free')
 
     // Buscar limites do plano
     const { data: limits, error: limitsError } = await supabase
@@ -329,4 +328,3 @@ function getOperationLabel(operationType: 'correct' | 'rewrite' | 'ai_analysis' 
       return 'operações'
   }
 }
-// @ts-nocheck

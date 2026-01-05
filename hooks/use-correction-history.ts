@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react'
 import { CorrectionHistory, supabase } from '@/lib/supabase'
 import { useUser } from "@/components/providers/user-provider"
@@ -17,7 +16,7 @@ export const useCorrectionHistory = () => {
 
     const fetchHistory = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('correction_history')
           .select('*')
           .eq('user_id', user.id)
@@ -28,7 +27,7 @@ export const useCorrectionHistory = () => {
           console.error('Erro ao buscar histórico:', error)
           setHistory([])
         } else {
-          setHistory(data || [])
+          setHistory((data || []) as CorrectionHistory[])
         }
       } catch (error) {
         console.error('Erro ao carregar histórico:', error)
@@ -51,7 +50,7 @@ export const useCorrectionHistory = () => {
     if (!user) return { error: 'Usuário não autenticado' }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('correction_history')
         .insert([
           {
@@ -72,7 +71,7 @@ export const useCorrectionHistory = () => {
       }
 
       // Adicionar ao histórico local
-      setHistory(prev => [data, ...prev])
+      setHistory(prev => [data as CorrectionHistory, ...prev])
       return { error: null, data }
     } catch (error) {
       console.error('Erro ao salvar correção:', error)
@@ -102,4 +101,3 @@ export const useCorrectionHistory = () => {
     saveCorrection
   }
 }
-// @ts-nocheck

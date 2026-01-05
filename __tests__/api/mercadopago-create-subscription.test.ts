@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from "next/server"
 
 jest.mock("@/utils/env-config", () => ({
@@ -71,11 +70,11 @@ describe("Mercado Pago create subscription API", () => {
   beforeEach(() => {
     jest.resetAllMocks()
     jest.resetModules()
-    process.env.NODE_ENV = "test"
+    ;(process.env as any).NODE_ENV = "test"
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalEnv
+    ;(process.env as any).NODE_ENV = originalEnv
   })
 
   it("returns 400 when required fields are missing", async () => {

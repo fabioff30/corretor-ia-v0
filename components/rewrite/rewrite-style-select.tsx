@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -56,7 +55,8 @@ export function RewriteStyleSelect({
 
   const selectedStyle = getRewriteStyle(value)
 
-  const handleStyleClick = (style: RewriteStyleInternal) => {
+  const handleStyleClick = (styleId: string) => {
+    const style = styleId as RewriteStyleInternal
     // Permitir que todos selecionem qualquer estilo
     onChange(style)
     setOpen(false)
@@ -238,4 +238,3 @@ export function RewriteStyleSelectWithDescription(
     </div>
   )
 }
-// @ts-nocheck

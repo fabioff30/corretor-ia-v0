@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Edit User (Admin)
  * PATCH /api/admin/users/[id]
@@ -94,9 +93,9 @@ export async function PATCH(
       )
     }
 
-    // Log the change for audit trail
+    // Log the change for audit trail (admin_audit_log table may not be in generated types)
     if (body.plan_type && body.plan_type !== existingUser.plan_type) {
-      await supabase.from('admin_audit_log').insert({
+      await (supabase as any).from('admin_audit_log').insert({
         admin_id: currentUser.id,
         admin_email: currentUser.email,
         action: 'update_user_plan',
@@ -205,4 +204,3 @@ export async function GET(
     )
   }
 }
-// @ts-nocheck

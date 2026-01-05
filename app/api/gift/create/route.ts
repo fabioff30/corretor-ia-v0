@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Create Gift Purchase
  * POST /api/gift/create
@@ -249,7 +248,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       status: gift.status,
-      payment_confirmed: ['paid', 'email_sent', 'redeemed'].includes(gift.status),
+      payment_confirmed: gift.status ? ['paid', 'email_sent', 'redeemed'].includes(gift.status) : false,
       email_sent: !!gift.email_sent_at,
     })
   } catch (error) {
@@ -260,4 +259,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-// @ts-nocheck

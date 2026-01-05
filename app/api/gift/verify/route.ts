@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Verify Gift Code
  * GET /api/gift/verify?code={giftCode}
@@ -143,4 +142,3 @@ function getPlanName(planType: GiftPlanId): string {
   const plan = CHRISTMAS_GIFT_CONFIG.PLANS[planType]
   return plan?.name || 'Premium'
 }
-// @ts-nocheck

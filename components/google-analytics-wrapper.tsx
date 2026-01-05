@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client'
 
 import { GoogleAnalytics } from '@next/third-parties/google'
@@ -77,15 +76,10 @@ export function useGoogleAnalytics() {
   }
 }
 
-// Tipos para o gtag
+// Tipos para o gtag - use any signature to be compatible with @next/third-parties
 declare global {
   interface Window {
-    gtag: (
-      command: 'event' | 'config' | 'js',
-      targetId: string | Date,
-      config?: Record<string, any>
-    ) => void
+    gtag: (...args: any[]) => void
     dataLayer: any[]
   }
 }
-// @ts-nocheck

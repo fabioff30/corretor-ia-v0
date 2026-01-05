@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Admin Coupon Management
  * GET /api/admin/coupons
@@ -22,7 +21,7 @@ function requireAdmin(profilePlanType?: string) {
 export async function GET(request: NextRequest) {
   try {
     const { profile } = await getCurrentUserWithProfile()
-    requireAdmin(profile?.plan_type)
+    requireAdmin(profile?.plan_type ?? undefined)
 
     const { searchParams } = new URL(request.url)
     const limitParam = searchParams.get("limit")
@@ -34,9 +33,10 @@ export async function GET(request: NextRequest) {
     })
 
     const mapped = promotionCodes.data.map((promotionCode) => {
-      const coupon = promotionCode.coupon
+      // Use type assertion for expanded coupon (Stripe types may not reflect expand correctly)
+      const coupon = (promotionCode as any).coupon
       const couponData =
-        typeof coupon === "string"
+        typeof coupon === "string" || !coupon
           ? null
           : {
               id: coupon.id,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { profile } = await getCurrentUserWithProfile()
-    requireAdmin(profile?.plan_type)
+    requireAdmin(profile?.plan_type ?? undefined)
 
     const body = await request.json().catch(() => ({}))
     const {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       active: true,
       max_redemptions: maxRedemptions ?? undefined,
       expires_at: expiresAtTimestamp,
-    })
+    } as any)
 
     return NextResponse.json({
       promotionCode: {
@@ -169,4 +169,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status })
   }
 }
-// @ts-nocheck

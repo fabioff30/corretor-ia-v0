@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Plan Limits Configuration (Admin)
  * GET /api/admin/limites - Get all plan limits
@@ -147,7 +146,7 @@ export async function PATCH(request: NextRequest) {
           old_value: String(oldValue),
           new_value: String(newValue),
           changed_by: currentUser.id,
-          changed_by_email: currentUser.email,
+          changed_by_email: currentUser.email ?? 'unknown',
         })
       }
     }
@@ -170,4 +169,3 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
-// @ts-nocheck

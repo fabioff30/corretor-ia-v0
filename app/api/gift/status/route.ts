@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Check Gift Payment Status
  * GET /api/gift/status?id={giftId}
@@ -64,9 +63,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const status = (gift.status ?? 'pending_payment') as GiftStatusResponse['status']
     const response: GiftStatusResponse = {
-      status: gift.status,
-      payment_confirmed: ['paid', 'email_sent', 'redeemed'].includes(gift.status),
+      status,
+      payment_confirmed: ['paid', 'email_sent', 'redeemed'].includes(status),
       email_sent: !!gift.email_sent_at,
     }
 
@@ -79,4 +79,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-// @ts-nocheck

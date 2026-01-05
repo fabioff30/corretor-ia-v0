@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Dashboard usage overview
  * GET /api/dashboard/usage
@@ -35,7 +34,7 @@ export async function GET() {
     // Calculate date 30 days ago for recent activity
     const thirtyDaysAgo = subDays(today, 30).toISOString()
 
-    const planType = profile.plan_type === "admin" ? "pro" : profile.plan_type
+    const planType = profile.plan_type === "admin" ? "pro" : (profile.plan_type ?? "free")
 
     // Fetch daily usage, plan limits, last 30 days counts, and lifetime totals in parallel
     const [
@@ -217,13 +216,13 @@ export async function GET() {
       ai_analyses_used: usage.ai_analyses_used,
       corrections_remaining: isPremium
         ? -1
-        : Math.max(0, effectiveLimits.corrections_per_day - usage.corrections_used),
+        : Math.max(0, effectiveLimits.corrections_per_day - (usage.corrections_used ?? 0)),
       rewrites_remaining: isPremium
         ? -1
-        : Math.max(0, effectiveLimits.rewrites_per_day - usage.rewrites_used),
+        : Math.max(0, effectiveLimits.rewrites_per_day - (usage.rewrites_used ?? 0)),
       ai_analyses_remaining: isPremium
         ? -1
-        : Math.max(0, effectiveLimits.ai_analyses_per_day - usage.ai_analyses_used),
+        : Math.max(0, effectiveLimits.ai_analyses_per_day - (usage.ai_analyses_used ?? 0)),
       date: usage.date,
       // Last 30 days activity
       corrections_last_30_days: correctionsLast30Days ?? 0,
@@ -271,4 +270,3 @@ export async function GET() {
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
-// @ts-nocheck

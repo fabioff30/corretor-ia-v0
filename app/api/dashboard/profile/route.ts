@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * API Route: Update dashboard profile information
  * PATCH /api/dashboard/profile
@@ -13,10 +12,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 const updateSchema = z.object({
   full_name: z
-    .string({
-      required_error: "Nome é obrigatório",
-      invalid_type_error: "Nome inválido",
-    })
+    .string({ message: "Nome é obrigatório" })
     .trim()
     .min(3, "Nome deve ter pelo menos 3 caracteres")
     .max(100, "Nome muito longo"),
@@ -67,4 +63,3 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
-// @ts-nocheck

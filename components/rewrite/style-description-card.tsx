@@ -7,7 +7,7 @@ import { Crown, Target, Heart, Ruler, Sparkles, ArrowRight } from "lucide-react"
 import { RewriteStyleDefinition } from "@/utils/rewrite-styles"
 
 interface StyleDescriptionCardProps {
-  style: RewriteStyleDefinition | null
+  style: RewriteStyleDefinition | null | undefined
   compact?: boolean
   isPremium?: boolean
   onPremiumClick?: () => void

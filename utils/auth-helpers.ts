@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Helpers de autenticação e verificação de permissões
  */
@@ -157,7 +156,7 @@ export async function requireAdmin() {
  */
 export async function isAdmin(): Promise<boolean> {
   const profile = await getCurrentProfile()
-  return profile?.plan_type === 'admin' ?? false
+  return profile?.plan_type === 'admin'
 }
 
 /**
@@ -174,7 +173,7 @@ export async function isPro(): Promise<boolean> {
  */
 export async function isFree(): Promise<boolean> {
   const profile = await getCurrentProfile()
-  return profile?.plan_type === 'free' ?? false
+  return profile?.plan_type === 'free'
 }
 
 /**
@@ -186,4 +185,3 @@ export async function hasPremiumAccess(): Promise<boolean> {
 
   return profile.plan_type === 'pro' || profile.plan_type === 'admin'
 }
-// @ts-nocheck

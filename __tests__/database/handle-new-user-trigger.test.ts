@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Integration tests for handle_new_user() database trigger
  * Tests auto-creation of profiles when users sign up
@@ -76,11 +75,11 @@ describe.skip('handle_new_user() Trigger Function (Integration - requires Supaba
 
     expect(profileError).toBeNull()
     expect(profile).toBeDefined()
-    expect(profile!.id).toBe(testUserId)
-    expect(profile!.email).toBe(testEmail)
-    expect(profile!.full_name).toBe('Test User Full Name')
-    expect(profile!.plan_type).toBe('free')
-    expect(profile!.subscription_status).toBe('inactive')
+    expect((profile as any).id).toBe(testUserId)
+    expect((profile as any).email).toBe(testEmail)
+    expect((profile as any).full_name).toBe('Test User Full Name')
+    expect((profile as any).plan_type).toBe('free')
+    expect((profile as any).subscription_status).toBe('inactive')
   })
 
   it('should handle profile creation with minimal user metadata', async () => {
@@ -107,8 +106,8 @@ describe.skip('handle_new_user() Trigger Function (Integration - requires Supaba
 
     expect(profileError).toBeNull()
     expect(profile).toBeDefined()
-    expect(profile!.email).toBe(testEmail)
-    expect(profile!.full_name).toBe('') // Empty string when no metadata
+    expect((profile as any).email).toBe(testEmail)
+    expect((profile as any).full_name).toBe('') // Empty string when no metadata
   })
 
   it('should not duplicate profiles on conflict', async () => {
@@ -129,7 +128,7 @@ describe.skip('handle_new_user() Trigger Function (Integration - requires Supaba
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Manually trigger the function again (simulating conflict)
-    const { error: manualCallError } = await supabase.rpc('create_profile_for_user', {
+    const { error: manualCallError } = await (supabase as any).rpc('create_profile_for_user', {
       user_id: testUserId,
     })
 
@@ -171,7 +170,7 @@ describe.skip('handle_new_user() Trigger Function (Integration - requires Supaba
       .single()
 
     // Should prefer 'name' over 'full_name' per COALESCE logic
-    expect(profile!.full_name).toBe('Name Field')
+    expect((profile as any).full_name).toBe('Name Field')
   })
 })
 
@@ -211,7 +210,7 @@ describe.skip('create_profile_for_user() Manual Function (Integration - requires
     await supabase.from('profiles').delete().eq('id', testUserId)
 
     // Call manual function
-    const { error } = await supabase.rpc('create_profile_for_user', {
+    const { error } = await (supabase as any).rpc('create_profile_for_user', {
       user_id: testUserId,
     })
 
@@ -225,6 +224,6 @@ describe.skip('create_profile_for_user() Manual Function (Integration - requires
 
     expect(profileError).toBeNull()
     expect(profile).toBeDefined()
-    expect(profile!.email).toBe(testEmail)
+    expect((profile as any).email).toBe(testEmail)
   })
 })

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { addRating } from "@/utils/rating-stats"
@@ -90,4 +89,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-// @ts-nocheck

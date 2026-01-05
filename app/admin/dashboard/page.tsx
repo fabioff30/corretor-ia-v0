@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -509,4 +508,3 @@ export default function AdminDashboardPage() {
     </div>
   )
 }
-// @ts-nocheck

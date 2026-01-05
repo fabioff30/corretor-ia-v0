@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from "next/server"
 import { GET, DELETE } from "@/app/api/mercadopago/reset-test-subscription/route"
 
@@ -116,13 +115,13 @@ function mockSupabaseForDelete() {
 describe("Mercado Pago reset test subscription API", () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    process.env.NODE_ENV = "test"
+    ;(process.env as any).NODE_ENV = "test"
     process.env.NEXT_PUBLIC_APP_URL = "https://stage.corretordetextoonline.com.br"
     delete process.env.ALLOW_TEST_SUBSCRIPTION_RESET
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    ;(process.env as any).NODE_ENV = originalNodeEnv
     if (typeof originalAppUrl === "string") {
       process.env.NEXT_PUBLIC_APP_URL = originalAppUrl
     } else {
@@ -136,7 +135,7 @@ describe("Mercado Pago reset test subscription API", () => {
   })
 
   it("returns 403 in production", async () => {
-    process.env.NODE_ENV = "production"
+    ;(process.env as any).NODE_ENV = "production"
     process.env.NEXT_PUBLIC_APP_URL = "https://www.corretordetextoonline.com.br"
     setAdminUser()
     mockSupabaseForGet()
@@ -148,7 +147,7 @@ describe("Mercado Pago reset test subscription API", () => {
   })
 
   it("allows staging host in production", async () => {
-    process.env.NODE_ENV = "production"
+    ;(process.env as any).NODE_ENV = "production"
     process.env.NEXT_PUBLIC_APP_URL = "https://stage.corretordetextoonline.com.br"
     setAdminUser()
     mockSupabaseForGet()

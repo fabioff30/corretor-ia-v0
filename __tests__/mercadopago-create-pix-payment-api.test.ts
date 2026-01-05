@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { POST, GET } from '@/app/api/mercadopago/create-pix-payment/route'
 
@@ -90,11 +89,11 @@ function buildSupabaseMock(options: {
 describe('Mercado Pago create PIX payment API', () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    process.env.NODE_ENV = 'test'
+    ;(process.env as any).NODE_ENV = 'test'
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    ;(process.env as any).NODE_ENV = originalNodeEnv
   })
 
   it('requires guest email when user is not authenticated', async () => {

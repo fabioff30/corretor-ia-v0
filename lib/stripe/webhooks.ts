@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Stripe Webhook Handlers
  * Process Stripe webhook events and update database
@@ -8,6 +7,18 @@ import Stripe from 'stripe'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendCancellationEmail, sendPremiumUpgradeEmail, sendBundleActivationEmail } from '@/lib/email/send'
 import { activateJulinhoSubscription, sendJulinhoTemplateMessage } from '@/lib/julinho/client'
+
+// Type extensions for Stripe objects (some properties vary between API versions)
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_end?: number
+  current_period_start?: number
+}
+
+type InvoiceWithRefs = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null
+  payment_intent?: string | Stripe.PaymentIntent | null
+  charge?: string | Stripe.Charge | null
+}
 
 /**
  * Handle checkout.session.completed event
@@ -42,7 +53,9 @@ export async function handleCheckoutCompleted(
 
   // Get subscription details
   const stripe = (await import('./server')).stripe
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId)
+  // Type assertion - Stripe SDK returns the subscription object directly
+  const subscription = subscriptionResponse as SubscriptionWithPeriod
 
   // Check if subscription already exists
   const { data: existingSubscription } = await supabase
@@ -222,12 +235,19 @@ export async function handleCheckoutCompleted(
  * Handle invoice.paid event
  * Called when invoice is successfully paid
  */
-export async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  console.log('[Stripe Webhook] invoice.paid', invoice.id)
+export async function handleInvoicePaid(invoiceData: Stripe.Invoice) {
+  console.log('[Stripe Webhook] invoice.paid', invoiceData.id)
+  // Cast to extended type for accessing optional properties
+  const invoice = invoiceData as InvoiceWithRefs
 
   const supabase = createServiceRoleClient()
-  const subscriptionId = invoice.subscription as string
-  const customerId = invoice.customer as string
+  // Type assertions for Stripe properties that may be string or expanded objects
+  const subscriptionId = (typeof invoice.subscription === 'string'
+    ? invoice.subscription
+    : (invoice.subscription as Stripe.Subscription | null)?.id) as string | undefined
+  const customerId = (typeof invoice.customer === 'string'
+    ? invoice.customer
+    : (invoice.customer as Stripe.Customer | null)?.id) as string
 
   if (!subscriptionId) {
     console.log('[Stripe Webhook] Invoice is not for a subscription')
@@ -246,22 +266,33 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice) {
     return
   }
 
-  // Save payment transaction
+  // Extract payment_intent and charge IDs (may be string or expanded object)
+  const paymentIntentId = typeof invoice.payment_intent === 'string'
+    ? invoice.payment_intent
+    : invoice.payment_intent?.id
+  const chargeId = typeof invoice.charge === 'string'
+    ? invoice.charge
+    : invoice.charge?.id
+  const paidAt = invoice.status_transitions?.paid_at
+    ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
+    : new Date().toISOString()
+
+  // Save payment transaction (note: using fields available in the table schema)
   const { error: insertError } = await supabase
     .from('payment_transactions')
     .insert({
-      subscription_id: subscription.id,
       user_id: subscription.user_id,
-      stripe_payment_intent_id: invoice.payment_intent as string,
+      stripe_payment_intent_id: paymentIntentId || null,
       stripe_invoice_id: invoice.id,
-      stripe_charge_id: invoice.charge as string,
+      stripe_charge_id: chargeId || null,
       status: 'approved',
       amount: (invoice.amount_paid || 0) / 100,
       currency: invoice.currency.toUpperCase(),
       payment_method: 'card',
       payment_type: 'subscription',
-      paid_at: new Date(invoice.status_transitions.paid_at! * 1000).toISOString(),
-      webhook_data: invoice as any,
+      paid_at: paidAt,
+      // Cast to Json type for Supabase compatibility
+      webhook_data: JSON.parse(JSON.stringify(invoice)),
     })
 
   if (insertError) {
@@ -270,7 +301,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // Activate subscription if first payment
-  if (invoice.billing_reason === 'subscription_create') {
+  if (invoice.billing_reason === 'subscription_create' && subscription.user_id) {
     const { error: activateError } = await supabase.rpc('activate_subscription', {
       p_user_id: subscription.user_id,
       p_subscription_id: subscription.id,
@@ -308,11 +339,15 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice) {
  * Handle invoice.payment_failed event
  * Called when invoice payment fails
  */
-export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('[Stripe Webhook] invoice.payment_failed', invoice.id)
+export async function handleInvoicePaymentFailed(invoiceData: Stripe.Invoice) {
+  console.log('[Stripe Webhook] invoice.payment_failed', invoiceData.id)
+  // Cast to extended type for accessing optional properties
+  const invoice = invoiceData as InvoiceWithRefs
 
   const supabase = createServiceRoleClient()
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = typeof invoice.subscription === 'string'
+    ? invoice.subscription
+    : (invoice.subscription as Stripe.Subscription | null)?.id
 
   if (!subscriptionId) {
     return
@@ -331,15 +366,17 @@ export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   }
 
   // Update profile to past_due
-  await supabase
-    .from('profiles')
-    .update({
-      subscription_status: 'past_due',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', subscription.user_id)
+  if (subscription.user_id) {
+    await supabase
+      .from('profiles')
+      .update({
+        subscription_status: 'past_due',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', subscription.user_id)
 
-  console.log('[Stripe Webhook] Subscription marked as past_due')
+    console.log('[Stripe Webhook] Subscription marked as past_due')
+  }
 }
 
 /**
@@ -353,13 +390,16 @@ export async function handleSubscriptionUpdated(
 
   const supabase = createServiceRoleClient()
 
+  // Access current_period_end with type assertion (Stripe types may vary)
+  const currentPeriodEnd = (subscription as unknown as { current_period_end?: number }).current_period_end
+
   // Update subscription in database
   const { error: updateError } = await supabase
     .from('subscriptions')
     .update({
       status: subscription.status as 'pending' | 'authorized' | 'paused' | 'canceled',
-      next_payment_date: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toISOString()
+      next_payment_date: currentPeriodEnd
+        ? new Date(currentPeriodEnd * 1000).toISOString()
         : null,
       updated_at: new Date().toISOString(),
     })
@@ -393,6 +433,11 @@ export async function handleSubscriptionDeleted(
 
   if (!dbSubscription) {
     console.error('[Stripe Webhook] Subscription not found:', subscription.id)
+    return
+  }
+
+  if (!dbSubscription.user_id) {
+    console.error('[Stripe Webhook] Subscription has no user_id:', subscription.id)
     return
   }
 
@@ -461,12 +506,12 @@ export async function handlePixPaymentSucceeded(
     const priceId = planType === 'monthly' ? STRIPE_PRICES.MONTHLY : STRIPE_PRICES.ANNUAL
 
     // Create subscription after PIX payment
-    const subscription = await stripe.subscriptions.create({
+    const subscriptionResponse = await stripe.subscriptions.create({
       customer: paymentIntent.customer as string,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: {
-        payment_method_types: ['card', 'pix'],
+        payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
       metadata: {
@@ -475,6 +520,9 @@ export async function handlePixPaymentSucceeded(
         initialPaymentIntentId: paymentIntent.id,
       },
     })
+
+    // Type assertion for subscription properties (cast through unknown for API version compatibility)
+    const subscription = subscriptionResponse as unknown as SubscriptionWithPeriod
 
     // Save subscription to database
     const { error: insertError } = await supabase
@@ -485,8 +533,12 @@ export async function handlePixPaymentSucceeded(
         stripe_customer_id: paymentIntent.customer as string,
         status: 'active',
         price_id: priceId,
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_start: subscription.current_period_start
+          ? new Date(subscription.current_period_start * 1000).toISOString()
+          : new Date().toISOString(),
+        current_period_end: subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000).toISOString()
+          : null,
         cancel_at_period_end: false,
       })
 
@@ -694,4 +746,3 @@ export async function handleLifetimePaymentCompleted(
     throw error
   }
 }
-// @ts-nocheck

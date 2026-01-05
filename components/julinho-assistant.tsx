@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client"
 
 import type React from "react"
@@ -239,10 +238,11 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
         // If it's a simple response, add directly
         setIsTyping(true)
 
+        // Type guard for SimpleResponse
+        const responseContent = data.isBatched === false ? data.response : "Desculpe, não consegui processar sua pergunta."
+
         // Calculate a natural delay for typing
-        const typingDelay = calculateNaturalDelay(
-          "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
-        )
+        const typingDelay = calculateNaturalDelay(responseContent)
 
         setTimeout(() => {
           setMessages((prev) => [
@@ -250,7 +250,7 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
             {
               id: `assistant_${Date.now()}`,
               role: "assistant" as const,
-              content: "isBatched" in data ? data.response : "Desculpe, não consegui processar sua pergunta.",
+              content: responseContent,
               isComplete: true,
             },
           ])
@@ -308,9 +308,11 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
 
   // Determine the position of the widget
   // On mobile, position above the bottom navigation bar (h-16 = 64px + safe area)
-  const positionClasses = {
+  const positionClasses: Record<NonNullable<JulinhoAssistantProps['position']>, string> = {
     "bottom-right": isMobile ? "bottom-20 right-4" : "bottom-6 right-6",
     "bottom-left": isMobile ? "bottom-20 left-4" : "bottom-6 left-6",
+    "top-right": isMobile ? "top-20 right-4" : "top-6 right-6",
+    "top-left": isMobile ? "top-20 left-4" : "top-6 left-6",
   }
 
   // Handle opening the chat
@@ -551,4 +553,3 @@ export function JulinhoAssistant({ position = "bottom-right" }: JulinhoAssistant
     </>
   )
 }
-// @ts-nocheck

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Stripe Server Library
  * Server-side Stripe SDK and helper functions
@@ -18,7 +17,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured')
     }
     stripeInstance = new Stripe(secretKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2025-10-29.clover',
       typescript: true,
     })
   }
@@ -113,15 +112,16 @@ export async function createCheckoutSession(
   // Determine if this is a bundle purchase (by whatsappPhone presence or price ID)
   const isBundle = !!whatsappPhone || priceId === STRIPE_PRICES.BUNDLE_MONTHLY
 
-  // Prepare metadata
-  const baseMetadata = userId
+  // Prepare metadata - build object explicitly to avoid undefined values
+  const metadata: Record<string, string> = userId
     ? { userId }
     : { guestEmail: email, isGuestCheckout: 'true' }
 
   // Add bundle-specific metadata
-  const metadata = isBundle && whatsappPhone
-    ? { ...baseMetadata, isBundle: 'true', whatsappPhone }
-    : baseMetadata
+  if (isBundle && whatsappPhone) {
+    metadata.isBundle = 'true'
+    metadata.whatsappPhone = whatsappPhone
+  }
 
   // Create checkout session
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -265,8 +265,14 @@ export async function getPixPaymentDetails(
       }
     )
 
-    if (paymentIntent.next_action?.type === 'display_pix_qr_code') {
-      const pixData = paymentIntent.next_action.display_pix_qr_code
+    // Type assertion needed because Stripe types may not include PIX-specific fields
+    const nextAction = paymentIntent.next_action as {
+      type?: string
+      display_pix_qr_code?: { qr_code: string; text: string }
+    } | null
+
+    if (nextAction?.type === 'display_pix_qr_code' && nextAction.display_pix_qr_code) {
+      const pixData = nextAction.display_pix_qr_code
       return {
         qrCode: pixData.qr_code, // Base64 encoded QR code image
         pixCode: pixData.text,    // PIX copy-paste code
@@ -308,7 +314,7 @@ export async function createSubscriptionAfterPixPayment(
     items: [{ price: priceId }],
     payment_behavior: 'default_incomplete',
     payment_settings: {
-      payment_method_types: ['card', 'pix'],
+      payment_method_types: ['card'],
       save_default_payment_method: 'on_subscription',
     },
     metadata: {
@@ -334,8 +340,8 @@ export async function createLifetimeCheckoutSession(
   // Get or create customer
   const customerId = await getOrCreateStripeCustomer(userId, email)
 
-  // Prepare metadata
-  const metadata = userId
+  // Prepare metadata - build explicitly to avoid undefined values
+  const metadata: Record<string, string> = userId
     ? { userId, purchaseType: 'lifetime', promoCode: 'BLACKFRIDAY2024' }
     : { guestEmail: email, isGuestCheckout: 'true', purchaseType: 'lifetime', promoCode: 'BLACKFRIDAY2024' }
 
@@ -377,4 +383,3 @@ export async function createLifetimeCheckoutSession(
 
   return session
 }
-// @ts-nocheck
