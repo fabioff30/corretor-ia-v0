@@ -40,10 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Bundle requires WhatsApp phone for Julinho activation
+    // For regular plans, WhatsApp is optional but will activate Julinho if provided
     const isBundle = planType === 'bundle_monthly'
     let normalizedWhatsApp: string | null = null
 
     if (isBundle) {
+      // Bundle: WhatsApp is required
       if (!whatsappPhone) {
         return NextResponse.json(
           { error: 'Número de WhatsApp é obrigatório para o pacote CorretorIA + Julinho' },
@@ -59,6 +61,14 @@ export async function POST(request: NextRequest) {
       }
 
       normalizedWhatsApp = normalizePhoneNumber(whatsappPhone)
+    } else if (whatsappPhone) {
+      // Regular plans: WhatsApp is optional, validate and normalize if provided
+      if (validateWhatsAppPhone(whatsappPhone)) {
+        normalizedWhatsApp = normalizePhoneNumber(whatsappPhone)
+        console.log('[MP PIX] WhatsApp provided for Julinho activation:', normalizedWhatsApp?.slice(0, 4) + '****')
+      } else {
+        console.log('[MP PIX] Invalid WhatsApp format, ignoring:', whatsappPhone?.slice(0, 4) + '****')
+      }
     }
 
     // Try to get authenticated user (optional)

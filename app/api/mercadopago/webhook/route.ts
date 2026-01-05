@@ -401,6 +401,51 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         console.warn('[MP Webhook Payment] User profile has no email - skipping payment confirmation email')
       }
 
+      // =============================
+      // JULINHO ACTIVATION (if WhatsApp provided)
+      // For regular premium plans, activate Julinho as a bonus
+      // =============================
+      let julinhoActivated = false
+      const { data: pixPaymentForJulinho } = await supabase
+        .from('pix_payments')
+        .select('whatsapp_phone, julinho_activated')
+        .eq('payment_intent_id', payment.id.toString())
+        .maybeSingle()
+
+      if (pixPaymentForJulinho?.whatsapp_phone && !pixPaymentForJulinho.julinho_activated) {
+        const whatsappPhone = pixPaymentForJulinho.whatsapp_phone
+        console.log('[MP Webhook Payment] Activating Julinho for premium subscriber:', whatsappPhone.slice(0, 4) + '****')
+
+        try {
+          // 1. Send template message "pagamento_aprovado"
+          const templateResult = await sendJulinhoTemplateMessage(whatsappPhone, 'pagamento_aprovado')
+          if (templateResult.success) {
+            console.log('[MP Webhook Payment] Template "pagamento_aprovado" sent to:', whatsappPhone.slice(0, 4) + '****')
+          } else {
+            console.error('[MP Webhook Payment] Failed to send template:', templateResult.error)
+          }
+
+          // 2. Activate Julinho subscription for 30 days
+          const julinhoResult = await activateJulinhoSubscription(whatsappPhone, 30)
+          if (julinhoResult.success) {
+            julinhoActivated = true
+            console.log('[MP Webhook Payment] Julinho activated for:', whatsappPhone.slice(0, 4) + '****')
+
+            // Update julinho_activated status
+            await supabase
+              .from('pix_payments')
+              .update({ julinho_activated: true })
+              .eq('payment_intent_id', payment.id.toString())
+          } else {
+            console.error('[MP Webhook Payment] Julinho activation failed:', julinhoResult.error)
+            // Non-critical - don't fail the payment processing
+          }
+        } catch (julinhoError) {
+          console.error('[MP Webhook Payment] Error activating Julinho:', julinhoError)
+          // Non-critical - subscription is already active
+        }
+      }
+
       // Mark payment as consumed (benefit applied)
       const { error: consumeError } = await supabase
         .from('pix_payments')
@@ -423,6 +468,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         subscription_expires_at: updatedProfile?.subscription_expires_at,
         rpcActivated: !activateError,
         paymentConsumed: !consumeError,
+        julinhoActivated,
         processing_time_ms: duration,
       })
       return

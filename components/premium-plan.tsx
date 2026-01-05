@@ -217,14 +217,30 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
       console.log('[Premium] Generating PIX payment for', planType, 'plan')
 
-      // Create PIX payment with coupon if available
+      // Read WhatsApp from localStorage (saved during registration)
+      let whatsappPhone: string | undefined
+      const pendingData = localStorage.getItem('pendingPixPlan')
+      if (pendingData) {
+        try {
+          const parsed = JSON.parse(pendingData)
+          if (parsed.whatsappPhone) {
+            whatsappPhone = parsed.whatsappPhone
+            console.log('[Premium] WhatsApp found for Julinho activation')
+          }
+        } catch {
+          // pendingData is just the planType string, no WhatsApp
+        }
+      }
+
+      // Create PIX payment with coupon and WhatsApp if available
       const normalizedUserEmail = (profile?.email ?? user.email ?? '').trim()
       const payment = await createPixPayment(
         planType,
         user.id,
         normalizedUserEmail || undefined,
         undefined,
-        couponCode
+        couponCode,
+        whatsappPhone
       )
 
       if (payment) {
@@ -283,8 +299,32 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     // Only trigger if we just registered and now have a user
     if (!justRegistered || !user) return
 
-    const pendingPixPlan = localStorage.getItem('pendingPixPlan') as PlanType | null
-    const pendingCardPlan = localStorage.getItem('pendingCardPlan') as PlanType | null
+    const pendingPixData = localStorage.getItem('pendingPixPlan')
+    const pendingCardData = localStorage.getItem('pendingCardPlan')
+
+    // Parse pendingPixPlan - can be JSON { planType, whatsappPhone } or legacy string
+    let pendingPixPlan: PlanType | null = null
+    if (pendingPixData) {
+      try {
+        const parsed = JSON.parse(pendingPixData)
+        pendingPixPlan = parsed.planType as PlanType
+      } catch {
+        // Legacy format: just the planType string
+        pendingPixPlan = pendingPixData as PlanType
+      }
+    }
+
+    // Parse pendingCardPlan - can be JSON { planType, whatsappPhone } or legacy string
+    let pendingCardPlan: PlanType | null = null
+    if (pendingCardData) {
+      try {
+        const parsed = JSON.parse(pendingCardData)
+        pendingCardPlan = parsed.planType as PlanType
+      } catch {
+        // Legacy format: just the planType string
+        pendingCardPlan = pendingCardData as PlanType
+      }
+    }
 
     // Handle PIX payment
     if (pendingPixPlan && !pixGeneratedRef.current) {
@@ -293,13 +333,14 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       // Mark as generated to prevent duplicates
       pixGeneratedRef.current = true
 
-      // Clear flags and storage
-      localStorage.removeItem('pendingPixPlan')
+      // Clear flags (but keep localStorage until handlePixPayment reads whatsappPhone)
       setJustRegistered(false)
 
       // Small delay to ensure auth state is fully updated
       setTimeout(() => {
-        handlePixPayment(pendingPixPlan)
+        handlePixPayment(pendingPixPlan!)
+        // Clear localStorage after payment creation (handlePixPayment reads whatsappPhone)
+        localStorage.removeItem('pendingPixPlan')
       }, 500)
     }
     // Handle Stripe card payment
@@ -315,7 +356,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
       // Small delay to ensure auth state is fully updated
       setTimeout(() => {
-        handleSubscribe(pendingCardPlan)
+        handleSubscribe(pendingCardPlan!)
       }, 500)
     }
   }, [user, justRegistered])

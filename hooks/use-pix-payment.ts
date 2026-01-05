@@ -28,7 +28,8 @@ interface UsePixPaymentReturn {
     userId?: string,
     userEmail?: string,
     guestEmail?: string,
-    couponCode?: string
+    couponCode?: string,
+    whatsappPhone?: string
   ) => Promise<PixPaymentData | null>
   checkPaymentStatus: (paymentId: string) => Promise<boolean>
   reset: () => void
@@ -45,7 +46,8 @@ export function usePixPayment(): UsePixPaymentReturn {
     userId?: string,
     userEmail?: string,
     guestEmail?: string,
-    couponCode?: string
+    couponCode?: string,
+    whatsappPhone?: string
   ): Promise<PixPaymentData | null> => {
     setIsLoading(true)
     setError(null)
@@ -82,6 +84,7 @@ export function usePixPayment(): UsePixPaymentReturn {
           ...(normalizedUserEmail && { userEmail: normalizedUserEmail }),
           ...(normalizedGuestEmail && { guestEmail: normalizedGuestEmail }),
           ...(couponCode && { couponCode }),
+          ...(whatsappPhone && { whatsappPhone }),
         }),
       })
 

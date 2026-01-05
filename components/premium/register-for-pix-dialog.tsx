@@ -20,11 +20,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
+import { Loader2, Mail, User, Lock, CheckCircle2, Phone } from 'lucide-react'
 import { useUser } from "@/components/providers/user-provider"
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import Image from 'next/image'
+import { formatPhoneNumber, normalizePhoneNumber } from '@/utils/phone-formatter'
 
 interface RegisterForPixDialogProps {
   isOpen: boolean
@@ -45,6 +46,7 @@ export function RegisterForPixDialog({
 }: RegisterForPixDialogProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -71,7 +73,10 @@ export function RegisterForPixDialog({
     try {
       // Save pending plan to localStorage before redirect
       const storageKey = paymentMethod === 'pix' ? 'pendingPixPlan' : 'pendingCardPlan'
-      localStorage.setItem(storageKey, planType)
+      localStorage.setItem(storageKey, JSON.stringify({
+        planType,
+        whatsappPhone: whatsapp ? normalizePhoneNumber(whatsapp) : null
+      }))
 
       const { error: googleError } = await signInWithGoogle()
 
@@ -131,6 +136,13 @@ export function RegisterForPixDialog({
         setError(signUpError.message)
         return
       }
+
+      // Save WhatsApp to localStorage for PIX payment creation
+      const storageKey = paymentMethod === 'pix' ? 'pendingPixPlan' : 'pendingCardPlan'
+      localStorage.setItem(storageKey, JSON.stringify({
+        planType,
+        whatsappPhone: whatsapp ? normalizePhoneNumber(whatsapp) : null
+      }))
 
       // Don't show toast here - parent will handle it
       // Just trigger the success callback
@@ -249,6 +261,28 @@ export function RegisterForPixDialog({
                 disabled={isSubmitting}
               />
             </div>
+          </div>
+
+          {/* WhatsApp (opcional) */}
+          <div className="space-y-2">
+            <Label htmlFor="register-whatsapp">
+              WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span>
+            </Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="register-whatsapp"
+                type="tel"
+                placeholder="(85) 99999-9999"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(formatPhoneNumber(e.target.value))}
+                className="pl-10"
+                disabled={isSubmitting}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Receba o Julinho IA no seu WhatsApp gratis por 30 dias!
+            </p>
           </div>
 
           {/* Password */}
