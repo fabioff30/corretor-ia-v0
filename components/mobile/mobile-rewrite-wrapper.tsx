@@ -137,36 +137,13 @@ export function MobileRewriteWrapper({
         if (!isPremium) {
             const usage = readFreeRewriteUsage()
             if (usage.count >= rewritesDailyLimit) {
-                const description =
-                    rewritesDailyLimit === 1
-                        ? "Você já realizou a reescrita gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
-                        : `Você já realizou ${rewritesDailyLimit} reescritas gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
-
-                toast({
-                    title: "Oferta Especial - 50% OFF!",
-                    description,
-                    variant: "destructive",
-                    action: (
-                        <Link
-                            href="/oferta-especial"
-                            className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
-                            onClick={() => sendGTMEvent("special_offer_cta_click", { location: "mobile_rewrite_limit_toast", trigger: "rewrite_limit" })}
-                        >
-                            Ver Oferta →
-                        </Link>
-                    ),
-                })
-
                 sendGTMEvent("free_rewrite_limit_reached", {
                     limit: rewritesDailyLimit,
                     usage: usage.count,
                 })
 
-                // Redirect to special offer page after 2 seconds
-                setTimeout(() => {
-                    window.location.href = "/oferta-especial"
-                }, 2000)
-
+                // Redirect to premium page
+                window.location.href = "/premium"
                 return
             }
         }

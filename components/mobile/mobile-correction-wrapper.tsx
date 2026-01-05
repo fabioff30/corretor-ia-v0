@@ -369,36 +369,13 @@ export function MobileCorrectionWrapper({
     if (!isPremium) {
       const usage = readFreeCorrectionUsage()
       if (usage.count >= correctionsDailyLimit) {
-        const description =
-          correctionsDailyLimit === 1
-            ? "Você já realizou a correção gratuita de hoje. Aproveite 50% OFF no primeiro mês e continue agora!"
-            : `Você já realizou ${correctionsDailyLimit} correções gratuitas hoje. Aproveite 50% OFF no primeiro mês e continue agora!`
-
-        toast({
-          title: "Oferta Especial - 50% OFF!",
-          description,
-          variant: "destructive",
-          action: (
-            <Link
-              href="/oferta-especial"
-              className="text-sm font-medium underline-offset-4 hover:underline whitespace-nowrap"
-              onClick={() => sendGTMEvent("special_offer_cta_click", { location: "mobile_correction_limit_toast", trigger: "correction_limit" })}
-            >
-              Ver Oferta →
-            </Link>
-          ),
-        })
-
         sendGTMEvent("free_correction_limit_reached", {
           limit: correctionsDailyLimit,
           usage: usage.count,
         })
 
-        // Redirect to special offer page after 2 seconds
-        setTimeout(() => {
-          window.location.href = "/oferta-especial"
-        }, 2000)
-
+        // Redirect to premium page
+        window.location.href = "/premium"
         return
       }
     }
