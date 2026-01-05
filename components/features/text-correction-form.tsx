@@ -252,6 +252,12 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
   const remainingRewrites = Math.max(rewritesDailyLimit - freeRewritesCount, 0)
 
+  // Calcular se o limite diário foi atingido (como no mobile)
+  const isAtDailyLimit = !isPremium && (
+    (operationMode === "correct" && correctionsDailyLimit > 0 && freeCorrectionsCount >= correctionsDailyLimit) ||
+    (operationMode === "rewrite" && rewritesDailyLimit > 0 && freeRewritesCount >= rewritesDailyLimit)
+  )
+
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
   const [showPainBanner, setShowPainBanner] = useState(false)
@@ -1454,17 +1460,17 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                       ? "Digite ou cole seu texto aqui para correção..."
                       : "Digite ou cole seu texto aqui para reescrita..."
                 }
-                className={`min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground ${(!isPremium && useAdvancedAI) || isOverCharacterLimit ? "opacity-20 pointer-events-none" : ""
+                className={`min-h-[180px] resize-y text-base p-4 focus-visible:ring-primary bg-background border rounded-lg text-foreground ${(!isPremium && useAdvancedAI) || isOverCharacterLimit || isAtDailyLimit ? "opacity-20 pointer-events-none" : ""
                   }`}
                 value={originalText}
                 onChange={handleTextChange}
-                disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI) || isOverCharacterLimit}
+                disabled={isLoading || isConvertingFile || (!isPremium && useAdvancedAI) || isOverCharacterLimit || isAtDailyLimit}
                 maxLength={characterLimit ?? undefined}
                 aria-label={operationMode === "correct" ? "Texto para correção" : "Texto para reescrita"}
               />
 
               {/* Overlay for Non-Logged Users (Custom Placeholder) */}
-              {!user && originalText === "" && !((!isPremium && useAdvancedAI) || isOverCharacterLimit) && (
+              {!user && originalText === "" && !((!isPremium && useAdvancedAI) || isOverCharacterLimit || isAtDailyLimit) && (
                 <div className="absolute inset-0 p-4 pointer-events-none flex items-start z-[5]">
                   <span className="text-muted-foreground text-base">
                     Cole, digite seu texto ou{" "}
@@ -1476,34 +1482,44 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 </div>
               )}
 
-              {/* Overlay for Locked States (Advanced AI or Limit Exceeded) */}
-              {((!isPremium && useAdvancedAI) || isOverCharacterLimit) && (
+              {/* Overlay for Locked States (Advanced AI, Limit Exceeded, or Daily Limit Reached) */}
+              {((!isPremium && useAdvancedAI) || isOverCharacterLimit || isAtDailyLimit) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-lg border border-primary/20 p-4 text-center z-10">
                   <div className="bg-background/95 p-6 rounded-xl shadow-lg border border-border max-w-sm w-full space-y-4">
                     <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                       <Crown className="h-6 w-6 text-primary animate-pulse" />
                     </div>
                     <h3 className="font-bold text-lg">
-                      {isOverCharacterLimit ? "Limite de caracteres excedido" : "Recurso Premium"}
+                      {isAtDailyLimit
+                        ? "Limite diário atingido"
+                        : isOverCharacterLimit
+                          ? "Limite de caracteres excedido"
+                          : "Recurso Premium"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {isOverCharacterLimit
-                        ? "Você atingiu o limite de caracteres do plano gratuito."
-                        : "A IA Avançada é exclusiva para membros Premium."}
+                      {isAtDailyLimit
+                        ? `Você usou suas ${operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit} ${operationMode === "correct" ? "correções" : "reescritas"} gratuitas de hoje.`
+                        : isOverCharacterLimit
+                          ? "Você atingiu o limite de caracteres do plano gratuito."
+                          : "A IA Avançada é exclusiva para membros Premium."}
                       <br />
-                      Faça login ou assine para continuar.
+                      {isAtDailyLimit
+                        ? "Faça upgrade para correções ilimitadas!"
+                        : "Faça login ou assine para continuar."}
                     </p>
                     <div className="flex flex-col gap-2 pt-2">
                       <Button asChild className="w-full font-semibold shadow-md">
                         <Link href="/premium">
-                          Ver planos Premium
+                          {isAtDailyLimit ? "Liberar correções ilimitadas" : "Ver planos Premium"}
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="sm" asChild className="w-full">
-                        <Link href="/login">
-                          Já sou assinante (Login)
-                        </Link>
-                      </Button>
+                      {!isAtDailyLimit && (
+                        <Button variant="ghost" size="sm" asChild className="w-full">
+                          <Link href="/login">
+                            Já sou assinante (Login)
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1657,7 +1673,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                     id="quick-mode-toggle"
                     checked={quickMode}
                     onCheckedChange={handleQuickModeToggle}
-                    disabled={isLoading || isConvertingFile}
+                    disabled={isLoading || isConvertingFile || isAtDailyLimit}
                     className="data-[state=checked]:bg-amber-500"
                   />
                 </div>
@@ -1729,7 +1745,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                   isLoading ||
                   isConvertingFile ||
                   !originalText.trim() ||
-                  isOverCharacterLimit
+                  isOverCharacterLimit ||
+                  isAtDailyLimit
                 }
                 className="px-6 relative overflow-hidden group w-full sm:w-auto order-1 sm:order-3"
               >
