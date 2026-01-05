@@ -19,6 +19,7 @@ import {
   sendJulinhoBroadcast,
   getJulinhoBroadcastPreview,
 } from "@/lib/julinho/client"
+import type { Database } from "@/types/supabase"
 
 export const maxDuration = 300 // 5 minutes for bulk operations
 
@@ -139,7 +140,9 @@ export async function POST(request: NextRequest) {
       .range(startOffset, startOffset + batchSize - 1)
       .order("created_at", { ascending: true })
 
-    const { data: users, error: queryError, count } = await query
+    const { data: users, error: queryError, count } = await query.returns<
+      Pick<Database["public"]["Tables"]["profiles"]["Row"], "id" | "email" | "full_name" | "plan_type" | "subscription_status">[]
+    >()
 
     if (queryError) {
       console.error("[Campaign] Query error:", queryError)

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createProSubscription } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getPublicConfig } from '@/utils/env-config'
+import type { Tables, TablesInsert, TablesUpdate } from '@/types/supabase'
 
 export const maxDuration = 60
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('id, email, plan_type, subscription_status')
       .eq('id', userId)
-      .single()
+      .single<Tables<'profiles'>>()
 
     if (profileError || !profile) {
       return NextResponse.json(
@@ -62,14 +63,15 @@ export async function POST(request: NextRequest) {
       const latestSubscription = existingSubscriptions[0]
 
       // If subscription is pending and older than 30 minutes, allow creating new one
-      const subscriptionAge = Date.now() - new Date(latestSubscription.created_at).getTime()
+      const createdAt = latestSubscription.created_at ? new Date(latestSubscription.created_at) : new Date()
+      const subscriptionAge = Date.now() - createdAt.getTime()
       const thirtyMinutes = 30 * 60 * 1000
 
       if (latestSubscription.status === 'pending' && subscriptionAge > thirtyMinutes) {
         // Cancel old pending subscription
         await supabase
           .from('subscriptions')
-          .update({ status: 'canceled' })
+          .update<TablesUpdate<'subscriptions'>>({ status: 'canceled' })
           .eq('id', latestSubscription.id)
 
         console.log(`Cancelled old pending subscription: ${latestSubscription.id}`)
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     // Save subscription to Supabase
     const { data: subscription, error: insertError } = await supabase
       .from('subscriptions')
-      .insert({
+      .insert<TablesInsert<'subscriptions'>>({
         user_id: userId,
         mp_subscription_id: mpSubscription.id,
         mp_plan_id: null, // We're using auto_recurring, not a pre-created plan
@@ -117,8 +119,8 @@ export async function POST(request: NextRequest) {
         amount: mpSubscription.auto_recurring.transaction_amount,
         currency: mpSubscription.auto_recurring.currency_id,
       })
-      .select()
-      .single()
+      .select('id, status, mp_subscription_id, amount, currency, next_payment_date, created_at')
+      .single<Tables<'subscriptions'>>()
 
     if (insertError) {
       console.error('Error saving subscription to Supabase:', insertError)
@@ -171,12 +173,12 @@ export async function GET(request: NextRequest) {
     // Get user's active subscription
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('*')
+      .select('id, status, mp_subscription_id, amount, currency, next_payment_date, end_date')
       .eq('user_id', userId)
       .in('status', ['pending', 'authorized'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .single<Tables<'subscriptions'>>()
 
     if (error || !subscription) {
       return NextResponse.json(

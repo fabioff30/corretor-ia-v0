@@ -59,8 +59,14 @@ const typeConfig: Record<"correct" | "rewrite" | "ai_analysis", { label: string;
   ai_analysis: { label: "Análise IA", icon: ScanSearch },
 }
 
-function formatDate(dateIso: string) {
+function normalizeOperationType(type: string | null | undefined): "correct" | "rewrite" | "ai_analysis" {
+  if (type === "rewrite" || type === "ai_analysis") return type
+  return "correct"
+}
+
+function formatDate(dateIso?: string | null) {
   try {
+    if (!dateIso) return "--"
     return format(new Date(dateIso), "dd/MM/yyyy HH:mm", { locale: ptBR })
   } catch (error) {
     return "--"
@@ -127,7 +133,9 @@ function getAiSummary(summaryText: string | null) {
 }
 
 function buildCopyPayload(correction: UserCorrection) {
-  if (correction.operation_type === "ai_analysis") {
+  const operationType = normalizeOperationType(correction.operation_type)
+
+  if (operationType === "ai_analysis") {
     const summary = getAiSummary(correction.corrected_text)
     if (!summary) return ""
     const probability = Math.round((summary.probability ?? 0) * 100)
@@ -197,20 +205,21 @@ export default function CorrectionsHistoryPage() {
   const handleDownload = useCallback(
     (correction: UserCorrection) => {
       try {
-        const isAi = correction.operation_type === "ai_analysis"
-        const filename = `corretor-${correction.operation_type}-${format(new Date(correction.created_at), "yyyyMMdd-HHmm")}.${isAi ? "json" : "txt"
-          }`
+        const operationType = normalizeOperationType(correction.operation_type)
+        const createdAt = correction.created_at ?? new Date().toISOString()
+        const isAi = operationType === "ai_analysis"
+        const filename = `corretor-${operationType}-${format(new Date(createdAt), "yyyyMMdd-HHmm")}.${isAi ? "json" : "txt"}`
 
         const payload = isAi
           ? JSON.stringify(
-            {
-              summary: getAiSummary(correction.corrected_text),
-              evaluation: correction.evaluation,
-              originalText: correction.original_text,
-            },
-            null,
-            2,
-          )
+              {
+                summary: getAiSummary(correction.corrected_text),
+                evaluation: correction.evaluation,
+                originalText: correction.original_text,
+              },
+              null,
+              2,
+            )
           : correction.corrected_text
 
         const blob = new Blob([payload], { type: isAi ? "application/json" : "text/plain;charset=utf-8" })
@@ -446,7 +455,7 @@ export default function CorrectionsHistoryPage() {
                   {corrections.map((correction) => (
                     <TableRow key={correction.id}>
                       <TableCell className="font-medium">{formatDate(correction.created_at)}</TableCell>
-                      <TableCell>{getTypeBadge(correction.operation_type)}</TableCell>
+                      <TableCell>{getTypeBadge(normalizeOperationType(correction.operation_type))}</TableCell>
                       <TableCell className="text-right">{correction.character_count.toLocaleString("pt-BR")}</TableCell>
                       <TableCell>
                         <div className="max-w-xl truncate text-sm text-muted-foreground">{formatPreview(correction)}</div>
@@ -524,7 +533,7 @@ export default function CorrectionsHistoryPage() {
             </DialogTitle>
             {selectedCorrection && (
               <DialogDescription>
-                {formatDate(selectedCorrection.created_at)} • {typeConfig[selectedCorrection.operation_type].label}
+                {formatDate(selectedCorrection.created_at)} • {typeConfig[normalizeOperationType(selectedCorrection.operation_type)].label}
               </DialogDescription>
             )}
           </DialogHeader>

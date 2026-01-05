@@ -21,7 +21,10 @@ import { LazyJulinhoAssistant, LazyGoogleOneTap } from "@/components/layout/lazy
 
 const inter = Inter({ subsets: ["latin"] })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.corretordetextoonline.com.br"
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "CorretorIA - Corretor de Texto Online Grátis com Inteligência Artificial",
   description:
     "Corrija textos em português com inteligência artificial. Identifica erros gramaticais, ortográficos e de pontuação automaticamente.",

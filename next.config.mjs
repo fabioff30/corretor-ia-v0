@@ -8,6 +8,10 @@ const __dirname = path.dirname(__filename)
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
+  eslint: {
+    // CI/preview environments may lack the Next.js ESLint plugin; skip lint in build to avoid failures.
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
@@ -36,12 +40,6 @@ const nextConfig = {
         ],
       },
     ]
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
   },
   images: {
     // Otimização de imagens habilitada para melhor performance

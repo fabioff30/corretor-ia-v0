@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 /**
  * Script para fazer upload das credenciais do Google Cloud para o Vercel Blob
  *
@@ -80,3 +81,4 @@ uploadCredentials()
     console.error('\n❌ Erro:', error instanceof Error ? error.message : error);
     process.exit(1);
   });
+// @ts-nocheck

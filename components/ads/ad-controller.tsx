@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AdBanner } from "@/components/ad-banner"
+import { AdBanner } from "@/components/ads/ad-banner"
 import { usePathname } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { DISABLE_ADS } from "@/utils/constants"
@@ -21,7 +21,7 @@ export function AdController() {
 
   // Verificar se o usuário é premium ou admin
   const isAdmin = profile?.plan_type === "admin"
-  const isPremium = profile?.plan_type === "pro" || isAdmin
+  const isPremium = profile?.plan_type === "pro" || profile?.plan_type === "lifetime" || isAdmin
   const shouldHideForPremium = isPremium
 
   useEffect(() => {

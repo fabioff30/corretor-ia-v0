@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     : securityHeadersMiddleware(request)
 
   // 3.1 Persist país para front-end de ads (ex.: Clever) usando header do edge
-  const countryHeader = request.headers.get('x-vercel-ip-country') || request.geo?.country || ''
+  const countryHeader = request.headers.get('x-vercel-ip-country') || ''
   const country = countryHeader.toUpperCase()
   if (country) {
     responseWithHeaders.cookies.set('country', country, {

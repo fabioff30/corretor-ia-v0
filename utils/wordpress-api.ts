@@ -4,6 +4,21 @@
 
 const API_URL = "https://blog.corretordetextoonline.com.br/wp-json/wp/v2"
 
+// In constrained environments (e.g., CI without external network), avoid repeated failed fetches
+let wordpressUnavailableUntil = 0
+const BACKOFF_MS = 5 * 60 * 1000 // 5 minutes
+const skipDuringBuild =
+  process.env.NEXT_PHASE === "phase-production-build" &&
+  process.env.ALLOW_BLOG_FETCH_IN_BUILD !== "true"
+
+function shouldSkipFetch() {
+  return skipDuringBuild || Date.now() < wordpressUnavailableUntil
+}
+
+function recordFailure() {
+  wordpressUnavailableUntil = Date.now() + BACKOFF_MS
+}
+
 // Reduced revalidation time from 3600 (1 hour) to 300 (5 minutes)
 const DEFAULT_REVALIDATION_TIME = 300
 
@@ -80,6 +95,11 @@ export async function getPosts(
   totalPages: number
   totalPosts: number
 }> {
+  if (shouldSkipFetch()) {
+    console.warn("WordPress API temporarily unavailable, using cached empty posts.")
+    return { posts: [], totalPages: 0, totalPosts: 0 }
+  }
+
   try {
     console.log(`Fetching posts: page ${page}, perPage ${perPage}, forceRefresh: ${forceRefresh}`)
 
@@ -106,6 +126,7 @@ export async function getPosts(
     }
   } catch (error) {
     console.error("Error fetching posts:", error)
+    recordFailure()
     return {
       posts: [],
       totalPages: 0,
@@ -120,6 +141,11 @@ export async function getPosts(
  * @param forceRefresh Whether to bypass cache and force a fresh fetch
  */
 export async function getPostBySlug(slug: string, forceRefresh = false): Promise<WPPost | null> {
+  if (shouldSkipFetch()) {
+    console.warn(`WordPress API temporarily unavailable, skipping fetch for slug ${slug}`)
+    return null
+  }
+
   try {
     console.log(`Fetching post by slug: ${slug}, forceRefresh: ${forceRefresh}`)
 
@@ -144,6 +170,7 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
     return posts[0]
   } catch (error) {
     console.error(`Error fetching post with slug ${slug}:`, error)
+    recordFailure()
     return null
   }
 }
@@ -155,6 +182,11 @@ export async function getPostBySlug(slug: string, forceRefresh = false): Promise
  * @param forceRefresh Whether to bypass cache and force a fresh fetch
  */
 export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefresh = false): Promise<WPPost[]> {
+  if (shouldSkipFetch()) {
+    console.warn(`WordPress API temporarily unavailable, skipping related posts for ${currentSlug}`)
+    return []
+  }
+
   try {
     console.log(`Fetching related posts (excluding ${currentSlug}), forceRefresh: ${forceRefresh}`)
 
@@ -174,6 +206,7 @@ export async function getRelatedPosts(currentSlug: string, limit = 4, forceRefre
     return filteredPosts
   } catch (error) {
     console.error("Error fetching related posts:", error)
+    recordFailure()
     return []
   }
 }

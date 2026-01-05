@@ -87,13 +87,11 @@ export async function submitContactForm(formData: ContactFormData) {
       // Return validation errors
       return {
         success: false,
-        errors: error.errors.reduce(
-          (acc, curr) => {
-            acc[curr.path[0]] = curr.message
-            return acc
-          },
-          {} as Record<string, string>,
-        ),
+        errors: error.issues.reduce<Record<string, string>>((acc, curr) => {
+          const key = typeof curr.path?.[0] === "string" ? curr.path[0] : `field_${acc.length}`
+          acc[key] = curr.message
+          return acc
+        }, {}),
       }
     }
 

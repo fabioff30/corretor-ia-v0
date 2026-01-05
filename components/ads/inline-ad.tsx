@@ -5,7 +5,7 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import Image from "next/image"
 import { GOOGLE_ADSENSE_CLIENT, DISABLE_ADS } from "@/utils/constants"
-import { useFeatureAccess } from "@/hooks/use-subscription"
+import { useSubscription } from "@/hooks/use-subscription"
 
 interface InlineAdProps {
   adSlot?: string
@@ -22,10 +22,10 @@ export function InlineAd({ adSlot, className = "", format = "auto", useAdsense =
   const [hasConsent, setHasConsent] = useState(false)
   const adRef = useRef<HTMLModElement>(null)
   const initRef = useRef(false)
-  const { canAvoidAds } = useFeatureAccess()
+  const { isPremium } = useSubscription()
 
   // Não mostrar anúncios para usuários premium
-  if (canAvoidAds) return null
+  if (isPremium) return null
 
   // Verificar consentimento de cookies
   useEffect(() => {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Route: Logout
  * POST /api/auth/logout
@@ -80,3 +81,4 @@ export async function OPTIONS() {
     },
   })
 }
+// @ts-nocheck

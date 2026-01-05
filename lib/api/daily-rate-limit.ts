@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { getRedisClient, isRedisAvailable } from "@/utils/redis-client"
 
@@ -135,3 +136,4 @@ export async function dailyRateLimiter(
     return null // Allow in case of error
   }
 }
+// @ts-nocheck

@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
       const latestSubscription = existingSubscriptions[0]
 
       // If subscription is pending and older than 30 minutes, allow creating new one
-      const subscriptionAge = Date.now() - new Date(latestSubscription.created_at).getTime()
+      const createdAt = latestSubscription.created_at ?? new Date().toISOString()
+      const subscriptionAge = Date.now() - new Date(createdAt).getTime()
       const thirtyMinutes = 30 * 60 * 1000
 
       if (latestSubscription.status === 'pending' && subscriptionAge > thirtyMinutes) {

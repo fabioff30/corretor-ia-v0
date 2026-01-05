@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import type { Tables, TablesUpdate } from '@/types/supabase'
 
 export const maxDuration = 60
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { data: subscription, error: findError } = await query
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .single<Tables<'subscriptions'>>()
 
     if (findError || !subscription) {
       return NextResponse.json(
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       .from('subscriptions')
       .select('*')
       .eq('id', subscription.id)
-      .single()
+      .single<Tables<'subscriptions'>>()
 
     return NextResponse.json(
       {
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
       .select('id, status, mp_subscription_id, end_date')
       .eq('user_id', userId)
       .in('status', ['pending', 'authorized', 'paused'])
-      .single()
+      .single<Tables<'subscriptions'>>()
 
     if (error || !subscription) {
       return NextResponse.json(

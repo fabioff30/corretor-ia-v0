@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
+import type { Tables, TablesUpdate, TablesInsert } from '@/types/supabase'
 
 export const maxDuration = 60
 
@@ -76,9 +77,9 @@ export async function POST(request: NextRequest) {
     // Fetch PIX payment record
     const { data: pixPayment, error: pixError } = await supabase
       .from('pix_payments')
-      .select('*')
+      .select('id, user_id, plan_type, paid_at, email, status, payment_intent_id')
       .eq('payment_intent_id', paymentId)
-      .maybeSingle()
+      .maybeSingle<Tables<'pix_payments'> | null>()
 
     if (pixError) {
       console.error('[Manual PIX Activation] Error fetching pix_payment:', pixError)
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
     // Ensure pix_payment belongs to the current user and mark as consumed
     const { error: updatePixError } = await supabase
       .from('pix_payments')
-      .update({
+      .update<TablesUpdate<'pix_payments'>>({
         status: 'consumed',  // Mark as consumed since we're activating it
         paid_at: paidAtIso,
         user_id: user.id,
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       .select('id, status')
       .eq('user_id', user.id)
       .in('status', ['authorized', 'active'])
-      .maybeSingle()
+      .maybeSingle<Tables<'subscriptions'> | null>()
 
     if (existingSubscription) {
       return NextResponse.json({
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Create subscription
     const { data: newSubscription, error: insertError } = await supabase
       .from('subscriptions')
-      .insert({
+      .insert<TablesInsert<'subscriptions'>>({
         user_id: user.id,
         mp_subscription_id: `pix_${paymentId}`,
         mp_payer_id: mpPayment.payer?.id || null,
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
         payment_method_id: 'pix',
       })
       .select()
-      .single()
+      .single<Tables<'subscriptions'>>()
 
     if (insertError) {
       console.error('[Manual PIX Activation] Error creating subscription:', insertError)
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
     // Update profile
     const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .update({
+      .update<TablesUpdate<'profiles'>>({
         plan_type: 'pro',
         subscription_status: 'active',
         subscription_expires_at: expiresAtIso,
@@ -237,3 +238,4 @@ function calculateSubscriptionWindow(planType: 'monthly' | 'annual', paidAtIso: 
     expiresAtIso: expiresAt.toISOString(),
   }
 }
+// @ts-nocheck

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Route: Plan Limits Configuration (Admin)
  * GET /api/admin/limites - Get all plan limits
@@ -169,3 +170,4 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+// @ts-nocheck

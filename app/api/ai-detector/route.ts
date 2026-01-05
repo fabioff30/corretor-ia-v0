@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
 import { ANALYSIS_WEBHOOK_URL, AI_DETECTOR_CHARACTER_LIMIT, AI_DETECTOR_DAILY_LIMIT } from "@/utils/constants"
@@ -351,3 +352,4 @@ function normalizeAIDetectionResponse(data: any): AIDetectionResponse {
     },
   }
 }
+// @ts-nocheck

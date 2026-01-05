@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
 import { REWRITE_WEBHOOK_URL } from "@/utils/constants"
 import {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse
 
     // Validate and sanitize input
-    const newRequest = new Request(request.url, {
+    const newRequest = new NextRequest(request.url, {
       method: request.method,
       headers: request.headers,
       body: JSON.stringify(requestBody),

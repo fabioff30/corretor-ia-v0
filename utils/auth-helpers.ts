@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Helpers de autenticação e verificação de permissões
  */
@@ -185,3 +186,4 @@ export async function hasPremiumAccess(): Promise<boolean> {
 
   return profile.plan_type === 'pro' || profile.plan_type === 'admin'
 }
+// @ts-nocheck

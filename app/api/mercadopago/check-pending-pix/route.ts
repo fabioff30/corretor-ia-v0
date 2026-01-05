@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
 import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
+import type { Tables } from '@/types/supabase'
 
 export const maxDuration = 30
 
@@ -45,7 +46,7 @@ export async function GET() {
     // Find PIX payments for this user that are 'paid' or 'approved' (not consumed)
     const { data: pixPayments, error: pixError } = await supabase
       .from('pix_payments')
-      .select('payment_intent_id, amount, plan_type, paid_at, status')
+      .select('id, payment_intent_id, amount, plan_type, paid_at, status')
       .eq('user_id', user.id)
       .in('status', ['paid', 'approved'])
       .order('created_at', { ascending: false })
@@ -66,7 +67,7 @@ export async function GET() {
       }, { status: 404 })
     }
 
-    const pixPayment = pixPayments[0]
+    const pixPayment = pixPayments[0] as Tables<'pix_payments'>
 
     // Verify payment is actually approved in Mercado Pago
     try {
@@ -89,8 +90,8 @@ export async function GET() {
     return NextResponse.json({
       hasPendingPayment: true,
       payment: {
-        paymentId: pixPayment.payment_intent_id,
-        amount: parseFloat(pixPayment.amount),
+        paymentId: String(pixPayment.payment_intent_id),
+        amount: Number(pixPayment.amount),
         planType: pixPayment.plan_type,
         paidAt: pixPayment.paid_at || new Date().toISOString(),
       },

@@ -17,7 +17,71 @@ type SupabaseMockStore = {
   unsubscribe?: jest.Mock
 }
 
-let supabaseMockStore: SupabaseMockStore
+var supabaseMockStore: SupabaseMockStore = {}
+
+const ensureSupabaseMockInitialized = () => {
+  if (!supabaseMockStore.supabase) {
+    // Try to grab the instance created by jest.mock factory
+    try {
+      const clientModule = require("@/lib/supabase/client")
+      supabaseMockStore.supabase = clientModule.supabase
+      supabaseMockStore.createClient = clientModule.createClient
+    } catch {
+      // fall through to manual creation
+    }
+  }
+
+  if (!supabaseMockStore.supabase) {
+    const maybeSingle = jest.fn()
+    const unsubscribe = jest.fn()
+
+    const queryBuilder = {
+      select: jest.fn(() => queryBuilder),
+      eq: jest.fn(() => queryBuilder),
+      maybeSingle,
+      single: jest.fn(),
+    }
+
+    const supabaseMock = {
+      from: jest.fn(() => queryBuilder),
+      auth: {
+        getUser: jest.fn(),
+        onAuthStateChange: jest.fn(() => ({
+          data: { subscription: { unsubscribe } },
+        })),
+        signOut: jest.fn(),
+      },
+      storage: {
+        from: jest.fn(() => ({
+          upload: jest.fn(),
+          getPublicUrl: jest.fn(() => ({ data: { publicUrl: "" } })),
+        })),
+      },
+    }
+
+    const createClientMock = jest.fn(() => supabaseMock)
+
+    supabaseMockStore = {
+      supabase: supabaseMock,
+      createClient: createClientMock,
+      maybeSingle,
+      queryBuilder,
+      unsubscribe,
+    }
+  }
+
+  if (!supabaseMockStore.queryBuilder && supabaseMockStore.supabase) {
+    const qb = supabaseMockStore.supabase.from("profiles")
+    supabaseMockStore.queryBuilder = qb
+    supabaseMockStore.maybeSingle = qb?.maybeSingle
+  }
+
+  if (!supabaseMockStore.unsubscribe) {
+    supabaseMockStore.unsubscribe = jest.fn()
+  }
+
+  return supabaseMockStore
+}
 
 jest.mock("@/lib/supabase/client", () => {
   const maybeSingle = jest.fn()
@@ -64,6 +128,7 @@ jest.mock("@/lib/supabase/client", () => {
 })
 
 const getSupabaseMock = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.supabase) {
     throw new Error("Supabase mock not initialized")
   }
@@ -71,6 +136,7 @@ const getSupabaseMock = () => {
 }
 
 const getQueryBuilder = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.queryBuilder) {
     throw new Error("Query builder mock not initialized")
   }
@@ -78,6 +144,7 @@ const getQueryBuilder = () => {
 }
 
 const getMaybeSingle = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.maybeSingle) {
     throw new Error("maybeSingle mock not initialized")
   }
@@ -85,6 +152,7 @@ const getMaybeSingle = () => {
 }
 
 const getUnsubscribe = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.unsubscribe) {
     throw new Error("unsubscribe mock not initialized")
   }
@@ -117,7 +185,7 @@ function Observer({
 const originalFetch = global.fetch
 
 describe("UserProvider", () => {
-  let setItemSpy: jest.SpyInstance
+  let setItemSpy: jest.SpyInstance | undefined
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -152,11 +220,11 @@ describe("UserProvider", () => {
     setItemSpy.mockImplementation(() => void 0)
   })
 
-  afterEach(() => {
-    setItemSpy.mockRestore()
-    window.localStorage.clear()
-    global.fetch = originalFetch
-  })
+afterEach(() => {
+  setItemSpy?.mockRestore?.()
+  window.localStorage.clear()
+  global.fetch = originalFetch
+})
 
   it("cria o perfil via rota protegida quando Supabase retorna PGRST116", async () => {
     const createdProfile: Profile = {

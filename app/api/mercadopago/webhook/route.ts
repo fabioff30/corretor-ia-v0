@@ -16,7 +16,7 @@ import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendPaymentApprovedEmail, sendGiftInvitationEmail, sendGiftBuyerRewardEmail, sendBundleActivationEmail } from '@/lib/email/send'
 import { getPublicConfig } from '@/utils/env-config'
-import { CHRISTMAS_GIFT_CONFIG } from '@/lib/gift/config'
+import { CHRISTMAS_GIFT_CONFIG, getGiftPlan } from '@/lib/gift/config'
 import type { GiftPlanId } from '@/lib/gift/types'
 import { activateJulinhoSubscription, sendJulinhoTemplateMessage } from '@/lib/julinho/client'
 
@@ -214,7 +214,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       // First, get the payment to check if it's a guest payment
       const { data: pixPaymentCheck, error: pixCheckError } = await supabase
         .from('pix_payments')
-        .select('user_id, email, plan_type')
+        .select('user_id, email, plan_type, paid_at')
         .eq('payment_intent_id', payment.id.toString())
         .maybeSingle()
 
@@ -241,7 +241,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
           paid_at: payment.date_approved || new Date().toISOString(),
         })
         .eq('payment_intent_id', payment.id.toString())
-        .select('user_id, email, plan_type')
+        .select('user_id, email, plan_type, paid_at')
         .maybeSingle()
 
       if (pixUpdateError) {
@@ -481,6 +481,10 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
 
     // Handle payment status
     if (payment.status === 'approved') {
+      if (!subscription.user_id) {
+        console.warn('[MP Webhook Payment] Subscription missing user_id, skipping activation')
+        return
+      }
       // Payment approved - activate subscription
       const { error: activateError } = await supabase.rpc(
         'activate_subscription',
@@ -570,6 +574,10 @@ async function handleSubscriptionEvent(subscriptionId: string, webhookBody: any)
 
     // Handle subscription cancellation
     if (mpSubscription.status === 'cancelled') {
+      if (!subscription.user_id) {
+        console.warn('[MP Webhook Subscription] Subscription missing user_id, skipping cancel RPC')
+        return
+      }
       const { error: cancelError } = await supabase.rpc('cancel_subscription', {
         p_user_id: subscription.user_id,
         p_subscription_id: subscription.id,
@@ -1006,7 +1014,7 @@ async function handleGiftPayment(payment: any, externalReference: string, supaba
     console.log('[MP Webhook Gift] Gift marked as paid, sending email to recipient...')
 
     // Get plan name from config
-    const planConfig = CHRISTMAS_GIFT_CONFIG.PLANS[gift.plan_type as GiftPlanId]
+    const planConfig = gift.plan_type ? getGiftPlan(gift.plan_type as GiftPlanId) : undefined
     const planName = planConfig?.name || 'Premium'
 
     // Send gift invitation email to recipient

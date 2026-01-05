@@ -14,14 +14,14 @@ export const revalidate = 1800 // Cache por 30 minutos
 export async function GET() {
   try {
     // Get rating stats from Redis
-    const ratingStats = await getRatingStats()
+    const ratingStats = await getRatingStats() as { averageRating: number; totalRatings: number }
 
     // Get premium users count from Supabase
     let premiumUsers = 127 // default fallback
     let totalCorrections = 15234 // default fallback
 
     try {
-      const supabase = await createClient()
+      const supabase = (await createClient()) as any
 
       // Count premium users
       const { count: premiumCount } = await supabase

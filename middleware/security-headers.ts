@@ -7,50 +7,83 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export function securityHeadersMiddleware(request: NextRequest) {
   const response = NextResponse.next()
-  
-  // Content Security Policy
+
+  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+    : '*.supabase.co'
+
+  // Content Security Policy (production-hardened)
   const csp = [
-    // Default source remains scoped to our origin
     "default-src 'self'",
-
-    // Allow all script, style, image, font and frame sources while keeping inline allowances
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
-    "style-src 'self' 'unsafe-inline' *",
-    "img-src 'self' data: blob: *",
-    "font-src 'self' data: *",
-    "frame-src 'self' *",
-
-    // Permit any outbound connections (fetch, websockets, etc.)
-    "connect-src 'self' *",
-
-    // Worker sources for service workers
+    [
+      "script-src 'self' 'unsafe-inline'",
+      "https://www.googletagmanager.com",
+      "https://www.google-analytics.com",
+      "https://connect.facebook.net",
+      "https://www.clarity.ms",
+      "https://static.cloudflareinsights.com",
+      "https://js.stripe.com"
+    ].join(' '),
+    [
+      "style-src 'self' 'unsafe-inline'",
+      "https://fonts.googleapis.com"
+    ].join(' '),
+    [
+      "img-src 'self' data: blob:",
+      "https://www.google-analytics.com",
+      "https://www.googletagmanager.com",
+      "https://connect.facebook.net",
+      "https://www.clarity.ms"
+    ].join(' '),
+    [
+      "font-src 'self' data:",
+      "https://fonts.gstatic.com"
+    ].join(' '),
+    [
+      "connect-src 'self'",
+      `https://${supabaseHost}`,
+      "wss://*.supabase.co",
+      "wss://*.supabase.in",
+      "https://api.openai.com",
+      "https://*.upstash.io",
+      "wss://*.upstash.io",
+      "https://www.google-analytics.com",
+      "https://www.googletagmanager.com",
+      "https://connect.facebook.net",
+      "https://www.clarity.ms",
+      "https://api.stripe.com",
+      "https://js.stripe.com",
+      "https://api.mercadopago.com",
+      "https://*.stripe.com"
+    ].join(' '),
+    [
+      "frame-src 'self'",
+      "https://js.stripe.com",
+      "https://hooks.stripe.com",
+      "https://www.googletagmanager.com",
+      "https://connect.facebook.net"
+    ].join(' '),
     "worker-src 'self' blob:",
-
-    // Maintain critical protections
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action *",
-
-    // Upgrade insecure requests in production
+    "form-action 'self' https://js.stripe.com https://hooks.stripe.com",
+    "frame-ancestors 'self'",
     ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
   ].join('; ')
-  
-  // Set CSP header
+
   response.headers.set('Content-Security-Policy', csp)
-  
-  // Additional security headers
   response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  
-  // Strict Transport Security for HTTPS
+  response.headers.set('Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), browsing-topics=()')
+
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
       'Strict-Transport-Security',
       'max-age=31536000; includeSubDomains; preload'
     )
   }
-  
+
   return response
 }
 
@@ -59,21 +92,21 @@ export function securityHeadersMiddleware(request: NextRequest) {
  */
 export function developmentCSP(request: NextRequest) {
   const response = NextResponse.next()
-  
-  // More permissive CSP for development
+
   const devCsp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
-    "style-src 'self' 'unsafe-inline' *",
-    "img-src 'self' data: blob: *",
-    "font-src 'self' data: *",
-    "connect-src 'self' *",
-    "frame-src 'self' *",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
+    "frame-src 'self'",
     "worker-src 'self' blob:",
     "object-src 'none'",
+    "base-uri 'self'"
   ].join('; ')
-  
+
   response.headers.set('Content-Security-Policy', devCsp)
-  
+
   return response
 }

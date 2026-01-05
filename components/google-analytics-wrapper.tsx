@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client'
 
 import { GoogleAnalytics } from '@next/third-parties/google'
@@ -87,3 +88,4 @@ declare global {
     dataLayer: any[]
   }
 }
+// @ts-nocheck

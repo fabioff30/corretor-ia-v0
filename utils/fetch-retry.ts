@@ -43,7 +43,7 @@ export async function fetchWithRetry(
     retryCondition = defaultRetryCondition
   } = retryOptions
 
-  let lastError: Error
+  let lastError: Error | null = null
   let lastResponse: Response | undefined
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

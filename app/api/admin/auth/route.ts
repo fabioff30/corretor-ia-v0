@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminPassword, setAdminSession, clearAdminSession, getAdminSession } from '@/lib/auth'
 import { rateLimiter } from '@/middleware/rate-limit'
 
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for') ||
+    request.headers.get('x-real-ip') ||
+    request.headers.get('cf-connecting-ip') ||
+    'unknown'
+  )
+}
+
 /**
  * Admin Authentication API
  * Secure server-side authentication for admin users
@@ -28,9 +37,7 @@ export async function POST(request: NextRequest) {
 
         if (!validateAdminPassword(password)) {
           // Log failed login attempt
-          console.warn('Failed admin login attempt from IP:', 
-            request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-          )
+          console.warn('Failed admin login attempt from IP:', getClientIp(request))
           
           return NextResponse.json(
             { error: 'Invalid credentials' },
@@ -41,9 +48,7 @@ export async function POST(request: NextRequest) {
         // Create secure session
         await setAdminSession()
         
-        console.log('Successful admin login from IP:', 
-          request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-        )
+        console.log('Successful admin login from IP:', getClientIp(request))
 
         return NextResponse.json({
           success: true,

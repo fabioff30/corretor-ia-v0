@@ -66,7 +66,14 @@ export function SubscriptionManagement() {
 
       if (error) throw error
 
-      setSubscription(data)
+      const normalized = data
+        ? {
+            ...data,
+            status: (data.status ?? 'pending') as Subscription['status'],
+          }
+        : null
+
+      setSubscription(normalized)
     } catch (error) {
       console.error('Error fetching subscription:', error)
     } finally {

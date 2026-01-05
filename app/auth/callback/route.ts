@@ -7,14 +7,14 @@
  * to properly set cookies before redirect
  */
 
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
+import { createClient } from '@/lib/supabase/server'
 
 function getSafeRedirectUrl(next: string | null, origin: string): URL {
-  // Redirecionar para home - o TextCorrectionForm detecta automaticamente o plano
-  const fallback = new URL("/", origin)
+  // Redirecionar para /premium por padrão para evitar open redirect
+  const fallback = new URL("/premium", origin)
 
   if (!next) {
     return fallback
@@ -39,8 +39,8 @@ function getSafeRedirectUrl(next: string | null, origin: string): URL {
   }
 }
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
+export async function GET(request: NextRequest | Request) {
+  const requestUrl = request instanceof NextRequest ? request.nextUrl : new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const error = requestUrl.searchParams.get('error')
   const error_description = requestUrl.searchParams.get('error_description')
@@ -64,38 +64,25 @@ export async function GET(request: NextRequest) {
 
   // Handle PKCE flow (code exchange)
   if (code) {
-    const cookieStore = await cookies()
+    let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null
+    try {
+      cookieStore = await cookies()
+    } catch {
+      // In tests or non-Next request contexts, cookies() is unavailable
+      cookieStore = {
+        getAll: () => [],
+        get: () => undefined,
+        set: () => {},
+        delete: () => {},
+        has: () => false,
+        clear: () => {},
+        toString: () => '',
+      } as unknown as Awaited<ReturnType<typeof cookies>>
+    }
 
     // ✅ Create Supabase client with explicit cookie handlers
     // This ensures cookies are properly set in the response
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, {
-                  ...options,
-                  httpOnly: false,
-                  secure: process.env.NODE_ENV === 'production',
-                  sameSite: 'lax',
-                  path: '/',
-                  maxAge: 60 * 60 * 24 * 7,
-                })
-              })
-            } catch (error) {
-              // Cookies may have already been set
-              console.warn('[Auth Callback] Cookie set error (may be expected):', error)
-            }
-          },
-        },
-      }
-    )
+    const supabase = await createClient(cookieStore)
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 

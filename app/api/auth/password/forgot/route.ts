@@ -17,15 +17,16 @@ export async function POST(request: Request) {
 
     // Buscar todos os usuários e filtrar por email
     // Nota: Na v2.x, listUsers() retorna uma página de usuários
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    const users = (data?.users ?? []) as Array<{ email?: string | null; user_metadata?: Record<string, any> }>
 
-    if (listError || !users || users.length === 0) {
+    if (listError || users.length === 0) {
       // Responder sucesso mesmo se não houver usuários para evitar enumeração
       return NextResponse.json({ success: true })
     }
 
     // Filtrar usuário por email
-    const user = users.find(u => u.email === email)
+    const user = users.find((u) => u.email === email)
 
     if (!user) {
       // Responder sucesso mesmo se usuário não existir para evitar enumeração

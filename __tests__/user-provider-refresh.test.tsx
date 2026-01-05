@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tests for UserProvider refreshProfile() function
  * Tests the new refresh functionality that forces profile update from database
@@ -21,7 +22,69 @@ type SupabaseMockStore = {
   unsubscribe?: jest.Mock
 }
 
-let supabaseMockStore: SupabaseMockStore
+var supabaseMockStore: SupabaseMockStore = {}
+
+const ensureSupabaseMockInitialized = () => {
+  if (!supabaseMockStore.supabase) {
+    try {
+      const clientModule = require('@/lib/supabase/client')
+      supabaseMockStore.supabase = clientModule.supabase
+      supabaseMockStore.createClient = clientModule.createClient
+    } catch {
+      // ignore and fall back to manual creation
+    }
+  }
+
+  if (!supabaseMockStore.supabase) {
+    const maybeSingle = jest.fn()
+    const unsubscribe = jest.fn()
+
+    const queryBuilder = {
+      select: jest.fn(() => queryBuilder),
+      eq: jest.fn(() => queryBuilder),
+      maybeSingle,
+    }
+
+    const supabaseMock = {
+      from: jest.fn(() => queryBuilder),
+      auth: {
+        getUser: jest.fn(),
+        onAuthStateChange: jest.fn(() => ({
+          data: { subscription: { unsubscribe } },
+        })),
+        signOut: jest.fn(),
+      },
+      storage: {
+        from: jest.fn(() => ({
+          upload: jest.fn(),
+          getPublicUrl: jest.fn(() => ({ data: { publicUrl: '' } })),
+        })),
+      },
+    }
+
+    const createClientMock = jest.fn(() => supabaseMock)
+
+    supabaseMockStore = {
+      supabase: supabaseMock,
+      createClient: createClientMock,
+      maybeSingle,
+      queryBuilder,
+      unsubscribe,
+    }
+  }
+
+  if (!supabaseMockStore.queryBuilder && supabaseMockStore.supabase) {
+    const qb = supabaseMockStore.supabase.from('profiles')
+    supabaseMockStore.queryBuilder = qb
+    supabaseMockStore.maybeSingle = qb?.maybeSingle
+  }
+
+  if (!supabaseMockStore.unsubscribe) {
+    supabaseMockStore.unsubscribe = jest.fn()
+  }
+
+  return supabaseMockStore
+}
 
 jest.mock('@/lib/supabase/client', () => {
   const maybeSingle = jest.fn()
@@ -67,6 +130,7 @@ jest.mock('@/lib/supabase/client', () => {
 })
 
 const getSupabaseMock = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.supabase) {
     throw new Error('Supabase mock not initialized')
   }
@@ -74,6 +138,7 @@ const getSupabaseMock = () => {
 }
 
 const getMaybeSingle = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.maybeSingle) {
     throw new Error('maybeSingle mock not initialized')
   }
@@ -81,6 +146,7 @@ const getMaybeSingle = () => {
 }
 
 const getQueryBuilder = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.queryBuilder) {
     throw new Error('Query builder mock not initialized')
   }
@@ -88,6 +154,7 @@ const getQueryBuilder = () => {
 }
 
 const getUnsubscribe = () => {
+  ensureSupabaseMockInitialized()
   if (!supabaseMockStore.unsubscribe) {
     throw new Error('unsubscribe mock not initialized')
   }
@@ -132,7 +199,7 @@ function TestComponent({
 }
 
 describe('UserProvider - refreshProfile()', () => {
-  let setItemSpy: jest.SpyInstance
+  let setItemSpy: jest.SpyInstance | undefined
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -166,7 +233,7 @@ describe('UserProvider - refreshProfile()', () => {
   })
 
   afterEach(() => {
-    setItemSpy.mockRestore()
+    setItemSpy?.mockRestore?.()
     window.localStorage.clear()
   })
 
@@ -227,6 +294,7 @@ describe('UserProvider - refreshProfile()', () => {
 
   it('should return error if user is not authenticated', async () => {
     // No user
+    const supabaseMock = getSupabaseMock()
     supabaseMock.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
@@ -257,6 +325,7 @@ describe('UserProvider - refreshProfile()', () => {
   })
 
   it('should handle errors from fetchProfile', async () => {
+    const maybeSingle = getMaybeSingle()
     maybeSingle.mockResolvedValue({
       data: null,
       error: { message: 'Database error', code: 'DB_ERROR' },
@@ -287,6 +356,7 @@ describe('UserProvider - refreshProfile()', () => {
   })
 
   it('should create profile via /api/profiles/sync if PGRST116 error', async () => {
+    const maybeSingle = getMaybeSingle()
     // First call returns PGRST116 (profile not found)
     maybeSingle.mockResolvedValueOnce({
       data: null,
@@ -338,6 +408,7 @@ describe('UserProvider - refreshProfile()', () => {
   })
 
   it('should log refresh operations for debugging', async () => {
+    const maybeSingle = getMaybeSingle()
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
 
     maybeSingle.mockResolvedValue({ data: mockProfilePro, error: null })

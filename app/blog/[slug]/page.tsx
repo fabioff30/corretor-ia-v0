@@ -3,11 +3,18 @@ import { notFound } from "next/navigation"
 import { getPostBySlug, extractExcerpt, getPosts, getRelatedPosts } from "@/utils/wordpress-api"
 import { BlogPostContent } from "@/components/blog/blog-post-content"
 
+// Avoid build-time failures when external WordPress API is unreachable.
+export const dynamic = "force-dynamic"
+
 // ISR: revalidate every 15 minutes for fresh content while maintaining cache
 export const revalidate = 900
 
 // Pre-render top 50 posts at build time for faster indexing
 export async function generateStaticParams() {
+  if (process.env.ENABLE_BLOG_STATIC !== "true") {
+    return []
+  }
+
   try {
     const { posts } = await getPosts(1, 50)
     return posts.map((post) => ({

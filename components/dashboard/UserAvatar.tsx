@@ -51,6 +51,13 @@ export function UserAvatar() {
 
   if (!user || !profile) return null
 
+  const planForBadge: 'free' | 'pro' | 'admin' =
+    profile.plan_type === 'admin'
+      ? 'admin'
+      : profile.plan_type === 'pro' || profile.plan_type === 'lifetime'
+        ? 'pro'
+        : 'free'
+
   // Pegar iniciais do nome ou email
   const getInitials = () => {
     if (profile.full_name) {
@@ -83,7 +90,7 @@ export function UserAvatar() {
             <p className="text-sm font-medium leading-none">{profile.full_name || 'Usuário'}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             <div className="pt-2">
-              <PlanBadge planType={profile.plan_type} />
+              <PlanBadge planType={planForBadge} />
             </div>
           </div>
         </DropdownMenuLabel>

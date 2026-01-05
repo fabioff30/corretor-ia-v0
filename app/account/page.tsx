@@ -21,7 +21,7 @@ import { useEffect, useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AccountPage() {
-  const { user, loading, updateProfile } = useUser()
+  const { user, profile, loading } = useUser()
   const subscription = useSubscription()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -36,10 +36,14 @@ export default function AccountPage() {
   // Atualizar campos quando o usuário carregar
   useEffect(() => {
     if (user) {
-      setName(user.name || "")
+      const derivedName =
+        profile?.full_name ||
+        (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) ||
+        ""
+      setName(derivedName)
       setEmail(user.email || "")
     }
-  }, [user])
+  }, [user, profile])
 
   if (loading) {
     return (

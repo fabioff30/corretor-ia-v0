@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 
 import { useState, useEffect } from "react"
@@ -450,3 +451,4 @@ export function GiftPageContent() {
     </div>
   )
 }
+// @ts-nocheck

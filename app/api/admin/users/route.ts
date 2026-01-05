@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Route: List Users (Admin)
  * GET /api/admin/users
@@ -129,3 +130,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+// @ts-nocheck

@@ -72,8 +72,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
     }
 
     // Track begin checkout
-    sendGTMEvent({
-      event: "begin_checkout",
+    sendGTMEvent("begin_checkout", {
       currency: "BRL",
       value: 19.90,
       items: [
@@ -107,8 +106,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
       setIsPixModalOpen(true)
 
       // Track PIX generated
-      sendGTMEvent({
-        event: "add_payment_info",
+      sendGTMEvent("add_payment_info", {
         payment_type: "pix",
         value: 19.90,
         currency: "BRL",
@@ -204,8 +202,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
     }
 
     // Track begin checkout
-    sendGTMEvent({
-      event: "begin_checkout",
+    sendGTMEvent("begin_checkout", {
       currency: "BRL",
       value: 19.90,
       items: [
@@ -237,8 +234,7 @@ export function BundlePricingCard({ className }: BundlePricingCardProps) {
       }
 
       // Track payment info
-      sendGTMEvent({
-        event: "add_payment_info",
+      sendGTMEvent("add_payment_info", {
         payment_type: "card",
         value: 19.90,
         currency: "BRL",

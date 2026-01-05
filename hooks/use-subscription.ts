@@ -17,6 +17,14 @@ interface SubscriptionData {
   nextPaymentDate: string | null
   amount: number | null
   currency: string | null
+  isPremium: boolean
+  expiresAt: string | null
+  daysUntilExpiry: number | null
+  features: {
+    characterLimit: number
+    noAds: boolean
+    priorityProcessing: boolean
+  }
 }
 
 interface SubscriptionActions {
@@ -179,12 +187,21 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
   // Computed values
   const isAdmin = profile?.plan_type === 'admin'
   const hasActiveProSubscription = profile?.plan_type === 'pro' && profile?.subscription_status === 'active'
-  const isActive = subscription?.status === 'authorized' || isAdmin
-  const isPro = hasActiveProSubscription || isAdmin
+  const isLifetime = profile?.plan_type === 'lifetime'
+  const isActive = subscription?.status === 'authorized' || isAdmin || isLifetime
+  const isPro = hasActiveProSubscription || isAdmin || isLifetime
+  const isPremium = isPro
   const canCancel = isActive && subscription !== null
-  const nextPaymentDate = subscription?.next_payment_date || null
+  const nextPaymentDate = subscription?.next_payment_date || profile?.subscription_expires_at || null
   const amount = subscription?.amount || null
   const currency = subscription?.currency || null
+  const expiresAt = nextPaymentDate
+  const daysUntilExpiry = expiresAt ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
+  const features = {
+    characterLimit: isPremium ? 20000 : 1000,
+    noAds: isPremium,
+    priorityProcessing: isPremium,
+  }
 
   return {
     subscription,
@@ -192,8 +209,12 @@ export function useSubscription(): SubscriptionData & SubscriptionActions {
     error,
     isActive,
     isPro,
+    isPremium,
     canCancel,
     nextPaymentDate,
+    expiresAt,
+    daysUntilExpiry,
+    features,
     amount,
     currency,
     createSubscription,

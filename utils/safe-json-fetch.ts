@@ -131,6 +131,32 @@ export interface ResponseValidator<T> {
   getDefaultFallback: () => T
 }
 
+export interface CorrectionResponse {
+  correctedText: string
+  evaluation?: {
+    strengths?: string[]
+    weaknesses?: string[]
+    suggestions?: string[]
+    score?: number
+  }
+}
+
+export interface AIDetectionResponse {
+  correctionId?: string
+  result: {
+    verdict: 'human' | 'ai' | 'uncertain'
+    probability: number
+    confidence: string
+    explanation?: string
+    signals?: unknown[]
+  }
+  textStats: {
+    words: number
+    characters: number
+    sentences: number
+  }
+}
+
 /**
  * Validate and normalize API response
  */
@@ -199,9 +225,9 @@ export async function fetchAndParseJson<T>(
 /**
  * Create a response validator for text correction responses
  */
-export function createCorrectionResponseValidator(): ResponseValidator<any> {
+export function createCorrectionResponseValidator(): ResponseValidator<CorrectionResponse> {
   return {
-    isValid: (data: unknown) => {
+    isValid: (data: unknown): data is CorrectionResponse => {
       if (typeof data !== "object" || data === null) return false
 
       const obj = data as Record<string, unknown>
@@ -214,7 +240,7 @@ export function createCorrectionResponseValidator(): ResponseValidator<any> {
         obj.correctedText.length < 10000
       )
     },
-    getDefaultFallback: () => ({
+    getDefaultFallback: (): CorrectionResponse => ({
       correctedText: "",
       evaluation: {
         strengths: [],
@@ -228,9 +254,9 @@ export function createCorrectionResponseValidator(): ResponseValidator<any> {
 /**
  * Create a response validator for AI detection responses
  */
-export function createAIDetectionResponseValidator(): ResponseValidator<any> {
+export function createAIDetectionResponseValidator(): ResponseValidator<AIDetectionResponse> {
   return {
-    isValid: (data: unknown) => {
+    isValid: (data: unknown): data is AIDetectionResponse => {
       if (typeof data !== "object" || data === null) return false
 
       const obj = data as Record<string, unknown>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Check, Wand2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ type ToneOption =
   | "Acadêmico"
   | "Criativo"
   | "Romântico"
+  | "Conciso"
   | "Narrativo"
   | "Instagram"
   | "WhatsApp"
@@ -28,6 +29,7 @@ const tones: { value: ToneOption; label: string; description: string }[] = [
   { value: "Acadêmico", label: "Acadêmico", description: "Linguagem técnica para trabalhos científicos." },
   { value: "Criativo", label: "Criativo", description: "Tom original e imaginativo." },
   { value: "Romântico", label: "Romântico", description: "Tom emotivo e apaixonado." },
+  { value: "Conciso", label: "Conciso", description: "Texto direto ao ponto, sem rodeios." },
   { value: "Narrativo", label: "Narrativo", description: "Tom narrativo para contar histórias." },
   { value: "Instagram", label: "Instagram", description: "Estilo casual e envolvente para posts de redes sociais." },
   { value: "WhatsApp", label: "WhatsApp", description: "Tom conversacional para mensagens diretas." },
@@ -39,12 +41,19 @@ interface ToneAdjusterProps {
   onToneChange?: (tone: ToneOption, customInstruction?: string) => void
   className?: string
   disabled?: boolean
+  selectedTone?: ToneOption
 }
 
-export function ToneAdjuster({ onToneChange, className, disabled = false }: ToneAdjusterProps) {
-  const [selectedTone, setSelectedTone] = useState<ToneOption>("Padrão")
+export function ToneAdjuster({ onToneChange, className, disabled = false, selectedTone: externalTone }: ToneAdjusterProps) {
+  const [selectedTone, setSelectedTone] = useState<ToneOption>(externalTone ?? "Padrão")
   const [customToneInput, setCustomToneInput] = useState<string>("")
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (externalTone) {
+      setSelectedTone(externalTone)
+    }
+  }, [externalTone])
 
   const handleSelectTone = (tone: ToneOption) => {
     setSelectedTone(tone)

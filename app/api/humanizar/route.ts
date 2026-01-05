@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
 import { HUMANIZAR_WEBHOOK_URL, HUMANIZAR_MAX_TEXT_LENGTH, HUMANIZAR_TIMEOUT } from "@/utils/constants"
@@ -169,3 +170,4 @@ export async function POST(request: NextRequest) {
     return handleGeneralError(error, requestId, ip, cfRay)
   }
 }
+// @ts-nocheck

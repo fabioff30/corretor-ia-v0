@@ -14,21 +14,18 @@ import { sendGTMEvent } from "@/utils/gtm-helper"
 import Link from "next/link"
 import { useUser } from "@/hooks/use-user"
 import { safeJsonParse, extractValidJson, createAIDetectionResponseValidator } from "@/utils/safe-json-fetch"
+import type { AIDetectionResponse as DetectorResponse } from "@/utils/safe-json-fetch"
 import { FileToTextUploader } from "@/components/file-to-text-uploader"
 
-interface AIDetectionResponse {
-  result?: {
-    verdict: "ai" | "human" | "uncertain"
-    probability: number
+type NormalizedDetection = DetectorResponse & {
+  result: DetectorResponse["result"] & {
     confidence: "low" | "medium" | "high"
     signals: string[]
-    explanation?: string
   }
-  textStats?: {
+  textStats: DetectorResponse["textStats"] & {
+    sentences: number
     words: number
     characters: number
-    sentences?: number
-    paragraphs?: number
     avgSentenceLength?: number
     avgWordLength?: number
     uppercaseRatio?: number
@@ -61,7 +58,11 @@ interface AIDetectionResponse {
     models?: string[]
     grammarErrors?: number
   }
-  correctionId?: string | null
+}
+
+function normalizeConfidence(confidence: string | undefined): "low" | "medium" | "high" {
+  if (confidence === "high" || confidence === "medium" || confidence === "low") return confidence
+  return "low"
 }
 
 interface AIDetectorFormProps {
@@ -75,7 +76,7 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
   const resolvedIsPremium = isPremiumOverride !== undefined ? isPremiumOverride : !!derivedPlanIsPremium
   const [text, setText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState<AIDetectionResponse | null>(null)
+  const [result, setResult] = useState<NormalizedDetection | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rateLimitError, setRateLimitError] = useState<{ message: string; resetAt: string } | null>(null)
   const [correctionId, setCorrectionId] = useState<string | null>(null)
@@ -153,12 +154,12 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
 
       // Try safe parsing with validation
       const validator = createAIDetectionResponseValidator()
-      let parseResult = safeJsonParse<AIDetectionResponse>(responseText)
+      let parseResult = safeJsonParse<DetectorResponse>(responseText)
 
       // If parsing fails, try to extract valid JSON
       if (!parseResult.success) {
         console.info("Attempting to recover from malformed response...")
-        parseResult = extractValidJson<AIDetectionResponse>(responseText)
+        parseResult = extractValidJson<DetectorResponse>(responseText)
       }
 
       if (!parseResult.success) {
@@ -177,11 +178,35 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
       }
 
       const data = parseResult.data
-      const { correctionId: savedId, ...analysisData } = data
-      setResult(analysisData)
+      const normalizedResult: NormalizedDetection = {
+        ...data,
+        result: {
+          verdict: data.result.verdict,
+          probability: data.result.probability,
+          confidence: normalizeConfidence((data.result as any).confidence),
+          explanation: (data.result as any).explanation,
+          signals: Array.isArray((data.result as any).signals)
+            ? (data.result as any).signals.map((signal: unknown) => String(signal))
+            : [],
+        },
+        textStats: {
+          words: data.textStats?.words ?? 0,
+          characters: data.textStats?.characters ?? 0,
+          sentences: data.textStats?.sentences ?? 0,
+          avgSentenceLength: (data as any).textStats?.avgSentenceLength,
+          avgWordLength: (data as any).textStats?.avgWordLength,
+          uppercaseRatio: (data as any).textStats?.uppercaseRatio,
+          digitRatio: (data as any).textStats?.digitRatio,
+          punctuationRatio: (data as any).textStats?.punctuationRatio,
+        },
+        brazilianism: (data as any).brazilianism,
+        grammarSummary: (data as any).grammarSummary,
+        metadata: (data as any).metadata ?? {},
+      }
+      setResult(normalizedResult)
 
-      if (savedId) {
-        setCorrectionId(savedId)
+      if (data.correctionId) {
+        setCorrectionId(data.correctionId)
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("user-corrections:refresh"))
         }
@@ -190,18 +215,16 @@ export function AIDetectorForm({ isPremium: isPremiumOverride, onAnalysisComplet
       }
 
       // Send Google Analytics event - safely access nested properties
-      if (data.result) {
-        sendGTMEvent('ai_detection_completed', {
-          verdict: data.result.verdict,
-          probability: data.result.probability,
-          confidence: data.result.confidence,
-          text_length: text.length,
-          words_count: data.textStats?.words || 0,
-          grammar_errors: data.grammarSummary?.errors || 0,
-          brazilianism_found: data.brazilianism?.found || false,
-          plan: resolvedIsPremium ? "premium" : "free",
-        })
-      }
+      sendGTMEvent('ai_detection_completed', {
+        verdict: normalizedResult.result.verdict,
+        probability: normalizedResult.result.probability,
+        confidence: normalizedResult.result.confidence,
+        text_length: text.length,
+        words_count: normalizedResult.textStats.words || 0,
+        grammar_errors: normalizedResult.grammarSummary?.errors || 0,
+        brazilianism_found: normalizedResult.brazilianism?.found || false,
+        plan: resolvedIsPremium ? "premium" : "free",
+      })
 
       toast({
         title: "Análise concluída!",

@@ -13,6 +13,10 @@ let redisAvailable = false
  * Initialize Redis client
  */
 export function initRedis(): void {
+  if (process.env.NODE_ENV === "test") {
+    redisAvailable = false
+    return
+  }
   if (!isServer() || redis) return
 
   try {

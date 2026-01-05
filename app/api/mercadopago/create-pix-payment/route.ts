@@ -10,6 +10,7 @@ import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 import { validateWhatsAppPhone, normalizePhoneNumber } from '@/lib/julinho/client'
+import type { Tables, TablesInsert } from '@/types/supabase'
 
 export const maxDuration = 60
 
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
           .from('profiles')
           .select('email, full_name')
           .eq('id', finalUserId)
-          .single()
+          .single<Tables<'profiles'>>()
 
         const profileEmail = profile?.email?.trim() || user?.email?.trim() || null
 
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
     // Save PIX payment to database
     const { error: insertError } = await supabase
       .from('pix_payments')
-      .insert({
+      .insert<TablesInsert<'pix_payments'>>({
         user_id: finalUserId, // NULL for guest payments
         email: isGuestPayment ? finalUserEmail : null, // Store email for guest payments
         payment_intent_id: payment.id.toString(),

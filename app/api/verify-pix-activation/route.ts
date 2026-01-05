@@ -161,8 +161,8 @@ export async function GET(request: NextRequest) {
       subscriptionCreated,
       debug: {
         paymentStatus: mpPayment.status,
-        profilePlanType: profile.plan_type,
-        profileSubscriptionStatus: profile.subscription_status || 'none',
+        profilePlanType: profile?.plan_type || 'none',
+        profileSubscriptionStatus: profile?.subscription_status || 'none',
         timestamp: new Date().toISOString(),
       }
     }

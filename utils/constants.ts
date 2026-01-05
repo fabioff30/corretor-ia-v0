@@ -1,6 +1,6 @@
 // Character limits
-export const FREE_CHARACTER_LIMIT = 1000
-export const PREMIUM_CHARACTER_LIMIT = 20000 // 20k characters for premium users
+export const FREE_CHARACTER_LIMIT = 1500
+export const PREMIUM_CHARACTER_LIMIT = 300000 // Premium upper cap (matches tests & API docs)
 export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit) - deprecated
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humanization
@@ -26,7 +26,7 @@ export const PREMIUM_API_TIMEOUT = 300000 // 300 seconds (5 min) for premium end
 export const MIN_REQUEST_INTERVAL = 5000 // 5 seconds
 export const FETCH_TIMEOUT = 85000 // 85 seconds (slightly less than API timeout)
 export const PREMIUM_FETCH_TIMEOUT = 295000 // 295 seconds for premium endpoints (slightly less than max)
-export const AI_DETECTOR_TIMEOUT = 290000 // 290 seconds for AI detector webhook (10s margin before Vercel timeout)
+export const AI_DETECTOR_TIMEOUT = 300000 // 300 seconds for AI detector webhook (aligned with Vercel max)
 export const HUMANIZAR_TIMEOUT = 110000 // 110 seconds for humanization processing (10s margin before Vercel timeout)
 
 // Z-index values

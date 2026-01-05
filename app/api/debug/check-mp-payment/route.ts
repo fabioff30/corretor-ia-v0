@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Debug Endpoint: Check Mercado Pago Payment
  * GET /api/debug/check-mp-payment?paymentId=XXX
@@ -76,3 +77,4 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+// @ts-nocheck

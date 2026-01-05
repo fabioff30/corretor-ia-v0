@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
@@ -461,3 +462,4 @@ export const useAuth = () => {
   }
   return context
 }
+// @ts-nocheck

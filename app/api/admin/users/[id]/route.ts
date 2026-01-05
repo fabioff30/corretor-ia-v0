@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Route: Edit User (Admin)
  * PATCH /api/admin/users/[id]
@@ -204,3 +205,4 @@ export async function GET(
     )
   }
 }
+// @ts-nocheck

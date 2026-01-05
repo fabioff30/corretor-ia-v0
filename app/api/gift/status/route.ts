@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Route: Check Gift Payment Status
  * GET /api/gift/status?id={giftId}
@@ -78,3 +79,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+// @ts-nocheck

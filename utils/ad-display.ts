@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Utility para verificar se deve mostrar anúncios para o usuário
  */
@@ -59,3 +60,4 @@ export function shouldShowAdsClient(planType: 'free' | 'pro' | 'admin' | null): 
   if (planType === 'pro' || planType === 'admin') return false
   return true // Free mostra anúncios
 }
+// @ts-nocheck

@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function UpgradePage() {
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const subscription = useSubscription()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -51,8 +51,8 @@ export default function UpgradePage() {
           title: "CorretorIA Pro - Assinatura Mensal",
           price: PREMIUM_PLAN_PRICE,
           quantity: 1,
-          donorName: user.name,
-          donorEmail: user.email,
+          donorName: profile?.full_name || user.user_metadata?.name || user.email || "Usuário",
+          donorEmail: user.email || "",
         })
       })
 

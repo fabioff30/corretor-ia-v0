@@ -46,6 +46,8 @@ export function DashboardSidebar({ isMobile = false, onNavigate, className }: Da
   const [collapsed, setCollapsed] = useState(false)
 
   const isAdmin = profile?.plan_type === 'admin'
+  const normalizedPlanType: 'free' | 'pro' | 'admin' =
+    isAdmin ? 'admin' : profile?.plan_type === 'pro' || profile?.plan_type === 'lifetime' ? 'pro' : 'free'
 
   const navItems: NavItem[] = [
     {
@@ -113,7 +115,7 @@ export function DashboardSidebar({ isMobile = false, onNavigate, className }: Da
     },
   ]
 
-  const isPremium = profile?.plan_type === 'pro' || profile?.plan_type === 'admin'
+  const isPremium = normalizedPlanType === 'pro' || normalizedPlanType === 'admin'
 
   // Combinar todos os items baseado no tipo de usuário
   let allItems = [...navItems]
@@ -184,7 +186,7 @@ export function DashboardSidebar({ isMobile = false, onNavigate, className }: Da
       {/* Plano Badge */}
       {!collapsed && profile && (
         <div className="border-b px-4 py-3">
-          <PlanBadge planType={profile.plan_type} className="w-full justify-center" />
+          <PlanBadge planType={normalizedPlanType} className="w-full justify-center" />
         </div>
       )}
 

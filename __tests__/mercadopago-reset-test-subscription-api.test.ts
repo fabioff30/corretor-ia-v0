@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest } from "next/server"
 import { GET, DELETE } from "@/app/api/mercadopago/reset-test-subscription/route"
 

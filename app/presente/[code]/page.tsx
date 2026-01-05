@@ -17,7 +17,7 @@ export default function GiftRedeemPage() {
   const params = useParams()
   const router = useRouter()
   const code = params.code as string
-  const { user, isLoading: isUserLoading } = useUser()
+  const { user, loading: isUserLoading } = useUser()
   const { toast } = useToast()
 
   const [isVerifying, setIsVerifying] = useState(true)

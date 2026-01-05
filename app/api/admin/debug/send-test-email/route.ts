@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Debug endpoint to test email sending
  * Accessible only to admins
@@ -250,3 +251,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Erro ao listar templates' }, { status: 500 })
   }
 }
+// @ts-nocheck

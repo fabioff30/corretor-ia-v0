@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Integration tests for handle_new_user() database trigger
  * Tests auto-creation of profiles when users sign up

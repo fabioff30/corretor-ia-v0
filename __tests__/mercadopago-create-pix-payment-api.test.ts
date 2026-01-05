@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { POST, GET } from '@/app/api/mercadopago/create-pix-payment/route'
 

@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { stripe, getOrCreateStripeCustomer, STRIPE_PRICES } from '@/lib/stripe/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -134,8 +135,12 @@ async function getPixDetails(paymentIntentId: string) {
     )
 
     // Get the next action which contains PIX details
-    if (paymentIntent.next_action?.type === 'display_pix_qr_code') {
-      const pixData = paymentIntent.next_action.display_pix_qr_code
+    const nextAction = paymentIntent.next_action as (Stripe.PaymentIntent.NextAction & {
+      display_pix_qr_code?: { qr_code: string; text: string }
+    }) | null
+
+    if (nextAction?.type === 'display_pix_qr_code' && nextAction.display_pix_qr_code) {
+      const pixData = nextAction.display_pix_qr_code
       return {
         qrCode: pixData.qr_code, // Base64 encoded QR code image
         pixCode: pixData.text, // PIX copy-paste code

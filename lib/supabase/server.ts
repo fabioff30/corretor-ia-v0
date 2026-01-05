@@ -3,6 +3,7 @@
  */
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
@@ -57,7 +58,7 @@ function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
   }
 }
 
-export async function createClient(cookieStore?: CookieStore) {
+export async function createClient(cookieStore?: CookieStore): Promise<SupabaseClient<Database>> {
   const store = cookieStore ?? (await cookies())
 
   return createServerClient<Database>(
@@ -99,7 +100,7 @@ export { withNormalizedCookieOptions }
  * Cliente Supabase com service_role key para operações administrativas
  * ⚠️ USAR APENAS NO SERVIDOR - NUNCA NO CLIENTE
  */
-export function createServiceRoleClient() {
+export function createServiceRoleClient(): SupabaseClient<Database> {
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,

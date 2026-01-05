@@ -3,6 +3,7 @@
  */
 
 import type { GiftPlanId } from './config'
+export type { GiftPlanId } from './config'
 
 // ============================================================================
 // Database Types

@@ -7,7 +7,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { sendGTMEvent } from "@/utils/gtm-helper"
 import { usePathname } from "next/navigation"
-import { useFeatureAccess } from "@/hooks/use-subscription"
+import { useSubscription } from "@/hooks/use-subscription"
 
 // Define the banner interface
 interface Banner {
@@ -35,14 +35,14 @@ export function AdBanner({ position = "bottom", variant = "standard", onClose, f
   const [currentBannerIndex] = useState(() => Math.floor(Math.random() * 4)) // Seleciona um banner aleatório na inicialização
   const pathname = usePathname()
   const [shouldShow, setShouldShow] = useState(true)
-  const { canAvoidAds } = useFeatureAccess()
+  const { isPremium } = useSubscription()
   // Adicionar uma ref para o banner
   const bannerRef = useRef<HTMLDivElement>(null)
   // Adicionar um novo estado para rastrear se o banner foi fechado recentemente
   const [wasRecentlyClosed, setWasRecentlyClosed] = useState(false)
 
   // Não mostrar banner para usuários premium
-  if (canAvoidAds) return null
+  if (isPremium) return null
 
   // Define the banners with their respective UTM parameters
   const banners: Banner[] = [

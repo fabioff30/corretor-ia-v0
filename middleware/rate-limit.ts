@@ -17,7 +17,7 @@ const memoryStore = new Map<string, RateLimitEntry>()
 const CLEANUP_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
 // Periodic cleanup of expired entries
-if (typeof setInterval !== 'undefined') {
+if (typeof setInterval !== 'undefined' && process.env.NODE_ENV !== 'test') {
   setInterval(() => {
     const now = Date.now()
     for (const [key, entry] of memoryStore.entries()) {
@@ -114,7 +114,7 @@ async function redisRateLimit(key: string, limit: number, windowMs: number): Pro
 export async function rateLimiter(req: NextRequest) {
   try {
     // Get client identifier
-    const ip = req.ip || req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown"
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown"
     const userAgent = req.headers.get("user-agent") || ""
     
     // Create composite key for better tracking
