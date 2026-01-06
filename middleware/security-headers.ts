@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 /**
  * Security Headers Middleware
  * Implements Content Security Policy and other security headers
+ *
+ * CSP Reference:
+ * - Google GTM/GA4: https://developers.google.com/tag-platform/security/guides/csp
+ * - Stripe: https://docs.stripe.com/security/guide
+ * - Mercado Pago: https://github.com/mercadopago/sdk-js/discussions/16
  */
 
 export function securityHeadersMiddleware(request: NextRequest) {
@@ -15,8 +20,11 @@ export function securityHeadersMiddleware(request: NextRequest) {
   // Content Security Policy (production-hardened)
   const csp = [
     "default-src 'self'",
+
+    // Scripts - all JavaScript sources
     [
       "script-src 'self' 'unsafe-inline'",
+      // Google Tag Manager & Analytics
       "https://www.googletagmanager.com",
       "https://*.googletagmanager.com",
       "https://www.google-analytics.com",
@@ -24,17 +32,42 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://analytics.google.com",
       "https://ssl.google-analytics.com",
       "https://www.google.com",
+      "https://www.google.com.br",
+      // Google AdSense
+      "https://pagead2.googlesyndication.com",
+      "https://*.googlesyndication.com",
+      "https://adservice.google.com",
+      "https://adservice.google.com.br",
+      // Google Ads / DoubleClick (for GA4 Signals & remarketing)
+      "https://*.doubleclick.net",
+      "https://www.googleadservices.com",
+      // Meta/Facebook Pixel
       "https://connect.facebook.net",
+      // Microsoft Clarity
       "https://www.clarity.ms",
+      "https://*.clarity.ms",
+      // Cloudflare
       "https://static.cloudflareinsights.com",
-      "https://js.stripe.com"
+      // Stripe
+      "https://js.stripe.com",
+      "https://*.js.stripe.com",
+      "https://checkout.stripe.com",
+      "https://connect-js.stripe.com",
+      // Mercado Pago
+      "https://*.mercadopago.com",
+      "https://*.mlstatic.com",
     ].join(' '),
+
+    // Styles
     [
       "style-src 'self' 'unsafe-inline'",
-      "https://fonts.googleapis.com"
+      "https://fonts.googleapis.com",
     ].join(' '),
+
+    // Images
     [
       "img-src 'self' data: blob:",
+      // Google Analytics & GTM
       "https://www.google-analytics.com",
       "https://*.google-analytics.com",
       "https://analytics.google.com",
@@ -42,20 +75,43 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://www.googletagmanager.com",
       "https://*.googletagmanager.com",
       "https://www.google.com",
+      "https://www.google.com.br",
+      // Google Ads / DoubleClick
+      "https://*.doubleclick.net",
       "https://stats.g.doubleclick.net",
+      "https://*.googlesyndication.com",
+      "https://pagead2.googlesyndication.com",
+      "https://www.googleadservices.com",
+      // Meta/Facebook
       "https://connect.facebook.net",
-      "https://www.clarity.ms"
+      "https://www.facebook.com",
+      // Microsoft Clarity
+      "https://www.clarity.ms",
+      "https://*.clarity.ms",
+      "https://*.bing.com",
+      // Stripe
+      "https://*.stripe.com",
+      // Mercado Pago
+      "https://*.mercadopago.com",
+      "https://*.mlstatic.com",
     ].join(' '),
+
+    // Fonts
     [
       "font-src 'self' data:",
-      "https://fonts.gstatic.com"
+      "https://fonts.gstatic.com",
     ].join(' '),
+
+    // API/XHR connections
     [
       "connect-src 'self'",
+      // Supabase
       `https://${supabaseHost}`,
       "wss://*.supabase.co",
       "wss://*.supabase.in",
+      // OpenAI
       "https://api.openai.com",
+      // Upstash Redis
       "https://*.upstash.io",
       "wss://*.upstash.io",
       // Google Analytics & GTM
@@ -66,28 +122,76 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://region1.google-analytics.com",
       "https://www.googletagmanager.com",
       "https://*.googletagmanager.com",
+      // Google Ads / DoubleClick (for GA4 Signals)
+      "https://*.doubleclick.net",
       "https://stats.g.doubleclick.net",
-      // Facebook & Others
+      "https://pagead2.googlesyndication.com",
+      "https://*.googlesyndication.com",
+      "https://www.google.com",
+      "https://www.google.com.br",
+      // Meta/Facebook
       "https://connect.facebook.net",
+      "https://www.facebook.com",
+      // Microsoft Clarity
       "https://www.clarity.ms",
-      // Payment providers
+      "https://*.clarity.ms",
+      // Stripe
       "https://api.stripe.com",
       "https://js.stripe.com",
+      "https://*.stripe.com",
+      "https://checkout.stripe.com",
+      "https://connect-js.stripe.com",
+      // Mercado Pago
       "https://api.mercadopago.com",
-      "https://*.stripe.com"
+      "https://*.mercadopago.com",
+      "https://*.mlstatic.com",
     ].join(' '),
+
+    // Iframes
     [
       "frame-src 'self'",
+      // Google Tag Manager
+      "https://www.googletagmanager.com",
+      // Google Ads
+      "https://*.doubleclick.net",
+      "https://googleads.g.doubleclick.net",
+      "https://tpc.googlesyndication.com",
+      "https://*.googlesyndication.com",
+      // Meta/Facebook
+      "https://connect.facebook.net",
+      "https://www.facebook.com",
+      // Stripe
+      "https://js.stripe.com",
+      "https://*.js.stripe.com",
+      "https://hooks.stripe.com",
+      "https://checkout.stripe.com",
+      "https://connect-js.stripe.com",
+      // Mercado Pago
+      "https://*.mercadopago.com",
+    ].join(' '),
+
+    // Workers (Service Workers, Web Workers)
+    "worker-src 'self' blob:",
+
+    // Objects (Flash, Java - block all)
+    "object-src 'none'",
+
+    // Base URI
+    "base-uri 'self'",
+
+    // Form submissions
+    [
+      "form-action 'self'",
       "https://js.stripe.com",
       "https://hooks.stripe.com",
-      "https://www.googletagmanager.com",
-      "https://connect.facebook.net"
+      "https://checkout.stripe.com",
+      "https://*.mercadopago.com",
     ].join(' '),
-    "worker-src 'self' blob:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self' https://js.stripe.com https://hooks.stripe.com",
+
+    // Frame ancestors (who can embed us)
     "frame-ancestors 'self'",
+
+    // Upgrade HTTP to HTTPS in production
     ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
   ].join('; ')
 
@@ -117,10 +221,10 @@ export function developmentCSP(request: NextRequest) {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
-    "frame-src 'self'",
+    "connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* https:",
+    "frame-src 'self' https:",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'"
