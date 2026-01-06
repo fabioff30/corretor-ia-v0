@@ -13,8 +13,8 @@ import type { Database } from '@/types/supabase'
 import { createClient } from '@/lib/supabase/server'
 
 function getSafeRedirectUrl(next: string | null, origin: string): URL {
-  // Redirecionar para /premium por padrão para evitar open redirect
-  const fallback = new URL("/premium", origin)
+  // Redirecionar para /dashboard por padrão após login
+  const fallback = new URL("/dashboard", origin)
 
   if (!next) {
     return fallback

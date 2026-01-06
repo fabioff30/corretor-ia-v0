@@ -4,13 +4,13 @@
 
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
 import { StatsCard } from '@/components/dashboard/StatsCard'
-import { UsageLimitCard } from '@/components/dashboard/UsageLimitCard'
 import { UpgradeBanner } from '@/components/dashboard/UpgradeBanner'
 import { PendingPixActivationBanner } from '@/components/dashboard/PendingPixActivationBanner'
+import { FreeVsProComparison } from '@/components/dashboard/FreeVsProComparison'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -19,7 +19,7 @@ import { useUsageLimits } from '@/hooks/use-usage-limits'
 import { usePendingPixPayment } from '@/hooks/use-pending-pix-payment'
 import { usePurchaseTracking } from '@/hooks/use-purchase-tracking'
 import { useToast } from '@/hooks/use-toast'
-import { FileText, Wand2, Sparkles, TrendingUp, Loader2 } from 'lucide-react'
+import { FileText, Wand2, Sparkles, TrendingUp, Loader2, Crown, Check } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -57,93 +57,44 @@ function DashboardContent() {
           </Alert>
         )}
 
-        {/* Estatísticas Rápidas */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {loading ? (
-            <>
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-            </>
-          ) : (
-            <>
-              <StatsCard
-                title="Correções"
-                value={stats?.corrections_last_30_days || 0}
-                description={
-                  isPremium
-                    ? `Últimos 30 dias · ${stats?.corrections_total || 0} no total`
-                    : `Últimos 30 dias · ${stats?.corrections_total || 0} no total`
-                }
-                icon={FileText}
-              />
-
-              <StatsCard
-                title="Reescritas"
-                value={stats?.rewrites_last_30_days || 0}
-                description={
-                  isPremium
-                    ? `Últimos 30 dias · ${stats?.rewrites_total || 0} no total`
-                    : `Últimos 30 dias · ${stats?.rewrites_total || 0} no total`
-                }
-                icon={Wand2}
-              />
-
-              <StatsCard
-                title="Análises de IA"
-                value={stats?.ai_analyses_last_30_days || 0}
-                description={
-                  isPremium
-                    ? `Últimos 30 dias · ${stats?.ai_analyses_total || 0} no total`
-                    : `Últimos 30 dias · ${stats?.ai_analyses_total || 0} no total`
-                }
-                icon={Sparkles}
-              />
-
-              <StatsCard
-                title="Limite de Caracteres"
-                value={maxCharacters === -1 ? '∞' : maxCharacters.toLocaleString()}
-                description={isPremium ? '20.000 por correção' : 'Por correção'}
-                icon={TrendingUp}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Limites de Uso Detalhados - Apenas para Free */}
-        {!isPremium && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Estatísticas Rápidas - Apenas para Premium */}
+        {isPremium && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {loading ? (
               <>
-                <Skeleton className="h-48" />
-                <Skeleton className="h-48" />
-                <Skeleton className="h-48" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
               </>
             ) : (
               <>
-                <UsageLimitCard
+                <StatsCard
                   title="Correções"
+                  value={stats?.corrections_last_30_days || 0}
+                  description={`Últimos 30 dias · ${stats?.corrections_total || 0} no total`}
                   icon={FileText}
-                  current={stats?.corrections_used || 0}
-                  limit={(stats?.corrections_used || 0) + (stats?.corrections_remaining || 0)}
-                  unit="correções"
                 />
 
-                <UsageLimitCard
+                <StatsCard
                   title="Reescritas"
+                  value={stats?.rewrites_last_30_days || 0}
+                  description={`Últimos 30 dias · ${stats?.rewrites_total || 0} no total`}
                   icon={Wand2}
-                  current={stats?.rewrites_used || 0}
-                  limit={(stats?.rewrites_used || 0) + (stats?.rewrites_remaining || 0)}
-                  unit="reescritas"
                 />
 
-                <UsageLimitCard
+                <StatsCard
                   title="Análises de IA"
+                  value={stats?.ai_analyses_last_30_days || 0}
+                  description={`Últimos 30 dias · ${stats?.ai_analyses_total || 0} no total`}
                   icon={Sparkles}
-                  current={stats?.ai_analyses_used || 0}
-                  limit={(stats?.ai_analyses_used || 0) + (stats?.ai_analyses_remaining || 0)}
-                  unit="análises"
+                />
+
+                <StatsCard
+                  title="Limite de Caracteres"
+                  value="∞"
+                  description="20.000 por correção"
+                  icon={TrendingUp}
                 />
               </>
             )}
@@ -175,82 +126,93 @@ function DashboardContent() {
               Comece a usar o CorretorIA agora mesmo
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Button asChild variant="outline" className="h-24 flex-col gap-2">
+          <CardContent className="space-y-4">
+            {/* Botão principal destacado no mobile */}
+            <Button
+              asChild
+              className="w-full h-20 flex-col gap-1.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg sm:hidden"
+            >
               <Link href="/">
-                <FileText className="h-6 w-6" />
-                <span className="font-medium">Nova Correção</span>
-                <span className="text-xs text-muted-foreground">
-                  Corrigir texto
+                <FileText className="h-7 w-7" />
+                <span className="font-bold text-base">Nova Correção</span>
+                <span className="text-xs opacity-90">
+                  Corrigir texto agora
                 </span>
               </Link>
             </Button>
 
-            <Button asChild variant="outline" className="h-24 flex-col gap-2">
-              <Link href="/reescrever-texto">
-                <Wand2 className="h-6 w-6" />
-                <span className="font-medium">Reescrever Texto</span>
-                <span className="text-xs text-muted-foreground">
-                  Mudar estilo
-                </span>
-              </Link>
-            </Button>
+            {/* Grid para desktop e tablet */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Nova Correção - versão desktop */}
+              <Button asChild variant="outline" className="h-24 flex-col gap-2 hidden sm:flex">
+                <Link href="/">
+                  <FileText className="h-6 w-6" />
+                  <span className="font-medium">Nova Correção</span>
+                  <span className="text-xs text-muted-foreground">
+                    Corrigir texto
+                  </span>
+                </Link>
+              </Button>
 
-            <Button asChild variant="outline" className="h-24 flex-col gap-2">
-              <Link href="/detector-ia">
-                <Sparkles className="h-6 w-6" />
-                <span className="font-medium">Detector de IA</span>
-                <span className="text-xs text-muted-foreground">
-                  Analisar texto
-                </span>
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+              <Button asChild variant="outline" className="h-24 flex-col gap-2">
+                <Link href="/reescrever-texto">
+                  <Wand2 className="h-6 w-6" />
+                  <span className="font-medium">Reescrever Texto</span>
+                  <span className="text-xs text-muted-foreground">
+                    Mudar estilo
+                  </span>
+                </Link>
+              </Button>
 
-        {/* Informações do Plano */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Seu Plano</CardTitle>
-            <CardDescription>
-              {isPremium
-                ? 'Você está no plano Pro com acesso ilimitado'
-                : 'Você está no plano gratuito'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Plano Atual:</span>
-                <span className="font-bold">
-                  {profile?.plan_type === 'admin' ? 'ADMIN' : profile?.plan_type === 'pro' ? 'PRO' : 'GRATUITO'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Limite de Caracteres:</span>
-                <span className="font-medium">
-                  {maxCharacters === -1 ? 'Ilimitado' : `${maxCharacters.toLocaleString()} caracteres`}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Anúncios:</span>
-                <span className="font-medium">
-                  {showAds ? 'Com anúncios' : 'Sem anúncios'}
-                </span>
-              </div>
-
-              {!isPremium && (
-                <Button asChild className="w-full mt-4">
-                  <Link href="/dashboard/upgrade">
-                    Fazer Upgrade para Pro
-                  </Link>
-                </Button>
-              )}
+              <Button asChild variant="outline" className="h-24 flex-col gap-2">
+                <Link href="/detector-ia">
+                  <Sparkles className="h-6 w-6" />
+                  <span className="font-medium">Detector de IA</span>
+                  <span className="text-xs text-muted-foreground">
+                    Analisar texto
+                  </span>
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Comparação de Planos ou Informações do Plano Premium */}
+        {isPremium ? (
+          <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-500" />
+                Seu Plano Premium
+              </CardTitle>
+              <CardDescription>
+                Você tem acesso ilimitado a todos os recursos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Correções ilimitadas</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Até 20.000 caracteres por texto</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Sem anúncios</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Processamento prioritário</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <FreeVsProComparison />
+        )}
       </div>
     </DashboardLayout>
   )
