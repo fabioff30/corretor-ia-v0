@@ -140,17 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       lastAuthEventRef.current = { event, sessionId: sessionIdentifier }
-      console.log('Auth state changed:', event, session?.user?.email)
 
-      // Track login event
-      if (event === 'SIGNED_IN' && session?.user) {
-        sendGTMEvent('login', {
-          method: session.user.app_metadata?.provider || 'unknown',
-          user_id: session.user.id,
-        })
-      }
-
-      // Track logout event
+      // Track logout event (no user verification needed)
       if (event === 'SIGNED_OUT') {
         sendGTMEvent('logout', {
           method: 'manual',
@@ -161,7 +152,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true)
 
       if (session?.user) {
-        const userData = await fetchUserWithSubscription(session.user)
+        // ✅ SECURITY: Revalidate user with Supabase server instead of trusting session.user
+        // session.user comes from storage (cookies) and could be tampered with
+        // getUser() contacts the Auth server to verify authenticity
+        const { data: { user: verifiedUser }, error: verifyError } = await supabase.auth.getUser()
+
+        if (verifyError || !verifiedUser) {
+          console.warn('[Auth] Failed to verify user from session:', verifyError?.message)
+          setUser(null)
+          setLoading(false)
+          return
+        }
+
+        // ✅ Track login event AFTER verification with server
+        // Use verifiedUser (from getUser()) instead of session.user
+        if (event === 'SIGNED_IN') {
+          console.log('Auth state changed:', event, verifiedUser.email)
+          sendGTMEvent('login', {
+            method: verifiedUser.app_metadata?.provider || 'unknown',
+            user_id: verifiedUser.id,
+          })
+        }
+
+        const userData = await fetchUserWithSubscription(verifiedUser)
         setUser(userData)
 
         // After successful login/signup, try to link any pending guest payments (PIX + Stripe)
@@ -183,7 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   console.log('[Auth] Guest payment(s) linked successfully:', data.items)
 
                   // Refresh user data to get updated subscription status
-                  const updatedUserData = await fetchUserWithSubscription(session.user)
+                  // ✅ Use verifiedUser (from getUser()) instead of session.user
+                  const updatedUserData = await fetchUserWithSubscription(verifiedUser)
                   setUser(updatedUserData)
 
                   console.log('[Auth] Premium subscription activated from guest payment!')

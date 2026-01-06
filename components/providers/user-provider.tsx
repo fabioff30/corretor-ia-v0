@@ -212,21 +212,37 @@ export function UserProvider({ children, initialUser = null, initialProfile = nu
 
       if (event === 'SIGNED_IN' && session) {
         refreshFailureCount = 0
-
-        // Track login event - GA4 recommended event
-        // https://developers.google.com/analytics/devguides/collection/ga4/reference/events#login
-        const provider = session.user?.app_metadata?.provider || 'email'
-        sendGA4Event('login', {
-          method: provider === 'email' ? 'email' : provider,
-        })
       }
 
-      const nextUser = session?.user ?? null
-      setUser(nextUser)
+      // ✅ SECURITY: Always verify user with Supabase server instead of trusting session.user
+      // session.user comes from storage (cookies) and could be tampered with
+      // getUser() contacts the Auth server to verify authenticity
+      if (session?.user) {
+        const { data: { user: verifiedUser }, error: verifyError } = await supabase.auth.getUser()
 
-      if (nextUser) {
-        await fetchProfile(nextUser.id)
+        if (verifyError || !verifiedUser) {
+          console.warn('[UserProvider] Failed to verify user from session:', verifyError?.message)
+          setUser(null)
+          setProfile(null)
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user-plan-type')
+          }
+          return
+        }
+
+        // Track login event AFTER verification with server
+        // https://developers.google.com/analytics/devguides/collection/ga4/reference/events#login
+        if (event === 'SIGNED_IN') {
+          const provider = verifiedUser.app_metadata?.provider || 'email'
+          sendGA4Event('login', {
+            method: provider === 'email' ? 'email' : provider,
+          })
+        }
+
+        setUser(verifiedUser)
+        await fetchProfile(verifiedUser.id)
       } else {
+        setUser(null)
         setProfile(null)
         // Limpar plan-type ao fazer logout ou sessão ausente
         if (typeof window !== 'undefined') {

@@ -31,14 +31,16 @@ export default function ResetPasswordPage() {
     const setupAuth = async () => {
       try {
         // Forçar processamento do hash/query params do Supabase
+        // This triggers URL hash processing for password recovery links
         await supabase.auth.getSession()
 
         // Aguardar processamento da URL
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        // Verificar se há sessão ativa
-        const { data } = await supabase.auth.getSession()
-        if (mounted && data.session) {
+        // ✅ SECURITY: Use getUser() to verify session authenticity with server
+        // getSession() reads from cookies which could be tampered with
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (mounted && user && !error) {
           setIsReady(true)
         }
       } catch (error) {
