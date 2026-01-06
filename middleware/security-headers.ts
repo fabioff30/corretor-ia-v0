@@ -18,7 +18,12 @@ export function securityHeadersMiddleware(request: NextRequest) {
     [
       "script-src 'self' 'unsafe-inline'",
       "https://www.googletagmanager.com",
+      "https://*.googletagmanager.com",
       "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://analytics.google.com",
+      "https://ssl.google-analytics.com",
+      "https://www.google.com",
       "https://connect.facebook.net",
       "https://www.clarity.ms",
       "https://static.cloudflareinsights.com",
@@ -31,7 +36,13 @@ export function securityHeadersMiddleware(request: NextRequest) {
     [
       "img-src 'self' data: blob:",
       "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://analytics.google.com",
+      "https://ssl.google-analytics.com",
       "https://www.googletagmanager.com",
+      "https://*.googletagmanager.com",
+      "https://www.google.com",
+      "https://stats.g.doubleclick.net",
       "https://connect.facebook.net",
       "https://www.clarity.ms"
     ].join(' '),
@@ -47,10 +58,19 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://api.openai.com",
       "https://*.upstash.io",
       "wss://*.upstash.io",
+      // Google Analytics & GTM
       "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://analytics.google.com",
+      "https://ssl.google-analytics.com",
+      "https://region1.google-analytics.com",
       "https://www.googletagmanager.com",
+      "https://*.googletagmanager.com",
+      "https://stats.g.doubleclick.net",
+      // Facebook & Others
       "https://connect.facebook.net",
       "https://www.clarity.ms",
+      // Payment providers
       "https://api.stripe.com",
       "https://js.stripe.com",
       "https://api.mercadopago.com",
