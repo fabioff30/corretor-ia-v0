@@ -178,6 +178,9 @@ export function securityHeadersMiddleware(request: NextRequest) {
     // Iframes
     [
       "frame-src 'self'",
+      // Own domain (for www/non-www compatibility)
+      "https://corretordetextoonline.com.br",
+      "https://www.corretordetextoonline.com.br",
       // Google Tag Manager
       "https://www.googletagmanager.com",
       // Google Ads
