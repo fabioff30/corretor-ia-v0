@@ -19,7 +19,7 @@ import { useUsageLimits } from '@/hooks/use-usage-limits'
 import { usePendingPixPayment } from '@/hooks/use-pending-pix-payment'
 import { usePurchaseTracking } from '@/hooks/use-purchase-tracking'
 import { useToast } from '@/hooks/use-toast'
-import { FileText, Wand2, Sparkles, TrendingUp, Loader2, Crown, Check } from 'lucide-react'
+import { FileText, Wand2, Sparkles, TrendingUp, Loader2, Crown, Check, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -142,7 +142,7 @@ function DashboardContent() {
             </Button>
 
             {/* Grid para desktop e tablet */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Nova Correção - versão desktop */}
               <Button asChild variant="outline" className="h-24 flex-col gap-2 hidden sm:flex">
                 <Link href="/">
@@ -170,6 +170,20 @@ function DashboardContent() {
                   <span className="font-medium">Detector de IA</span>
                   <span className="text-xs text-muted-foreground">
                     Analisar texto
+                  </span>
+                </Link>
+              </Button>
+
+              {/* Julinho - Assistente de WhatsApp */}
+              <Button
+                asChild
+                className="h-24 flex-col gap-2 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md"
+              >
+                <Link href="/chat/julinho">
+                  <MessageCircle className="h-6 w-6" />
+                  <span className="font-medium">Julinho</span>
+                  <span className="text-xs opacity-90">
+                    Assistente WhatsApp
                   </span>
                 </Link>
               </Button>
