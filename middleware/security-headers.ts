@@ -151,11 +151,12 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Own domain (for www/non-www compatibility)
       "https://corretordetextoonline.com.br",
       "https://www.corretordetextoonline.com.br",
-      // Google (all services: GTM, Ads, Sign-In, Funding Choices, etc.)
+      // Google (all services: GTM, Ads, Sign-In, Funding Choices, SODAR, etc.)
       "https://*.google.com",
       "https://*.googletagmanager.com",
       "https://*.googlesyndication.com",
       "https://*.doubleclick.net",
+      "https://*.adtrafficquality.google",
       "https://accounts.google.com",
       // Meta/Facebook
       "https://*.facebook.com",
