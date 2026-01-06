@@ -33,8 +33,8 @@ function LoginPageContent() {
     password: '',
   })
 
-  // Get redirect URL from query params
-  const redirectUrl = searchParams.get('redirect') || '/'
+  // Get redirect URL from query params (default to dashboard)
+  const redirectUrl = searchParams.get('redirect') || '/dashboard'
 
   // Redirecionar se ja estiver autenticado
   useEffect(() => {
