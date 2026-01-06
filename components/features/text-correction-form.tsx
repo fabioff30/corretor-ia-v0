@@ -73,6 +73,9 @@ import { FileToTextUploader } from "@/components/file-to-text-uploader"
 // Importar modal de limite de caracteres
 import { CharacterLimitModal } from "@/components/premium/character-limit-modal"
 
+// Importar loading overlay (desktop only)
+import LoadingOverlay from "@/components/loading-overlay"
+
 // Tipos globais para window.gtag estão em types/global.d.ts
 
 interface TextCorrectionFormProps {
@@ -1451,7 +1454,13 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                 </span>
               )}
             </div>
-            <div className="relative group">
+            <div className={`relative group ${isLoading && !isMobile ? 'loading-blur' : ''}`}>
+              {/* Loading Overlay - Desktop Only */}
+              {isLoading && !isMobile && (
+                <LoadingOverlay
+                  message={operationMode === "correct" ? "Corrigindo texto..." : "Reescrevendo texto..."}
+                />
+              )}
               <Textarea
                 placeholder={
                   !user && originalText === ""
