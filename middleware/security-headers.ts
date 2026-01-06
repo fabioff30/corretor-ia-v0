@@ -216,17 +216,45 @@ export function securityHeadersMiddleware(request: NextRequest) {
 
 /**
  * Relaxed CSP for development environment
+ * Allows all third-party services needed for analytics, ads, and payments
  */
 export function developmentCSP(request: NextRequest) {
   const response = NextResponse.next()
 
   const devCsp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Scripts - allow all external services in dev
+    [
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "https://*.google.com",
+      "https://*.googletagmanager.com",
+      "https://*.google-analytics.com",
+      "https://*.googlesyndication.com",
+      "https://*.googleadservices.com",
+      "https://*.doubleclick.net",
+      "https://connect.facebook.net",
+      "https://*.clarity.ms",
+      "https://*.bing.com",
+      "https://*.stripe.com",
+      "https://*.mercadopago.com",
+      "https://*.mlstatic.com",
+      "https://*.brevo.com",
+      "https://sibautomation.com",
+    ].join(' '),
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.google.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* https:",
+    // Connect - allow WebSocket for Supabase and all HTTPS
+    [
+      "connect-src 'self'",
+      "http://localhost:*",
+      "https://localhost:*",
+      "ws://localhost:*",
+      "wss://localhost:*",
+      "https:",
+      "wss://*.supabase.co",
+      "wss://*.supabase.in",
+    ].join(' '),
     "frame-src 'self' https:",
     "worker-src 'self' blob:",
     "object-src 'none'",
