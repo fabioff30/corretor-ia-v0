@@ -6,8 +6,12 @@ import { NextRequest, NextResponse } from 'next/server'
  *
  * CSP Reference:
  * - Google GTM/GA4: https://developers.google.com/tag-platform/security/guides/csp
+ * - Google Funding Choices: https://developers.google.com/funding-choices/csp
  * - Stripe: https://docs.stripe.com/security/guide
  * - Mercado Pago: https://github.com/mercadopago/sdk-js/discussions/16
+ * - Meta CAPI Gateway: https://developers.facebook.com/docs/marketing-api/conversions-api/guides/gateway
+ * - Microsoft Clarity/Bing: https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp
+ * - Brevo: https://developers.brevo.com/docs/getting-started
  */
 
 export function securityHeadersMiddleware(request: NextRequest) {
@@ -41,11 +45,14 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Google Ads / DoubleClick (for GA4 Signals & remarketing)
       "https://*.doubleclick.net",
       "https://www.googleadservices.com",
+      // Google Funding Choices (consent management)
+      "https://fundingchoicesmessages.google.com",
       // Meta/Facebook Pixel
       "https://connect.facebook.net",
-      // Microsoft Clarity
+      // Microsoft Clarity & Bing Ads
       "https://www.clarity.ms",
       "https://*.clarity.ms",
+      "https://bat.bing.com",
       // Cloudflare
       "https://static.cloudflareinsights.com",
       // Stripe
@@ -56,6 +63,9 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Mercado Pago
       "https://*.mercadopago.com",
       "https://*.mlstatic.com",
+      // Brevo (email marketing via GTM)
+      "https://cdn.brevo.com",
+      "https://*.brevo.com",
     ].join(' '),
 
     // Styles
@@ -129,12 +139,19 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.googlesyndication.com",
       "https://www.google.com",
       "https://www.google.com.br",
-      // Meta/Facebook
+      // Google Funding Choices
+      "https://fundingchoicesmessages.google.com",
+      // Meta/Facebook Pixel & CAPI Gateway
       "https://connect.facebook.net",
       "https://www.facebook.com",
-      // Microsoft Clarity
+      "https://*.facebook.com",
+      "https://*.run.app",                    // Meta CAPI Gateway on Google Cloud Run
+      "https://*.conversionsapigateway.com",  // Meta CAPI Gateway
+      // Microsoft Clarity & Bing Ads
       "https://www.clarity.ms",
       "https://*.clarity.ms",
+      "https://bat.bing.com",
+      "https://*.bing.com",
       // Stripe
       "https://api.stripe.com",
       "https://js.stripe.com",
@@ -145,6 +162,9 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://api.mercadopago.com",
       "https://*.mercadopago.com",
       "https://*.mlstatic.com",
+      // Brevo (email marketing)
+      "https://*.brevo.com",
+      "https://*.sendinblue.com",
     ].join(' '),
 
     // Iframes
@@ -157,6 +177,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://googleads.g.doubleclick.net",
       "https://tpc.googlesyndication.com",
       "https://*.googlesyndication.com",
+      // Google Funding Choices (consent dialogs)
+      "https://fundingchoicesmessages.google.com",
       // Meta/Facebook
       "https://connect.facebook.net",
       "https://www.facebook.com",
