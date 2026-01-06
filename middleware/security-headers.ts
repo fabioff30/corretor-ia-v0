@@ -149,6 +149,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://www.google.com.br",
       // Google Funding Choices
       "https://fundingchoicesmessages.google.com",
+      // Google Ads Traffic Quality (SODAR)
+      "https://*.adtrafficquality.google",
       // Meta/Facebook Pixel & CAPI Gateway
       "https://connect.facebook.net",
       "https://www.facebook.com",
