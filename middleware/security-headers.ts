@@ -81,6 +81,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
     // Images
     [
       "img-src 'self' data: blob:",
+      // Own blog subdomain
+      "https://blog.corretordetextoonline.com.br",
       // Google Analytics & GTM
       "https://www.google-analytics.com",
       "https://*.google-analytics.com",
@@ -119,6 +121,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
     // API/XHR connections
     [
       "connect-src 'self'",
+      // Own blog subdomain
+      "https://blog.corretordetextoonline.com.br",
       // Supabase
       `https://${supabaseHost}`,
       "wss://*.supabase.co",
