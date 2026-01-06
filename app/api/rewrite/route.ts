@@ -342,6 +342,32 @@ export async function POST(request: NextRequest) {
       apiResponse.headers.set("CF-Ray", cfRay)
     }
 
+    // Send TextRewritten event to Meta CAPI (non-blocking)
+    try {
+      const { sendCustomEvent } = await import('@/lib/meta-capi')
+      const fbc = request.cookies.get('_fbc')?.value
+      const fbp = request.cookies.get('_fbp')?.value
+
+      sendCustomEvent('TextRewritten', {
+        eventId: `textrewritten_${requestId}`,
+        eventSourceUrl: request.headers.get('referer') || 'https://www.corretordetextoonline.com.br',
+        userData: {
+          userId: currentUserContext?.user?.id,
+          clientIp: ip !== 'unknown' ? ip : undefined,
+          clientUserAgent: request.headers.get('user-agent') || undefined,
+          fbc: fbc || undefined,
+          fbp: fbp || undefined,
+        },
+        customData: {
+          text_length: text.length,
+          style: rewriteStyle,
+          is_premium: isPremium,
+        },
+      }).catch(err => console.error('[CAPI TextRewritten] Error (non-blocking):', err))
+    } catch (capiError) {
+      console.error('[CAPI TextRewritten] Import error (non-blocking):', capiError)
+    }
+
     return apiResponse
   } catch (error) {
     return handleGeneralError(error as Error, requestId, ip, requestBody?.text || "", startTime, "rewrite")

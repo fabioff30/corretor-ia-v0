@@ -19,6 +19,12 @@ interface PixPaymentData {
   isGuest: boolean
 }
 
+interface MetaTrackingData {
+  fbc?: string | null
+  fbp?: string | null
+  eventId?: string
+}
+
 interface UsePixPaymentReturn {
   isLoading: boolean
   error: string | null
@@ -29,7 +35,8 @@ interface UsePixPaymentReturn {
     userEmail?: string,
     guestEmail?: string,
     couponCode?: string,
-    whatsappPhone?: string
+    whatsappPhone?: string,
+    metaTracking?: MetaTrackingData
   ) => Promise<PixPaymentData | null>
   checkPaymentStatus: (paymentId: string) => Promise<boolean>
   reset: () => void
@@ -47,7 +54,8 @@ export function usePixPayment(): UsePixPaymentReturn {
     userEmail?: string,
     guestEmail?: string,
     couponCode?: string,
-    whatsappPhone?: string
+    whatsappPhone?: string,
+    metaTracking?: MetaTrackingData
   ): Promise<PixPaymentData | null> => {
     setIsLoading(true)
     setError(null)
@@ -85,6 +93,10 @@ export function usePixPayment(): UsePixPaymentReturn {
           ...(normalizedGuestEmail && { guestEmail: normalizedGuestEmail }),
           ...(couponCode && { couponCode }),
           ...(whatsappPhone && { whatsappPhone }),
+          // Meta CAPI tracking data for deduplication
+          ...(metaTracking?.fbc && { fbc: metaTracking.fbc }),
+          ...(metaTracking?.fbp && { fbp: metaTracking.fbp }),
+          ...(metaTracking?.eventId && { eventId: metaTracking.eventId }),
         }),
       })
 

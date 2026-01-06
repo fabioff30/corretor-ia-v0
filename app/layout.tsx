@@ -18,6 +18,7 @@ import type { Profile } from "@/types/supabase"
 import { GoogleAnalyticsWrapper } from "@/components/google-analytics-wrapper"
 import { BlackFridayBanner } from "@/components/black-friday/black-friday-banner"
 import { LazyJulinhoAssistant, LazyGoogleOneTap } from "@/components/layout/lazy-components"
+import { PageviewTracker } from "@/components/analytics/pageview-tracker"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -250,6 +251,7 @@ export default async function RootLayout({
             <LazyJulinhoAssistant />
             <LazyGoogleOneTap />
             <GoogleAnalyticsWrapper />
+            <PageviewTracker />
             {/* <CleverWebServerLoader /> */}
           </ThemeProvider>
         </UserProvider>      </body>

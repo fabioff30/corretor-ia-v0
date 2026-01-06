@@ -356,7 +356,10 @@ export type Database = {
           amount: number
           created_at: string | null
           email: string | null
+          event_id: string | null
           expires_at: string
+          fbc: string | null
+          fbp: string | null
           id: string
           is_bundle: boolean | null
           julinho_activated: boolean | null
@@ -377,7 +380,10 @@ export type Database = {
           amount: number
           created_at?: string | null
           email?: string | null
+          event_id?: string | null
           expires_at: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           is_bundle?: boolean | null
           julinho_activated?: boolean | null
@@ -398,7 +404,10 @@ export type Database = {
           amount?: number
           created_at?: string | null
           email?: string | null
+          event_id?: string | null
           expires_at?: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           is_bundle?: boolean | null
           julinho_activated?: boolean | null

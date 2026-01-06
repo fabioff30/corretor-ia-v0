@@ -214,7 +214,7 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
       // First, get the payment to check if it's a guest payment
       const { data: pixPaymentCheck, error: pixCheckError } = await supabase
         .from('pix_payments')
-        .select('user_id, email, plan_type, paid_at')
+        .select('user_id, email, plan_type, paid_at, fbc, fbp, event_id')
         .eq('payment_intent_id', payment.id.toString())
         .maybeSingle()
 
@@ -399,6 +399,35 @@ async function handlePaymentEvent(paymentId: string, webhookBody: any) {
         }
       } else {
         console.warn('[MP Webhook Payment] User profile has no email - skipping payment confirmation email')
+      }
+
+      // =============================
+      // SEND PURCHASE EVENT TO META CAPI
+      // =============================
+      try {
+        const { sendPurchaseEvent } = await import('@/lib/meta-capi')
+        const contentId = `premium_${planType}`
+        const contentName = planType === 'monthly' ? 'CorretorIA Premium Mensal' : 'CorretorIA Premium Anual'
+
+        await sendPurchaseEvent({
+          eventId: pixPaymentCheck.event_id || `purchase_${payment.id}_${Date.now()}`,
+          eventSourceUrl: 'https://www.corretordetextoonline.com.br/premium',
+          value: payment.transaction_amount,
+          currency: payment.currency_id || 'BRL',
+          contentId,
+          contentName,
+          userData: {
+            email: userProfile?.email || undefined,
+            userId: userId,
+            fbc: pixPaymentCheck.fbc || undefined,
+            fbp: pixPaymentCheck.fbp || undefined,
+          },
+        })
+
+        console.log('[MP Webhook Payment] Meta CAPI Purchase event sent')
+      } catch (capiError) {
+        // Non-blocking: log error but don't fail the payment
+        console.error('[MP Webhook Payment] Meta CAPI Purchase error (non-blocking):', capiError)
       }
 
       // =============================

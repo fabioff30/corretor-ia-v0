@@ -487,6 +487,33 @@ export async function POST(request: NextRequest) {
       apiResponse.headers.set("CF-Ray", cfRay)
     }
 
+    // Send TextCorrected event to Meta CAPI (non-blocking)
+    try {
+      const { sendCustomEvent } = await import('@/lib/meta-capi')
+      const fbc = request.cookies.get('_fbc')?.value
+      const fbp = request.cookies.get('_fbp')?.value
+
+      sendCustomEvent('TextCorrected', {
+        eventId: `textcorrected_${requestId}`,
+        eventSourceUrl: request.headers.get('referer') || 'https://www.corretordetextoonline.com.br',
+        userData: {
+          userId: currentUserContext?.user?.id,
+          clientIp: ip !== 'unknown' ? ip : undefined,
+          clientUserAgent: request.headers.get('user-agent') || undefined,
+          fbc: fbc || undefined,
+          fbp: fbp || undefined,
+        },
+        customData: {
+          text_length: text.length,
+          correction_score: processedEvaluation?.score || 0,
+          tone: tone !== 'Padrão' ? tone : undefined,
+          is_premium: isPremium,
+        },
+      }).catch(err => console.error('[CAPI TextCorrected] Error (non-blocking):', err))
+    } catch (capiError) {
+      console.error('[CAPI TextCorrected] Import error (non-blocking):', capiError)
+    }
+
     return apiResponse
   } catch (error) {
     return handleGeneralError(error as Error, requestId, ip, requestBody?.text || "", startTime, "correction")

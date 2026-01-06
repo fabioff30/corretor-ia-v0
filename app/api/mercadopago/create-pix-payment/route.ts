@@ -22,13 +22,17 @@ interface CreatePixPaymentRequest {
   couponCode?: string // Optional coupon code for discounts
   whatsappPhone?: string // Required for bundle purchases (Julinho activation)
   testMode?: boolean // Test mode with R$1 price
+  // Meta CAPI tracking data
+  fbc?: string | null // Facebook Click ID (_fbc cookie)
+  fbp?: string | null // Facebook Browser ID (_fbp cookie)
+  eventId?: string // Event ID for deduplication
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body first
     const body: CreatePixPaymentRequest = await request.json()
-    const { planType, userId, couponCode, whatsappPhone, testMode } = body
+    const { planType, userId, couponCode, whatsappPhone, testMode, fbc, fbp, eventId } = body
     const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : undefined
     const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : undefined
 
@@ -230,6 +234,10 @@ export async function POST(request: NextRequest) {
         whatsapp_phone: normalizedWhatsApp,
         is_bundle: isBundle,
         julinho_activated: false,
+        // Meta CAPI tracking data
+        fbc: fbc || null,
+        fbp: fbp || null,
+        event_id: eventId || null,
       })
 
     if (insertError) {
@@ -241,6 +249,40 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       )
+    }
+
+    // Send InitiateCheckout event to Meta CAPI (non-blocking)
+    try {
+      const { sendInitiateCheckoutEvent } = await import('@/lib/meta-capi')
+      const contentId = isBundle ? 'premium_bundle' : `premium_${planType}`
+      const contentName = isBundle
+        ? 'Pacote CorretorIA + Julinho'
+        : planType === 'monthly'
+          ? 'CorretorIA Premium Mensal'
+          : 'CorretorIA Premium Anual'
+
+      await sendInitiateCheckoutEvent({
+        eventId: eventId || `checkout_${payment.id}_${Date.now()}`,
+        eventSourceUrl: 'https://www.corretordetextoonline.com.br/premium',
+        value: finalAmount,
+        currency: 'BRL',
+        contentId,
+        contentName,
+        numItems: 1,
+        userData: {
+          email: finalUserEmail,
+          userId: finalUserId || undefined,
+          clientIp: request.headers.get('x-forwarded-for')?.split(',')[0] || undefined,
+          clientUserAgent: request.headers.get('user-agent') || undefined,
+          fbc: fbc || undefined,
+          fbp: fbp || undefined,
+        },
+      })
+
+      console.log('[MP PIX] Meta CAPI InitiateCheckout event sent')
+    } catch (capiError) {
+      // Non-blocking: log error but don't fail the payment
+      console.error('[MP PIX] Meta CAPI InitiateCheckout error (non-blocking):', capiError)
     }
 
     // Return payment details
