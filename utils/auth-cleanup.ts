@@ -6,7 +6,8 @@
 import { supabase } from '@/lib/supabase/client'
 
 const CLEANUP_FLAG_KEY = 'auth_cleanup_done'
-const CLEANUP_VERSION = '3' // Incrementado para forçar nova limpeza sem signOut()
+const CLEANUP_VERSION = '4' // Incrementado para forçar nova limpeza + detecção de sessão corrompida
+const CORRUPTION_FIX_FLAG = 'auth_corruption_fix_done'
 
 /**
  * Limpa todos os cookies e storage relacionados à autenticação do Supabase
@@ -92,6 +93,89 @@ export async function forceAuthCleanup(): Promise<void> {
 }
 
 /**
+ * Detecta e corrige sessões Supabase armazenadas como string JSON em vez de objeto
+ * Isso ocorre quando há double-serialization (JSON.stringify aplicado duas vezes)
+ *
+ * Erro que isso previne:
+ * TypeError: Cannot create property 'user' on string '{"access_token":"...","user":{...}}'
+ *
+ * @returns true se uma sessão corrompida foi detectada e tratada
+ */
+export function detectAndFixCorruptedSession(): boolean {
+  if (typeof window === 'undefined') return false
+
+  try {
+    // Extrair o projectRef da URL do Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)/)?.[1]
+
+    if (!projectRef) {
+      console.warn('[AuthCleanup] Não foi possível extrair projectRef da SUPABASE_URL')
+      return false
+    }
+
+    const storageKey = `sb-${projectRef}-auth-token`
+    const stored = localStorage.getItem(storageKey)
+
+    if (!stored) return false
+
+    // Verificar se é uma string que contém JSON serializado duas vezes
+    // Exemplo: '"{\\"access_token\\":\\"...\\"}"' (string dentro de string)
+    if (stored.startsWith('"') && stored.endsWith('"')) {
+      console.warn('[AuthCleanup] Detectada sessão double-serializada, tentando corrigir...')
+      try {
+        const parsed = JSON.parse(stored) // Remove primeira camada de serialização
+        if (typeof parsed === 'string') {
+          // Ainda é string, tenta parsear novamente
+          const session = JSON.parse(parsed) // Remove segunda camada
+          if (session && typeof session === 'object' && session.access_token) {
+            // Sessão válida encontrada, corrigir no storage
+            localStorage.setItem(storageKey, JSON.stringify(session))
+            console.log('[AuthCleanup] Sessão double-serializada corrigida com sucesso')
+            return true
+          }
+        }
+      } catch {
+        // Se não conseguir corrigir, limpar completamente
+        console.warn('[AuthCleanup] Não foi possível corrigir sessão, removendo...')
+        localStorage.removeItem(storageKey)
+        return true
+      }
+    }
+
+    // Verificar se o valor parseado é uma string (em vez de objeto)
+    try {
+      const parsed = JSON.parse(stored)
+      if (typeof parsed === 'string') {
+        console.warn('[AuthCleanup] Sessão armazenada como string, tentando re-parse...')
+        try {
+          const session = JSON.parse(parsed)
+          if (session && typeof session === 'object' && session.access_token) {
+            localStorage.setItem(storageKey, JSON.stringify(session))
+            console.log('[AuthCleanup] Sessão re-parseada com sucesso')
+            return true
+          }
+        } catch {
+          // String não é JSON válido, remover
+          localStorage.removeItem(storageKey)
+          return true
+        }
+      }
+    } catch {
+      // Valor não é JSON válido, remover para evitar erros
+      console.warn('[AuthCleanup] Sessão com formato inválido, removendo...')
+      localStorage.removeItem(storageKey)
+      return true
+    }
+
+    return false
+  } catch (error) {
+    console.error('[AuthCleanup] Erro ao verificar sessão corrompida:', error)
+    return false
+  }
+}
+
+/**
  * Verifica se precisa fazer limpeza automática e executa se necessário
  * Roda apenas uma vez por versão de limpeza
  */
@@ -99,6 +183,15 @@ export async function checkAndCleanup(): Promise<void> {
   if (typeof window === 'undefined') return
 
   try {
+    // IMPORTANTE: Detectar e corrigir sessão corrompida ANTES de qualquer operação
+    // Isso previne o erro "Cannot create property 'user' on string"
+    const wasCorrupted = detectAndFixCorruptedSession()
+    if (wasCorrupted) {
+      console.log('[AuthCleanup] Sessão corrompida foi tratada')
+      // Não recarregar automaticamente - deixar o Supabase reinicializar naturalmente
+      // O fix já foi aplicado no localStorage
+    }
+
     const lastCleanup = localStorage.getItem(CLEANUP_FLAG_KEY)
 
     // Se já fez limpeza nesta versão, pular
@@ -163,6 +256,37 @@ export class RefreshLoopDetector {
  */
 export function monitorAuthErrors(): void {
   if (typeof window === 'undefined') return
+
+  // Interceptar erros globais para detectar o TypeError específico de sessão corrompida
+  const originalOnError = window.onerror
+  window.onerror = function(message, source, lineno, colno, error) {
+    // Detectar o erro específico: Cannot create property 'user' on string
+    if (
+      typeof message === 'string' &&
+      message.includes("Cannot create property 'user' on string")
+    ) {
+      console.error('[AuthCleanup] Detectado erro de sessão corrompida via onerror, limpando...')
+      forceAuthCleanup().then(() => {
+        // Recarregar após limpeza para reinicializar o Supabase
+        setTimeout(() => window.location.reload(), 500)
+      })
+      return true // Prevenir propagação do erro
+    }
+    // Chamar handler original se existir
+    return originalOnError?.call(window, message, source, lineno, colno, error) ?? false
+  }
+
+  // Interceptar unhandled rejections (erros em promises)
+  window.addEventListener('unhandledrejection', (event) => {
+    const errorMessage = event.reason?.message || String(event.reason)
+    if (errorMessage.includes("Cannot create property 'user' on string")) {
+      console.error('[AuthCleanup] Detectado erro de sessão corrompida via promise rejection, limpando...')
+      event.preventDefault() // Prevenir log do erro
+      forceAuthCleanup().then(() => {
+        setTimeout(() => window.location.reload(), 500)
+      })
+    }
+  })
 
   // Interceptar fetch para detectar 429 do Supabase
   const originalFetch = window.fetch
