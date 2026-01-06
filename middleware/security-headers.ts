@@ -215,10 +215,15 @@ export function securityHeadersMiddleware(request: NextRequest) {
     // Form submissions
     [
       "form-action 'self'",
+      // Stripe
       "https://js.stripe.com",
       "https://hooks.stripe.com",
       "https://checkout.stripe.com",
+      // Mercado Pago
       "https://*.mercadopago.com",
+      // Meta/Facebook Pixel
+      "https://www.facebook.com",
+      "https://connect.facebook.net",
     ].join(' '),
 
     // Frame ancestors (who can embed us)
