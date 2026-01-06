@@ -80,6 +80,7 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.googlesyndication.com",
       "https://*.googleadservices.com",
       "https://*.doubleclick.net",
+      "https://*.adtrafficquality.google",
       "https://*.gstatic.com",
       // Meta/Facebook
       "https://*.facebook.com",
