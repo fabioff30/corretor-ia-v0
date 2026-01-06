@@ -25,48 +25,33 @@ export function securityHeadersMiddleware(request: NextRequest) {
   const csp = [
     "default-src 'self'",
 
-    // Scripts - all JavaScript sources
+    // Scripts - all JavaScript sources (relaxed for Google ecosystem)
     [
       "script-src 'self' 'unsafe-inline'",
-      // Google Tag Manager & Analytics
-      "https://www.googletagmanager.com",
+      // Google (all services: GTM, Analytics, Ads, Sign-In, APIs, etc.)
+      "https://*.google.com",
+      "https://*.google.com.br",
       "https://*.googletagmanager.com",
-      "https://www.google-analytics.com",
       "https://*.google-analytics.com",
-      "https://analytics.google.com",
-      "https://ssl.google-analytics.com",
-      "https://www.google.com",
-      "https://www.google.com.br",
-      // Google AdSense
-      "https://pagead2.googlesyndication.com",
       "https://*.googlesyndication.com",
-      "https://adservice.google.com",
-      "https://adservice.google.com.br",
-      // Google Ads / DoubleClick (for GA4 Signals & remarketing)
+      "https://*.googleadservices.com",
       "https://*.doubleclick.net",
-      "https://www.googleadservices.com",
-      // Google Funding Choices (consent management)
-      "https://fundingchoicesmessages.google.com",
+      "https://accounts.google.com",
+      "https://apis.google.com",
       // Meta/Facebook Pixel
       "https://connect.facebook.net",
       // Microsoft Clarity & Bing Ads
-      "https://www.clarity.ms",
       "https://*.clarity.ms",
-      "https://bat.bing.com",
+      "https://*.bing.com",
       // Cloudflare
       "https://static.cloudflareinsights.com",
       // Stripe
-      "https://js.stripe.com",
-      "https://*.js.stripe.com",
-      "https://checkout.stripe.com",
-      "https://connect-js.stripe.com",
+      "https://*.stripe.com",
       // Mercado Pago
       "https://*.mercadopago.com",
       "https://*.mlstatic.com",
       // Brevo (email marketing via GTM)
-      "https://cdn.brevo.com",
       "https://*.brevo.com",
-      "https://sibautomation.com",
       "https://*.sibautomation.com",
       // WonderPush (push notifications via Brevo)
       "https://*.wonderpush.com",
@@ -78,31 +63,24 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://fonts.googleapis.com",
     ].join(' '),
 
-    // Images
+    // Images (relaxed for third-party services)
     [
       "img-src 'self' data: blob:",
       // Own blog subdomain
       "https://blog.corretordetextoonline.com.br",
-      // Google Analytics & GTM
-      "https://www.google-analytics.com",
-      "https://*.google-analytics.com",
-      "https://analytics.google.com",
-      "https://ssl.google-analytics.com",
-      "https://www.googletagmanager.com",
+      // Google (all services)
+      "https://*.google.com",
+      "https://*.google.com.br",
       "https://*.googletagmanager.com",
-      "https://www.google.com",
-      "https://www.google.com.br",
-      // Google Ads / DoubleClick
-      "https://*.doubleclick.net",
-      "https://stats.g.doubleclick.net",
+      "https://*.google-analytics.com",
       "https://*.googlesyndication.com",
-      "https://pagead2.googlesyndication.com",
-      "https://www.googleadservices.com",
+      "https://*.googleadservices.com",
+      "https://*.doubleclick.net",
+      "https://*.gstatic.com",
       // Meta/Facebook
-      "https://connect.facebook.net",
-      "https://www.facebook.com",
-      // Microsoft Clarity
-      "https://www.clarity.ms",
+      "https://*.facebook.com",
+      "https://*.facebook.net",
+      // Microsoft
       "https://*.clarity.ms",
       "https://*.bing.com",
       // Stripe
@@ -118,7 +96,7 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://fonts.gstatic.com",
     ].join(' '),
 
-    // API/XHR connections
+    // API/XHR connections (relaxed for third-party services)
     [
       "connect-src 'self'",
       // Own blog subdomain
@@ -132,79 +110,54 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Upstash Redis
       "https://*.upstash.io",
       "wss://*.upstash.io",
-      // Google Analytics & GTM
-      "https://www.google-analytics.com",
-      "https://*.google-analytics.com",
-      "https://analytics.google.com",
-      "https://ssl.google-analytics.com",
-      "https://region1.google-analytics.com",
-      "https://www.googletagmanager.com",
+      // Google (all services: Analytics, GTM, Ads, Sign-In, etc.)
+      "https://*.google.com",
+      "https://*.google.com.br",
       "https://*.googletagmanager.com",
-      // Google Ads / DoubleClick (for GA4 Signals)
-      "https://*.doubleclick.net",
-      "https://stats.g.doubleclick.net",
-      "https://pagead2.googlesyndication.com",
+      "https://*.google-analytics.com",
       "https://*.googlesyndication.com",
-      "https://www.google.com",
-      "https://www.google.com.br",
-      // Google Funding Choices
-      "https://fundingchoicesmessages.google.com",
-      // Google Ads Traffic Quality (SODAR)
+      "https://*.googleadservices.com",
+      "https://*.doubleclick.net",
       "https://*.adtrafficquality.google",
+      "https://accounts.google.com",
       // Meta/Facebook Pixel & CAPI Gateway
-      "https://connect.facebook.net",
-      "https://www.facebook.com",
       "https://*.facebook.com",
-      "https://*.run.app",                    // Meta CAPI Gateway on Google Cloud Run
-      "https://*.conversionsapigateway.com",  // Meta CAPI Gateway
+      "https://*.facebook.net",
+      "https://*.run.app",
+      "https://*.conversionsapigateway.com",
       // Microsoft Clarity & Bing Ads
-      "https://www.clarity.ms",
       "https://*.clarity.ms",
-      "https://bat.bing.com",
       "https://*.bing.com",
       // Stripe
-      "https://api.stripe.com",
-      "https://js.stripe.com",
       "https://*.stripe.com",
-      "https://checkout.stripe.com",
-      "https://connect-js.stripe.com",
       // Mercado Pago
-      "https://api.mercadopago.com",
       "https://*.mercadopago.com",
       "https://*.mlstatic.com",
       // Brevo (email marketing)
       "https://*.brevo.com",
       "https://*.sendinblue.com",
-      "https://sibautomation.com",
       "https://*.sibautomation.com",
       // WonderPush (push notifications via Brevo)
       "https://*.wonderpush.com",
     ].join(' '),
 
-    // Iframes
+    // Iframes (relaxed for third-party services)
     [
       "frame-src 'self'",
       // Own domain (for www/non-www compatibility)
       "https://corretordetextoonline.com.br",
       "https://www.corretordetextoonline.com.br",
-      // Google Tag Manager
-      "https://www.googletagmanager.com",
-      // Google Ads
-      "https://*.doubleclick.net",
-      "https://googleads.g.doubleclick.net",
-      "https://tpc.googlesyndication.com",
+      // Google (all services: GTM, Ads, Sign-In, Funding Choices, etc.)
+      "https://*.google.com",
+      "https://*.googletagmanager.com",
       "https://*.googlesyndication.com",
-      // Google Funding Choices (consent dialogs)
-      "https://fundingchoicesmessages.google.com",
+      "https://*.doubleclick.net",
+      "https://accounts.google.com",
       // Meta/Facebook
-      "https://connect.facebook.net",
-      "https://www.facebook.com",
+      "https://*.facebook.com",
+      "https://*.facebook.net",
       // Stripe
-      "https://js.stripe.com",
-      "https://*.js.stripe.com",
-      "https://hooks.stripe.com",
-      "https://checkout.stripe.com",
-      "https://connect-js.stripe.com",
+      "https://*.stripe.com",
       // Mercado Pago
       "https://*.mercadopago.com",
     ].join(' '),
