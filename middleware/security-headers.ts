@@ -68,6 +68,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.brevo.com",
       "https://sibautomation.com",
       "https://*.sibautomation.com",
+      // WonderPush (push notifications via Brevo)
+      "https://*.wonderpush.com",
     ].join(' '),
 
     // Styles
@@ -169,6 +171,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.sendinblue.com",
       "https://sibautomation.com",
       "https://*.sibautomation.com",
+      // WonderPush (push notifications via Brevo)
+      "https://*.wonderpush.com",
     ].join(' '),
 
     // Iframes
