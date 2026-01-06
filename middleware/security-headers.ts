@@ -36,6 +36,7 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.googlesyndication.com",
       "https://*.googleadservices.com",
       "https://*.doubleclick.net",
+      "https://*.adtrafficquality.google",
       "https://accounts.google.com",
       "https://apis.google.com",
       // Meta/Facebook Pixel
@@ -52,15 +53,18 @@ export function securityHeadersMiddleware(request: NextRequest) {
       "https://*.mlstatic.com",
       // Brevo (email marketing via GTM)
       "https://*.brevo.com",
+      "https://sibautomation.com",
       "https://*.sibautomation.com",
       // WonderPush (push notifications via Brevo)
       "https://*.wonderpush.com",
     ].join(' '),
 
-    // Styles
+    // Styles (relaxed for Google Sign-In)
     [
       "style-src 'self' 'unsafe-inline'",
       "https://fonts.googleapis.com",
+      "https://*.google.com",
+      "https://accounts.google.com",
     ].join(' '),
 
     // Images (relaxed for third-party services)
