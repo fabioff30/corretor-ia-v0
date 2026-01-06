@@ -66,6 +66,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Brevo (email marketing via GTM)
       "https://cdn.brevo.com",
       "https://*.brevo.com",
+      "https://sibautomation.com",
+      "https://*.sibautomation.com",
     ].join(' '),
 
     // Styles
@@ -165,6 +167,8 @@ export function securityHeadersMiddleware(request: NextRequest) {
       // Brevo (email marketing)
       "https://*.brevo.com",
       "https://*.sendinblue.com",
+      "https://sibautomation.com",
+      "https://*.sibautomation.com",
     ].join(' '),
 
     // Iframes
