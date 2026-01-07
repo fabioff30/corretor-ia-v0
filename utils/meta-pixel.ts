@@ -4,7 +4,14 @@
  * Inclui suporte para:
  * - Deduplicação via eventID (para uso com CAPI)
  * - Captura de cookies _fbc e _fbp para server-side tracking
+ * - Construção manual de fbc a partir de fbclid quando cookie não existe
+ *
+ * @see https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters
  */
+
+// Storage key for fbclid persistence
+const FBCLID_STORAGE_KEY = 'meta_fbclid'
+const FBCLID_TIMESTAMP_KEY = 'meta_fbclid_ts'
 
 // Verifica se o fbq está disponível e se o usuário consentiu com cookies
 export const canTrack = () => {
@@ -58,6 +65,134 @@ export function getMetaCookies(): { fbc: string | null; fbp: string | null } {
     fbc: cookies["_fbc"] || null,
     fbp: cookies["_fbp"] || null,
   }
+}
+
+/**
+ * Captura o fbclid da URL e armazena no sessionStorage
+ * Deve ser chamado o mais cedo possível no carregamento da página
+ *
+ * @returns O fbclid se encontrado, null caso contrário
+ */
+export function captureFbclid(): string | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  try {
+    // Tentar capturar da URL atual
+    const urlParams = new URLSearchParams(window.location.search)
+    const fbclid = urlParams.get("fbclid")
+
+    if (fbclid) {
+      // Armazenar para uso posterior (sessão do usuário)
+      sessionStorage.setItem(FBCLID_STORAGE_KEY, fbclid)
+      sessionStorage.setItem(FBCLID_TIMESTAMP_KEY, Date.now().toString())
+      console.log("[Meta] fbclid capturado da URL:", fbclid.substring(0, 20) + "...")
+      return fbclid
+    }
+
+    // Se não está na URL, tentar recuperar do sessionStorage
+    const storedFbclid = sessionStorage.getItem(FBCLID_STORAGE_KEY)
+    const storedTimestamp = sessionStorage.getItem(FBCLID_TIMESTAMP_KEY)
+
+    if (storedFbclid && storedTimestamp) {
+      // fbclid é válido por 7 dias segundo a Meta
+      const timestamp = parseInt(storedTimestamp, 10)
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+      if (Date.now() - timestamp < sevenDaysMs) {
+        return storedFbclid
+      } else {
+        // Expirado, limpar
+        sessionStorage.removeItem(FBCLID_STORAGE_KEY)
+        sessionStorage.removeItem(FBCLID_TIMESTAMP_KEY)
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error("[Meta] Erro ao capturar fbclid:", error)
+    return null
+  }
+}
+
+/**
+ * Constrói o parâmetro fbc a partir do fbclid
+ * Formato: fb.{subdomain_index}.{creation_time}.{fbclid}
+ *
+ * @see https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters#fbc
+ *
+ * @param fbclid - O click ID do Meta (da URL ou armazenado)
+ * @param timestamp - Timestamp opcional (usa Date.now() se não fornecido)
+ * @returns String no formato fbc ou null se fbclid inválido
+ */
+export function constructFbc(fbclid: string | null, timestamp?: number): string | null {
+  if (!fbclid) {
+    return null
+  }
+
+  // Formato: fb.1.{timestamp_ms}.{fbclid}
+  // subdomain_index é sempre 1 para websites
+  const ts = timestamp || Date.now()
+  return `fb.1.${ts}.${fbclid}`
+}
+
+/**
+ * Obtém o fbc para envio ao CAPI
+ * Prioridade:
+ * 1. Cookie _fbc (definido pelo Meta Pixel)
+ * 2. Construção manual a partir de fbclid (se disponível)
+ *
+ * @returns O valor fbc pronto para envio (NÃO hashado) ou null
+ */
+export function getFbc(): string | null {
+  if (typeof document === "undefined") {
+    return null
+  }
+
+  // Primeiro, tentar obter do cookie _fbc (definido pelo Pixel)
+  const cookies = document.cookie.split(";").reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split("=")
+      if (key) {
+        acc[key] = value || ""
+      }
+      return acc
+    },
+    {} as Record<string, string>
+  )
+
+  const cookieFbc = cookies["_fbc"]
+  if (cookieFbc) {
+    console.log("[Meta] fbc obtido do cookie _fbc")
+    return cookieFbc
+  }
+
+  // Se não tem cookie, tentar construir a partir do fbclid
+  const fbclid = captureFbclid()
+  if (fbclid) {
+    const constructedFbc = constructFbc(fbclid)
+    console.log("[Meta] fbc construído a partir de fbclid:", constructedFbc?.substring(0, 30) + "...")
+    return constructedFbc
+  }
+
+  return null
+}
+
+/**
+ * Obtém os parâmetros fbc e fbp para envio ao CAPI
+ * Versão melhorada que tenta construir fbc a partir de fbclid se necessário
+ *
+ * @returns { fbc, fbp } - Valores prontos para envio (NÃO hashados)
+ */
+export function getMetaTrackingParams(): { fbc: string | null; fbp: string | null } {
+  if (typeof document === "undefined") {
+    return { fbc: null, fbp: null }
+  }
+
+  const { fbp } = getMetaCookies()
+  const fbc = getFbc()
+
+  return { fbc, fbp }
 }
 
 /**

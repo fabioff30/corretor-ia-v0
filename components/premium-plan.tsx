@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { sendGTMEvent } from "@/utils/gtm-helper"
-import { getMetaCookies, generateEventId } from "@/utils/meta-pixel"
+import { getMetaTrackingParams, generateEventId, captureFbclid } from "@/utils/meta-pixel"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { useSubscription } from "@/hooks/use-subscription"
@@ -233,8 +233,8 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
         }
       }
 
-      // Capture Meta cookies for CAPI tracking
-      const { fbc, fbp } = getMetaCookies()
+      // Capture Meta tracking params (fbc from cookie OR constructed from fbclid)
+      const { fbc, fbp } = getMetaTrackingParams()
       const eventId = generateEventId('InitiateCheckout')
 
       // Create PIX payment with coupon, WhatsApp, and Meta tracking
@@ -299,6 +299,11 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
       })
     }
   }
+
+  // Capturar fbclid da URL o mais cedo possível (para Meta CAPI tracking)
+  useEffect(() => {
+    captureFbclid()
+  }, [])
 
   // Auto-trigger payment flow after registration when user becomes available
   useEffect(() => {

@@ -12,7 +12,8 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import {
   canTrack,
   generateEventId,
-  getMetaCookies,
+  getMetaTrackingParams,
+  captureFbclid,
   trackPixelEventWithDedup,
 } from '@/utils/meta-pixel'
 
@@ -32,6 +33,11 @@ export function usePageviewTracking(options: UsePageviewTrackingOptions = {}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const lastTrackedUrl = useRef<string>('')
+
+  // Capturar fbclid da URL o mais cedo possível (antes do Pixel carregar)
+  useEffect(() => {
+    captureFbclid()
+  }, [])
 
   useEffect(() => {
     // Skip if tracking is disabled or user hasn't consented
@@ -61,8 +67,8 @@ export function usePageviewTracking(options: UsePageviewTrackingOptions = {}) {
     // Track on client-side Pixel with deduplication
     trackPixelEventWithDedup('PageView', {}, eventId)
 
-    // Get Meta cookies for server-side tracking
-    const { fbc, fbp } = getMetaCookies()
+    // Get Meta tracking params (fbc from cookie OR constructed from fbclid)
+    const { fbc, fbp } = getMetaTrackingParams()
 
     // Send to server-side CAPI (non-blocking)
     const fullUrl = typeof window !== 'undefined'
@@ -85,6 +91,6 @@ export function usePageviewTracking(options: UsePageviewTrackingOptions = {}) {
       console.error('[PageView Tracking] CAPI error:', err)
     })
 
-    console.log('[PageView Tracking] Sent for:', url)
+    console.log('[PageView Tracking] Sent for:', url, fbc ? '(fbc: present)' : '(fbc: missing)')
   }, [pathname, searchParams, enabled, excludePaths])
 }
