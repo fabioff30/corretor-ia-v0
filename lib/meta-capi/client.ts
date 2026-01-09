@@ -44,21 +44,46 @@ import {
 
 const META_API_VERSION = 'v21.0'
 const META_API_BASE_URL = 'https://graph.facebook.com'
+const META_CAPI_TIMEOUT_MS = 5000 // 5 segundos de timeout
+
+// Cache para evitar múltiplos warnings
+let hasWarnedAboutConfig = false
+
+/**
+ * Verifica se o token parece ser válido (não é placeholder)
+ */
+function isTokenValid(token: string | undefined): boolean {
+  if (!token) return false
+
+  // Detectar placeholders comuns
+  const placeholderPatterns = [
+    '<INSERIR',
+    'YOUR_TOKEN',
+    'PLACEHOLDER',
+    'TODO',
+    'CHANGE_ME',
+  ]
+
+  const upperToken = token.toUpperCase()
+  return !placeholderPatterns.some(pattern => upperToken.includes(pattern))
+}
 
 /**
  * Get Meta CAPI configuration from environment
+ * Returns null if configuration is invalid (prevents exceptions)
  */
-function getConfig(): MetaCAPIConfig {
+function getConfig(): MetaCAPIConfig | null {
   const pixelId = process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN
   const testEventCode = process.env.META_TEST_EVENT_CODE
 
-  if (!pixelId) {
-    throw new Error('[Meta CAPI] META_PIXEL_ID is not configured')
-  }
-
-  if (!accessToken) {
-    throw new Error('[Meta CAPI] META_CAPI_ACCESS_TOKEN is not configured')
+  // Validação - log warning apenas uma vez
+  if (!pixelId || !accessToken || !isTokenValid(accessToken)) {
+    if (!hasWarnedAboutConfig) {
+      console.warn('[Meta CAPI] Configuração inválida ou ausente - CAPI desativado')
+      hasWarnedAboutConfig = true
+    }
+    return null
   }
 
   return {
@@ -165,27 +190,35 @@ function processUserData(userData: MetaUserData): MetaUserDataPayload {
 
 /**
  * Send events to Meta Conversions API
+ * Features timeout protection and graceful error handling
  */
 async function sendToMetaAPI(
   events: MetaEventPayload[],
   config?: Partial<MetaCAPIConfig>
 ): Promise<MetaCAPIResult> {
+  const baseConfig = getConfig()
+
+  // Se config é null, token não está configurado - skip silenciosamente
+  if (!baseConfig) {
+    return { success: false, error: 'CAPI not configured', skipped: true }
+  }
+
+  const { pixelId, accessToken, testEventCode, debug } = {
+    ...baseConfig,
+    ...config,
+  }
+
+  const url = `${META_API_BASE_URL}/${META_API_VERSION}/${pixelId}/events?access_token=${accessToken}`
+
+  // Criar AbortController para timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), META_CAPI_TIMEOUT_MS)
+
   try {
-    const { pixelId, accessToken, testEventCode, debug } = {
-      ...getConfig(),
-      ...config,
-    }
-
-    const payload: MetaCAPIRequestPayload = {
-      data: events,
-    }
-
-    // Add test event code if configured (for development/testing)
+    const payload: MetaCAPIRequestPayload = { data: events }
     if (testEventCode) {
       payload.test_event_code = testEventCode
     }
-
-    const url = `${META_API_BASE_URL}/${META_API_VERSION}/${pixelId}/events?access_token=${accessToken}`
 
     if (debug) {
       console.log('[Meta CAPI] Sending events:', JSON.stringify(payload, null, 2))
@@ -193,17 +226,18 @@ async function sendToMetaAPI(
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     const data: MetaCAPIResponse = await response.json()
 
     if (!response.ok || data.error) {
       const errorMessage = data.error?.message || `HTTP ${response.status}`
-      console.error('[Meta CAPI] Error:', errorMessage, data.error)
+      console.error('[Meta CAPI] API Error:', errorMessage)
       return {
         success: false,
         error: errorMessage,
@@ -224,12 +258,23 @@ async function sendToMetaAPI(
       fbtraceId: data.fbtrace_id,
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[Meta CAPI] Exception:', message)
-    return {
-      success: false,
-      error: message,
+    clearTimeout(timeoutId)
+
+    // Tratar diferentes tipos de erro
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        // Timeout - log como warning, não erro crítico
+        console.warn('[Meta CAPI] Timeout após', META_CAPI_TIMEOUT_MS, 'ms')
+        return { success: false, error: 'Timeout', skipped: true }
+      }
+      // Erros de rede são comuns e não devem poluir logs em produção
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[Meta CAPI] Network error:', error.message)
+      }
+      return { success: false, error: error.message, skipped: true }
     }
+
+    return { success: false, error: 'Unknown error', skipped: true }
   }
 }
 

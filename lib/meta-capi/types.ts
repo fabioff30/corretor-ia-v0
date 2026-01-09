@@ -235,4 +235,5 @@ export interface MetaCAPIResult {
   eventsReceived?: number
   error?: string
   fbtraceId?: string
+  skipped?: boolean // Indica skip por config inválida ou erro de rede
 }
