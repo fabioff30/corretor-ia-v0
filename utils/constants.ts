@@ -1,5 +1,5 @@
 // Character limits
-export const FREE_CHARACTER_LIMIT = 1500
+export const FREE_CHARACTER_LIMIT = 1000
 export const PREMIUM_CHARACTER_LIMIT = 300000 // Premium upper cap (matches tests & API docs)
 export const UNLIMITED_CHARACTER_LIMIT = -1 // For Pro/Admin users (no limit) - deprecated
 export const AI_DETECTOR_CHARACTER_LIMIT = 10000
@@ -18,7 +18,7 @@ export const FREE_WEEKLY_LIMIT = 3 // @deprecated - use daily limit from plan_li
 // Legacy daily limits (kept for backwards compatibility with Supabase plan_limits_config)
 // These are now superseded by weekly limits for free users
 export const FREE_DAILY_CORRECTIONS_LIMIT = 3 // Deprecated - use FREE_WEEKLY_LIMIT
-export const FREE_DAILY_REWRITES_LIMIT = 3 // Deprecated - use FREE_WEEKLY_LIMIT
+export const FREE_DAILY_REWRITES_LIMIT = 1 // Free users: 1 rewrite/day
 
 // AI Detector limits
 export const AI_DETECTOR_DAILY_LIMIT = 2
