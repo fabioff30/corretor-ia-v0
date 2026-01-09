@@ -640,10 +640,25 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         sendGTMEvent("free_correction_limit_reached", {
           limit: correctionsDailyLimit,
           usage: usage.count,
+          device_type: "desktop",
+          text_length: originalText.length,
+          character_limit: characterLimit,
+          user_id: profile?.id || null,
+          is_authenticated: !!profile,
+          page_path: typeof window !== "undefined" ? window.location.pathname : "/",
         })
 
-        // Redirect to premium page
-        window.location.href = "/premium"
+        // Meta Pixel para remarketing
+        trackPixelCustomEvent("FreeCorrectionLimitReached", {
+          device_type: "desktop",
+          text_length: originalText.length,
+          is_authenticated: !!profile,
+        })
+
+        // Dar tempo para o GTM processar antes de redirecionar
+        setTimeout(() => {
+          window.location.href = "/premium"
+        }, 150)
         return
       }
     }
@@ -655,10 +670,25 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         sendGTMEvent("free_rewrite_limit_reached", {
           limit: rewritesDailyLimit,
           usage: rewriteUsage.count,
+          device_type: "desktop",
+          text_length: originalText.length,
+          character_limit: characterLimit,
+          user_id: profile?.id || null,
+          is_authenticated: !!profile,
+          page_path: typeof window !== "undefined" ? window.location.pathname : "/",
         })
 
-        // Redirect to premium page
-        window.location.href = "/premium"
+        // Meta Pixel para remarketing
+        trackPixelCustomEvent("FreeRewriteLimitReached", {
+          device_type: "desktop",
+          text_length: originalText.length,
+          is_authenticated: !!profile,
+        })
+
+        // Dar tempo para o GTM processar antes de redirecionar
+        setTimeout(() => {
+          window.location.href = "/premium"
+        }, 150)
         return
       }
 

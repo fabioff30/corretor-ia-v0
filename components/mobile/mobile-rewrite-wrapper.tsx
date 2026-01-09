@@ -12,6 +12,7 @@ import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT, FREE_DAILY_REWRITES_LIMIT } from "@/utils/constants"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 import Link from "next/link"
 
 const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
@@ -140,10 +141,25 @@ export function MobileRewriteWrapper({
                 sendGTMEvent("free_rewrite_limit_reached", {
                     limit: rewritesDailyLimit,
                     usage: usage.count,
+                    device_type: "mobile",
+                    text_length: text.length,
+                    character_limit: characterLimit,
+                    user_id: profile?.id || null,
+                    is_authenticated: !!profile,
+                    page_path: typeof window !== "undefined" ? window.location.pathname : "/",
                 })
 
-                // Redirect to premium page
-                window.location.href = "/premium"
+                // Meta Pixel para remarketing
+                trackPixelCustomEvent("FreeRewriteLimitReached", {
+                    device_type: "mobile",
+                    text_length: text.length,
+                    is_authenticated: !!profile,
+                })
+
+                // Dar tempo para o GTM processar antes de redirecionar
+                setTimeout(() => {
+                    window.location.href = "/premium"
+                }, 150)
                 return
             }
         }

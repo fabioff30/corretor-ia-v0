@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/use-user"
 import { usePlanLimits } from "@/hooks/use-plan-limits"
 import { FREE_CHARACTER_LIMIT, UNLIMITED_CHARACTER_LIMIT, API_REQUEST_TIMEOUT } from "@/utils/constants"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { trackPixelCustomEvent } from "@/utils/meta-pixel"
 import { createClient } from "@/lib/supabase/client"
 import {
   uploadToStorage,
@@ -39,6 +40,18 @@ function sanitizeExtractedText(text: string): string {
     .replace(/\r/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/**
+ * Helper to get today's date in local timezone (not UTC)
+ * This prevents the counter from resetting at midnight UTC instead of local midnight
+ */
+function getLocalDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 interface MobileCorrectionWrapperProps {
@@ -77,11 +90,13 @@ export function MobileCorrectionWrapper({
   const correctionsDailyLimit = limits?.corrections_per_day ?? 3
 
   // Função para ler o uso de correções gratuitas do localStorage
+  // IMPORTANT: Use local timezone, not UTC!
+  // toISOString() returns UTC which causes counter to reset at wrong time for non-UTC users
   const readFreeCorrectionUsage = useCallback(() => {
     if (typeof window === "undefined") {
       return { date: "", count: 0 }
     }
-    const today = new Date().toISOString().split("T")[0]
+    const today = getLocalDateString()
 
     try {
       const raw = window.localStorage.getItem(FREE_CORRECTIONS_STORAGE_KEY)
@@ -372,10 +387,25 @@ export function MobileCorrectionWrapper({
         sendGTMEvent("free_correction_limit_reached", {
           limit: correctionsDailyLimit,
           usage: usage.count,
+          device_type: "mobile",
+          text_length: text.length,
+          character_limit: characterLimit,
+          user_id: profile?.id || null,
+          is_authenticated: !!profile,
+          page_path: typeof window !== "undefined" ? window.location.pathname : "/",
         })
 
-        // Redirect to premium page
-        window.location.href = "/premium"
+        // Meta Pixel para remarketing
+        trackPixelCustomEvent("FreeCorrectionLimitReached", {
+          device_type: "mobile",
+          text_length: text.length,
+          is_authenticated: !!profile,
+        })
+
+        // Dar tempo para o GTM processar antes de redirecionar
+        setTimeout(() => {
+          window.location.href = "/premium"
+        }, 150)
         return
       }
     }
