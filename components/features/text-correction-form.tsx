@@ -93,8 +93,10 @@ type RewriteStyle = "formal" | "humanized" | "academic" | "creative" | "childlik
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
 const FREE_REWRITES_STORAGE_KEY = "corretoria:free-rewrites-usage"
+const GUEST_CORRECTIONS_STORAGE_KEY = "corretoria:guest-corrections-usage"
 const LAST_REWRITE_STYLE_KEY = "corretoria:last-rewrite-style"
 const SSE_THRESHOLD_CHARS = 5000 // Use SSE streaming for texts > 5k chars (matches worker PARALLEL_CHUNK_SIZE)
+const GUEST_DAILY_LIMIT = 2 // Guest users: 2 corrections per day
 
 // Interface para errorStats vindo da API
 interface ApiErrorStats {
@@ -248,6 +250,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const [pendingPremiumStyle, setPendingPremiumStyle] = useState<RewriteStyleInternal | undefined>(undefined)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
   const [freeRewritesCount, setFreeRewritesCount] = useState(0)
+  const [guestCorrectionsCount, setGuestCorrectionsCount] = useState(0)
   // CRITICAL: Use FREE_DAILY_CORRECTIONS_LIMIT (3) as fallback, not 5!
   // This ensures the limit is enforced even if Supabase query fails
   const correctionsDailyLimit = limits?.corrections_per_day ?? FREE_DAILY_CORRECTIONS_LIMIT
@@ -255,25 +258,40 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
   const remainingCorrections = Math.max(correctionsDailyLimit - freeCorrectionsCount, 0)
   const remainingRewrites = Math.max(rewritesDailyLimit - freeRewritesCount, 0)
 
-  // Calcular se o limite diário foi atingido (como no mobile)
-  const isAtDailyLimit = !isPremium && (
-    (operationMode === "correct" && correctionsDailyLimit > 0 && freeCorrectionsCount >= correctionsDailyLimit) ||
-    (operationMode === "rewrite" && rewritesDailyLimit > 0 && freeRewritesCount >= rewritesDailyLimit)
+  // Calcular se o limite diário foi atingido
+  // Para guests (não logados): 2 correções/dia
+  // Para usuários free logados: usa limites do plano
+  const isGuestAtLimit = !user && guestCorrectionsCount >= GUEST_DAILY_LIMIT
+  const isAtDailyLimit = isPremium ? false : (
+    user
+      ? (operationMode === "correct" && correctionsDailyLimit > 0 && freeCorrectionsCount >= correctionsDailyLimit) ||
+        (operationMode === "rewrite" && rewritesDailyLimit > 0 && freeRewritesCount >= rewritesDailyLimit)
+      : isGuestAtLimit
   )
 
   // Enviar evento GA4 quando o limite diário é atingido (momento crítico para conversão)
   useEffect(() => {
     if (isAtDailyLimit) {
-      sendGTMEvent("daily_limit_reached_view", {
-        operation_mode: operationMode,
-        device_type: "desktop",
-        limit: operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit,
-        usage: operationMode === "correct" ? freeCorrectionsCount : freeRewritesCount,
-        user_id: profile?.id || null,
-        is_authenticated: !!user,
-      })
+      // Evento específico para guests (não logados)
+      if (!user) {
+        sendGTMEvent("guest_daily_limit_reached", {
+          device_type: "desktop",
+          limit: GUEST_DAILY_LIMIT,
+          usage: guestCorrectionsCount,
+        })
+      } else {
+        // Evento para usuários logados (free)
+        sendGTMEvent("daily_limit_reached_view", {
+          operation_mode: operationMode,
+          device_type: "desktop",
+          limit: operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit,
+          usage: operationMode === "correct" ? freeCorrectionsCount : freeRewritesCount,
+          user_id: profile?.id || null,
+          is_authenticated: true,
+        })
+      }
     }
-  }, [isAtDailyLimit, operationMode, correctionsDailyLimit, rewritesDailyLimit, freeCorrectionsCount, freeRewritesCount, profile?.id, user])
+  }, [isAtDailyLimit, operationMode, correctionsDailyLimit, rewritesDailyLimit, freeCorrectionsCount, freeRewritesCount, profile?.id, user, guestCorrectionsCount])
 
   // Enviar evento GA4 quando o limite de caracteres é excedido
   useEffect(() => {
@@ -359,17 +377,52 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     return initialValue
   }
 
+  // Leitura de uso de correções para guests (não logados)
+  const readGuestCorrectionsUsage = () => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = getLocalDateString()
+
+    try {
+      const raw = window.localStorage.getItem(GUEST_CORRECTIONS_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível ler o uso diário de correções de guest:", error)
+    }
+
+    const initialValue = { date: today, count: 0 }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(GUEST_CORRECTIONS_STORAGE_KEY, JSON.stringify(initialValue))
+    }
+    return initialValue
+  }
+
   useEffect(() => {
     if (isPremium) {
       setFreeCorrectionsCount(0)
       setFreeRewritesCount(0)
+      setGuestCorrectionsCount(0)
       return
     }
-    const correctionUsage = readFreeCorrectionUsage()
-    setFreeCorrectionsCount(correctionUsage.count)
-    const rewriteUsage = readFreeRewriteUsage()
-    setFreeRewritesCount(rewriteUsage.count)
-  }, [isPremium])
+
+    // Se não está logado, carregar contagem de guest
+    if (!user) {
+      const guestUsage = readGuestCorrectionsUsage()
+      setGuestCorrectionsCount(guestUsage.count)
+    } else {
+      // Usuário logado: carregar contagem de free user
+      const correctionUsage = readFreeCorrectionUsage()
+      setFreeCorrectionsCount(correctionUsage.count)
+      const rewriteUsage = readFreeRewriteUsage()
+      setFreeRewritesCount(rewriteUsage.count)
+    }
+  }, [isPremium, user])
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -431,18 +484,32 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       })
       setIsLoading(false)
 
-      // Incrementar contagem de correções gratuitas se for usuário free
+      // Incrementar contagem de correções gratuitas (SSE callback)
       if (!isPremium && operationMode === "correct") {
-        const usage = readFreeCorrectionUsage()
-        // Use Math.min to cap at daily limit (prevents counter going beyond limit)
-        const newCount = Math.min(correctionsDailyLimit, usage.count + 1)
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            FREE_CORRECTIONS_STORAGE_KEY,
-            JSON.stringify({ date: usage.date || getLocalDateString(), count: newCount })
-          )
+        if (!user) {
+          // Guest: incrementar contador de guest
+          const guestUsage = readGuestCorrectionsUsage()
+          const newCount = Math.min(GUEST_DAILY_LIMIT, guestUsage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              GUEST_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({ date: guestUsage.date || getLocalDateString(), count: newCount })
+            )
+          }
+          setGuestCorrectionsCount(newCount)
+        } else {
+          // Usuário logado (free)
+          const usage = readFreeCorrectionUsage()
+          // Use Math.min to cap at daily limit (prevents counter going beyond limit)
+          const newCount = Math.min(correctionsDailyLimit, usage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              FREE_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({ date: usage.date || getLocalDateString(), count: newCount })
+            )
+          }
+          setFreeCorrectionsCount(newCount)
         }
-        setFreeCorrectionsCount(newCount)
       }
 
       toast({
@@ -663,7 +730,18 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
       return
     }
 
-    if (!isPremium && operationMode === "correct") {
+    // Verificar limite para guests (não logados)
+    if (!isPremium && !user && operationMode === "correct") {
+      const guestUsage = readGuestCorrectionsUsage()
+      if (guestUsage.count >= GUEST_DAILY_LIMIT) {
+        // Guest já atingiu limite - não deveria chegar aqui pois UI está desabilitada
+        // Mas verificamos por segurança
+        return
+      }
+    }
+
+    // Verificar limite para usuários free logados
+    if (!isPremium && user && operationMode === "correct") {
       const usage = readFreeCorrectionUsage()
       if (usage.count >= correctionsDailyLimit) {
         sendGTMEvent("free_correction_limit_reached", {
@@ -1124,20 +1202,38 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         description: "Confira os resultados abaixo.",
       })
 
+      // Incrementar contagem de correções gratuitas
       if (!isPremium && operationMode === "correct") {
-        const usage = readFreeCorrectionUsage()
-        const updatedCount = Math.min(correctionsDailyLimit, usage.count + 1)
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            FREE_CORRECTIONS_STORAGE_KEY,
-            JSON.stringify({
-              // Use local timezone date, not UTC
-              date: usage.date || getLocalDateString(),
-              count: updatedCount,
-            }),
-          )
+        if (!user) {
+          // Guest: incrementar contador de guest
+          const guestUsage = readGuestCorrectionsUsage()
+          const updatedGuestCount = Math.min(GUEST_DAILY_LIMIT, guestUsage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              GUEST_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({
+                date: guestUsage.date || getLocalDateString(),
+                count: updatedGuestCount,
+              }),
+            )
+          }
+          setGuestCorrectionsCount(updatedGuestCount)
+        } else {
+          // Usuário logado (free): incrementar contador normal
+          const usage = readFreeCorrectionUsage()
+          const updatedCount = Math.min(correctionsDailyLimit, usage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              FREE_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({
+                // Use local timezone date, not UTC
+                date: usage.date || getLocalDateString(),
+                count: updatedCount,
+              }),
+            )
+          }
+          setFreeCorrectionsCount(updatedCount)
         }
-        setFreeCorrectionsCount(updatedCount)
       }
 
       // Incrementar contagem de reescritas gratuitas se for usuário free
@@ -1566,7 +1662,9 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {isAtDailyLimit
-                        ? `Você usou suas ${operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit} ${operationMode === "correct" ? "correções" : "reescritas"} gratuitas de hoje.`
+                        ? (!user
+                            ? `Você usou suas ${GUEST_DAILY_LIMIT} correções gratuitas de hoje.`
+                            : `Você usou suas ${operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit} ${operationMode === "correct" ? "correções" : "reescritas"} gratuitas de hoje.`)
                         : isOverCharacterLimit
                           ? "Você atingiu o limite de caracteres do plano gratuito."
                           : "A IA Avançada é exclusiva para membros Premium."}
@@ -1581,6 +1679,14 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                           {isAtDailyLimit ? "Liberar correções ilimitadas" : "Ver planos Premium"}
                         </Link>
                       </Button>
+                      {/* Para guests no limite, mostrar opção de login para +1 correção */}
+                      {isAtDailyLimit && !user && (
+                        <Button variant="outline" size="sm" asChild className="w-full">
+                          <Link href="/login">
+                            Fazer login para +1 correção
+                          </Link>
+                        </Button>
+                      )}
                       {!isAtDailyLimit && (
                         <Button variant="ghost" size="sm" asChild className="w-full">
                           <Link href="/login">
@@ -1694,9 +1800,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
             </TooltipProvider>
             {!isPremium && (
               <div className="text-xs text-right text-muted-foreground">
-                {operationMode === "correct"
-                  ? `Correções gratuitas restantes hoje: ${remainingCorrections} de ${correctionsDailyLimit}`
-                  : `Reescritas gratuitas restantes hoje: ${remainingRewrites} de ${rewritesDailyLimit}`}
+                {!user ? (
+                  // Guest: mostrar contador de 2 + dica para login
+                  <span>
+                    Correções gratuitas: {guestCorrectionsCount}/{GUEST_DAILY_LIMIT}
+                    <Link href="/login" className="ml-2 text-primary hover:underline font-medium">
+                      Faça login para +1 correção
+                    </Link>
+                  </span>
+                ) : (
+                  // Usuário logado (free)
+                  operationMode === "correct"
+                    ? `Correções gratuitas restantes hoje: ${remainingCorrections} de ${correctionsDailyLimit}`
+                    : `Reescritas gratuitas restantes hoje: ${remainingRewrites} de ${rewritesDailyLimit}`
+                )}
               </div>
             )}
             {!isUnlimited && limitsLoading && (

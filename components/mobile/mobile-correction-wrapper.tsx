@@ -20,6 +20,8 @@ import {
 } from "@/lib/supabase/storage"
 
 const FREE_CORRECTIONS_STORAGE_KEY = "corretoria:free-corrections-usage"
+const GUEST_CORRECTIONS_STORAGE_KEY = "corretoria:guest-corrections-usage"
+const GUEST_DAILY_LIMIT = 2 // Guest users: 2 corrections per day
 
 // File upload constants
 const FREE_FORMATS = ["pdf", "docx", "txt", "html"]
@@ -75,6 +77,7 @@ export function MobileCorrectionWrapper({
   const [originalText, setOriginalText] = useState("")
   const [isLoading, setIsLoading] = useState(propIsLoading)
   const [freeCorrectionsCount, setFreeCorrectionsCount] = useState(0)
+  const [guestCorrectionsCount, setGuestCorrectionsCount] = useState(0)
   const [selectedTone, setSelectedTone] = useState<string>("Padrão")
   const [customTone, setCustomTone] = useState<string>("")
   const [isConvertingFile, setIsConvertingFile] = useState(false)
@@ -83,7 +86,7 @@ export function MobileCorrectionWrapper({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { toast } = useToast()
-  const { profile } = useUser()
+  const { user, profile } = useUser()
   const { limits } = usePlanLimits()
 
   const isPremium = profile?.plan_type === "pro" || profile?.plan_type === "admin" || profile?.plan_type === "lifetime"
@@ -115,15 +118,48 @@ export function MobileCorrectionWrapper({
     return initialValue
   }, [])
 
+  // Leitura de uso de correções para guests (não logados)
+  const readGuestCorrectionsUsage = useCallback(() => {
+    if (typeof window === "undefined") {
+      return { date: "", count: 0 }
+    }
+    const today = getLocalDateString()
+
+    try {
+      const raw = window.localStorage.getItem(GUEST_CORRECTIONS_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number }
+        if (parsed.date === today) {
+          return { date: today, count: parsed.count ?? 0 }
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
+    const initialValue = { date: today, count: 0 }
+    window.localStorage.setItem(GUEST_CORRECTIONS_STORAGE_KEY, JSON.stringify(initialValue))
+    return initialValue
+  }, [])
+
   // Carregar uso ao montar o componente
   useEffect(() => {
     if (isPremium) {
       setFreeCorrectionsCount(0)
+      setGuestCorrectionsCount(0)
       return
     }
-    const usage = readFreeCorrectionUsage()
-    setFreeCorrectionsCount(usage.count)
-  }, [isPremium, readFreeCorrectionUsage])
+
+    // Se não está logado, carregar contagem de guest
+    if (!user) {
+      const guestUsage = readGuestCorrectionsUsage()
+      setGuestCorrectionsCount(guestUsage.count)
+    } else {
+      // Usuário logado: carregar contagem de free user
+      const usage = readFreeCorrectionUsage()
+      setFreeCorrectionsCount(usage.count)
+    }
+  }, [isPremium, user, readFreeCorrectionUsage, readGuestCorrectionsUsage])
   const resolvedCharacterLimit = isPremium ? UNLIMITED_CHARACTER_LIMIT : limits?.max_characters ?? FREE_CHARACTER_LIMIT
   const isUnlimited = resolvedCharacterLimit === UNLIMITED_CHARACTER_LIMIT || resolvedCharacterLimit === -1
   const characterLimit = isUnlimited ? null : resolvedCharacterLimit
@@ -380,8 +416,18 @@ export function MobileCorrectionWrapper({
   const handleCorrect = async (text: string) => {
     if (!text.trim()) return
 
-    // Verificar limite de correções para usuários gratuitos ANTES de processar
-    if (!isPremium) {
+    // Verificar limite para guests (não logados)
+    if (!isPremium && !user) {
+      const guestUsage = readGuestCorrectionsUsage()
+      if (guestUsage.count >= GUEST_DAILY_LIMIT) {
+        // Guest já atingiu limite - não deveria chegar aqui pois UI está desabilitada
+        // Evento GA4 é enviado pelo componente MobileCorrectionInput
+        return
+      }
+    }
+
+    // Verificar limite de correções para usuários free logados ANTES de processar
+    if (!isPremium && user) {
       const usage = readFreeCorrectionUsage()
       if (usage.count >= correctionsDailyLimit) {
         sendGTMEvent("free_correction_limit_reached", {
@@ -470,17 +516,31 @@ export function MobileCorrectionWrapper({
       }
       setViewState("RESULT")
 
-      // Incrementar contagem de correções gratuitas se for usuário free
+      // Incrementar contagem de correções gratuitas
       if (!isPremium) {
-        const usage = readFreeCorrectionUsage()
-        const newCount = usage.count + 1
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            FREE_CORRECTIONS_STORAGE_KEY,
-            JSON.stringify({ date: usage.date, count: newCount })
-          )
+        if (!user) {
+          // Guest: incrementar contador de guest
+          const guestUsage = readGuestCorrectionsUsage()
+          const newCount = Math.min(GUEST_DAILY_LIMIT, guestUsage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              GUEST_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({ date: guestUsage.date || getLocalDateString(), count: newCount })
+            )
+          }
+          setGuestCorrectionsCount(newCount)
+        } else {
+          // Usuário logado (free): incrementar contador normal
+          const usage = readFreeCorrectionUsage()
+          const newCount = Math.min(correctionsDailyLimit, usage.count + 1)
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              FREE_CORRECTIONS_STORAGE_KEY,
+              JSON.stringify({ date: usage.date || getLocalDateString(), count: newCount })
+            )
+          }
+          setFreeCorrectionsCount(newCount)
         }
-        setFreeCorrectionsCount(newCount)
       }
 
       sendGTMEvent("text_corrected", {
@@ -545,8 +605,8 @@ export function MobileCorrectionWrapper({
         isLoading={isLoading || isConvertingFile}
         onAIToggle={handleAIToggle}
         aiEnabled={aiEnabled}
-        usageCount={freeCorrectionsCount}
-        usageLimit={correctionsDailyLimit}
+        usageCount={user ? freeCorrectionsCount : guestCorrectionsCount}
+        usageLimit={user ? correctionsDailyLimit : GUEST_DAILY_LIMIT}
         onToneChange={handleToneChange}
         showToneAdjuster={false}
         quickMode={quickMode}

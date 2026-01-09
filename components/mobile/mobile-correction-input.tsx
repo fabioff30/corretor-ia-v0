@@ -105,13 +105,23 @@ export function MobileCorrectionInput({
   // Enviar evento GA4 quando o limite diário é atingido (momento crítico para conversão)
   useEffect(() => {
     if (isAtDailyLimit) {
-      sendGTMEvent("daily_limit_reached_view", {
-        operation_mode: operationMode,
-        device_type: "mobile",
-        limit: usageLimit,
-        usage: usageCount,
-        is_authenticated: isLoggedIn,
-      })
+      // Evento específico para guests (não logados)
+      if (!isLoggedIn) {
+        sendGTMEvent("guest_daily_limit_reached", {
+          device_type: "mobile",
+          limit: usageLimit,
+          usage: usageCount,
+        })
+      } else {
+        // Evento para usuários logados (free)
+        sendGTMEvent("daily_limit_reached_view", {
+          operation_mode: operationMode,
+          device_type: "mobile",
+          limit: usageLimit,
+          usage: usageCount,
+          is_authenticated: true,
+        })
+      }
     }
   }, [isAtDailyLimit, operationMode, usageLimit, usageCount, isLoggedIn])
 
@@ -281,6 +291,14 @@ export function MobileCorrectionInput({
                     {isAtDailyLimit ? "Liberar correções ilimitadas" : "Ver planos Premium"}
                   </Link>
                 </Button>
+                {/* Para guests no limite, mostrar opção de login para +1 correção */}
+                {isAtDailyLimit && !isLoggedIn && (
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link href="/login">
+                      Fazer login para +1 correção
+                    </Link>
+                  </Button>
+                )}
                 {!isAtDailyLimit && (
                   <Button variant="ghost" size="sm" asChild className="w-full">
                     <Link href="/login">
