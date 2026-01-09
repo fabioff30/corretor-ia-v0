@@ -115,6 +115,20 @@ export function MobileCorrectionInput({
     }
   }, [isAtDailyLimit, operationMode, usageLimit, usageCount, isLoggedIn])
 
+  // Enviar evento GA4 quando o limite de caracteres é excedido
+  useEffect(() => {
+    if (isOverLimit && !isPremium) {
+      sendGTMEvent("character_limit_exceeded_view", {
+        device_type: "mobile",
+        current_count: charCount,
+        limit: characterLimit,
+        excess: charCount - (characterLimit || 0),
+        operation_mode: operationMode,
+        is_authenticated: isLoggedIn,
+      })
+    }
+  }, [isOverLimit, isPremium, charCount, characterLimit, operationMode, isLoggedIn])
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
 
@@ -365,8 +379,20 @@ export function MobileCorrectionInput({
         )}
       </Button>
 
-      {/* Over Limit Warning */}
-      {isOverLimit && (
+      {/* Over Limit Warning with Upgrade CTA */}
+      {isOverLimit && !isPremium && (
+        <div className="mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+          <p className="text-sm text-amber-800 dark:text-amber-200 mb-2 text-center">
+            Limite de {characterLimit?.toLocaleString('pt-BR')} caracteres excedido ({charCount - (characterLimit || 0)} a mais)
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/premium">
+              Liberar mais caracteres
+            </Link>
+          </Button>
+        </div>
+      )}
+      {isOverLimit && isPremium && (
         <p className="text-xs text-destructive text-center">
           {charCount - (characterLimit || 0)} caracteres excedidos
         </p>

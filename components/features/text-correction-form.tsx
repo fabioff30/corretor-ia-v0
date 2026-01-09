@@ -275,6 +275,21 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     }
   }, [isAtDailyLimit, operationMode, correctionsDailyLimit, rewritesDailyLimit, freeCorrectionsCount, freeRewritesCount, profile?.id, user])
 
+  // Enviar evento GA4 quando o limite de caracteres é excedido
+  useEffect(() => {
+    if (isOverCharacterLimit && !isPremium) {
+      sendGTMEvent("character_limit_exceeded_view", {
+        device_type: "desktop",
+        current_count: charCount,
+        limit: characterLimit,
+        excess: charCount - (characterLimit || 0),
+        operation_mode: operationMode,
+        user_id: profile?.id || null,
+        is_authenticated: !!user,
+      })
+    }
+  }, [isOverCharacterLimit, isPremium, charCount, characterLimit, operationMode, profile?.id, user])
+
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
   const [showPainBanner, setShowPainBanner] = useState(false)
@@ -1690,6 +1705,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
             {limitsError && (
               <div className="text-xs text-right text-amber-600">
                 Não foi possível carregar o limite mais recente. Usando valor padrão.
+              </div>
+            )}
+
+            {/* CTA de upgrade quando excede limite de caracteres */}
+            {isOverCharacterLimit && !isPremium && (
+              <div className="mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                  Você excedeu o limite de {characterLimit?.toLocaleString('pt-BR')} caracteres.
+                </p>
+                <Button asChild size="sm" className="w-full">
+                  <Link href="/premium">
+                    Liberar até 20.000 caracteres
+                  </Link>
+                </Button>
               </div>
             )}
 
