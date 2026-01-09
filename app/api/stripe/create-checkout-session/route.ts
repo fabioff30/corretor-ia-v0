@@ -58,19 +58,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate email format for guest checkouts
-    if (isGuestCheckout && guestEmail) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(guestEmail)) {
-        return NextResponse.json(
-          { error: 'Invalid email format' },
-          { status: 400 }
-        )
-      }
-    }
-
     // Determine final email
     const finalEmail = isGuestCheckout ? guestEmail! : (userEmail || '')
+
+    // Validate email format for ALL checkouts (guest and authenticated)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!finalEmail || !emailRegex.test(finalEmail)) {
+      return NextResponse.json(
+        { error: 'Invalid email format. Please update your email in account settings.' },
+        { status: 400 }
+      )
+    }
 
     console.log('[Stripe Checkout]', isGuestCheckout ? 'Guest' : 'Authenticated', 'checkout for:', finalEmail, 'plan:', planType)
 
