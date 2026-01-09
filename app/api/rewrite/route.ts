@@ -13,8 +13,7 @@ import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection, incrementUserUsage, canUserPerformOperation } from "@/utils/limit-checker"
-import { checkGuestMonthlyLimit } from "@/lib/api/guest-monthly-limit"
-import { checkFreeWeeklyLimit } from "@/lib/api/free-weekly-limit"
+import { checkGuestDailyLimit } from "@/lib/api/guest-daily-limit"
 import { isStylePremium } from "@/utils/rewrite-styles"
 
 export const dynamic = "force-dynamic"
@@ -105,14 +104,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // GUEST users (not authenticated) - check monthly limit (skip in premium test mode)
+    // GUEST users (not authenticated) - check daily limit (2/day per IP)
     if (!currentUserContext?.user && !skipChecks) {
-      const guestLimitResult = await checkGuestMonthlyLimit(request)
+      const guestLimitResult = await checkGuestDailyLimit(request)
       if (guestLimitResult) {
-        console.log(`API: Guest monthly limit exceeded`, requestId)
+        console.log(`API: Guest daily limit exceeded`, requestId)
         return guestLimitResult
       }
-      console.log(`API: Guest user - monthly limit OK`, requestId)
+      console.log(`API: Guest user - daily limit OK`, requestId)
     }
 
     // AUTHENTICATED users - check their plan
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
         console.log(`API: Auto-detected premium user (${userPlan})`, requestId)
       }
 
-      // FREE users - check daily + weekly limits
+      // FREE users - check daily limit (3/day per account via Supabase)
       if (userPlan === 'free') {
         const limitResult = await canUserPerformOperation(userId, 'rewrite')
         if (!limitResult.allowed) {
@@ -141,13 +140,7 @@ export async function POST(request: NextRequest) {
             { status: 429 },
           )
         }
-
-        const weeklyLimitResult = await checkFreeWeeklyLimit(request, userId)
-        if (weeklyLimitResult) {
-          console.log(`API: Free user ${userId} weekly limit exceeded`, requestId)
-          return weeklyLimitResult
-        }
-        console.log(`API: Free user ${userId} - weekly limit OK`, requestId)
+        console.log(`API: Free user ${userId} - daily limit OK`, requestId)
       }
     }
 

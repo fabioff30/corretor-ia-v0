@@ -6,11 +6,14 @@ export const AI_DETECTOR_CHARACTER_LIMIT = 10000
 export const HUMANIZAR_MAX_TEXT_LENGTH = 20000 // 20k characters max for humanization
 
 // Usage limits by user type
-// Guest (not authenticated): 3 operations per MONTH (shared between corrections + rewrites)
-// Free (authenticated): 3 operations per WEEK (shared between corrections + rewrites)
+// Guest (not authenticated): 2 operations per DAY (Redis-based, by IP)
+// Free (authenticated): 3 operations per DAY (Supabase-based, by account)
 // Pro/Lifetime: unlimited
-export const GUEST_MONTHLY_LIMIT = 3 // Guest users: 3 ops/month (Redis-based)
-export const FREE_WEEKLY_LIMIT = 3 // Free users: 3 ops/week (Supabase-based)
+export const GUEST_DAILY_LIMIT = 2 // Guest users: 2 ops/day (Redis-based)
+
+// Legacy limits (deprecated - kept for backwards compatibility)
+export const GUEST_MONTHLY_LIMIT = 3 // @deprecated - use GUEST_DAILY_LIMIT
+export const FREE_WEEKLY_LIMIT = 3 // @deprecated - use daily limit from plan_limits_config
 
 // Legacy daily limits (kept for backwards compatibility with Supabase plan_limits_config)
 // These are now superseded by weekly limits for free users
