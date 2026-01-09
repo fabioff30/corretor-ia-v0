@@ -52,6 +52,11 @@ export function RegisterForBundleDialog({
   const { signUp, signInWithGoogle } = useUser()
   const { toast } = useToast()
 
+  // Validação de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const isEmailValid = email.trim() !== '' && emailRegex.test(email)
+  const showEmailError = email.trim() !== '' && !isEmailValid
+
   const formattedPrice = planPrice.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -109,6 +114,16 @@ export function RegisterForBundleDialog({
     // Validations
     if (!name.trim()) {
       setError('Informe seu nome completo')
+      return
+    }
+
+    if (!email.trim()) {
+      setError('Informe seu email')
+      return
+    }
+
+    if (!isEmailValid) {
+      setError('Digite um email válido (ex: nome@email.com)')
       return
     }
 
@@ -265,11 +280,22 @@ export function RegisterForBundleDialog({
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
+                className={`pl-10 ${showEmailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 required
                 disabled={isSubmitting}
               />
             </div>
+            {showEmailError && (
+              <p className="text-xs text-red-500">
+                Digite um email válido (ex: nome@email.com)
+              </p>
+            )}
+            {email && isEmailValid && (
+              <div className="flex items-center gap-2 text-xs">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                <span className="text-green-600">Email válido</span>
+              </div>
+            )}
           </div>
 
           {/* Password */}

@@ -45,14 +45,24 @@ export function RegisterForm() {
     }
   }, [user, router, redirectUrl])
 
+  // Validação de email com regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const isEmailValid = formData.email.trim() !== '' && emailRegex.test(formData.email)
+  const showEmailError = formData.email.trim() !== '' && !isEmailValid
+
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError("Nome e obrigatorio")
+      setError("Nome é obrigatório")
       return false
     }
 
     if (!formData.email.trim()) {
-      setError("Email e obrigatorio")
+      setError("Email é obrigatório")
+      return false
+    }
+
+    if (!isEmailValid) {
+      setError("Digite um email válido (ex: nome@email.com)")
       return false
     }
 
@@ -62,12 +72,12 @@ export function RegisterForm() {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("As senhas nao coincidem")
+      setError("As senhas não coincidem")
       return false
     }
 
     if (!acceptTerms) {
-      setError("Voce deve aceitar os termos de uso")
+      setError("Você deve aceitar os termos de uso")
       return false
     }
 
@@ -245,11 +255,22 @@ export function RegisterForm() {
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={handleInputChange("email")}
-                  className="pl-10"
+                  className={`pl-10 ${showEmailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                   disabled={isLoading || isGoogleLoading}
                 />
               </div>
+              {showEmailError && (
+                <p className="text-xs text-red-500">
+                  Digite um email válido (ex: nome@email.com)
+                </p>
+              )}
+              {formData.email && isEmailValid && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Email válido
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

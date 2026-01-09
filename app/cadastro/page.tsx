@@ -42,6 +42,11 @@ export default function CadastroPage() {
     }
   }, [user, router])
 
+  // Validação de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const isEmailValid = formData.email.trim() !== '' && emailRegex.test(formData.email)
+  const showEmailError = formData.email.trim() !== '' && !isEmailValid
+
   // Validação de senha
   const passwordRequirements = {
     minLength: formData.password.length >= 8,
@@ -58,6 +63,21 @@ export default function CadastroPage() {
     setError(null)
 
     // Validações
+    if (!formData.fullName.trim()) {
+      setError('Informe seu nome completo.')
+      return
+    }
+
+    if (!formData.email.trim()) {
+      setError('Informe seu email.')
+      return
+    }
+
+    if (!isEmailValid) {
+      setError('Digite um email válido (ex: nome@email.com)')
+      return
+    }
+
     if (!acceptedTerms) {
       setError('Você precisa aceitar os Termos de Uso e Política de Privacidade.')
       return
@@ -239,13 +259,21 @@ export default function CadastroPage() {
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
-                    className="pl-10"
+                    className={`pl-10 ${showEmailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
                     disabled={isLoading || isGoogleLoading}
                   />
                 </div>
+                {showEmailError && (
+                  <p className="text-xs text-red-500">
+                    Digite um email válido (ex: nome@email.com)
+                  </p>
+                )}
+                {formData.email && isEmailValid && (
+                  <PasswordRequirement met={true} text="Email válido" />
+                )}
               </div>
 
               <div className="space-y-2">
