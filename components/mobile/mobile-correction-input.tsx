@@ -86,6 +86,13 @@ export function MobileCorrectionInput({
   const isUnlimited = characterLimit === null || characterLimit === -1
   const isAtDailyLimit = !isPremium && usageLimit > 0 && usageCount >= usageLimit
 
+  // Condições para overlays customizados (evita duplicação e bug de placeholder sobreposto)
+  const isTextEmpty = value === ""
+  const isNotInLockedState = !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit
+  const showNonLoggedOverlay = !isLoggedIn && isTextEmpty && isNotInLockedState
+  const showLoggedOverlay = isLoggedIn && isTextEmpty && isNotInLockedState && !!onFileUpload
+  const showCustomPlaceholder = showNonLoggedOverlay || showLoggedOverlay
+
   // Auto-focus ao montar
   useEffect(() => {
     textareaRef.current?.focus()
@@ -158,7 +165,7 @@ export function MobileCorrectionInput({
           aria-label="Campo de texto para correção"
           value={value}
           onChange={handleChange}
-          placeholder={value === "" && onFileUpload ? "" : placeholder}
+          placeholder={showCustomPlaceholder ? "" : placeholder}
           disabled={isLoading || (!isPremium && aiEnabled) || isOverLimit || isAtDailyLimit}
           className={cn(
             "min-h-[60vh] text-lg leading-relaxed resize-none",
@@ -170,7 +177,7 @@ export function MobileCorrectionInput({
         />
 
         {/* Overlay for Non-Logged Users (Custom Placeholder) */}
-        {!isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit && (
+        {showNonLoggedOverlay && (
           <div className="absolute inset-0 p-6 pointer-events-none flex items-start z-[5]">
             <span className="text-muted-foreground text-lg">
               Cole, digite seu texto,{" "}
@@ -196,7 +203,7 @@ export function MobileCorrectionInput({
         )}
 
         {/* Overlay for Logged Users when textarea is empty - show file upload option */}
-        {isLoggedIn && value === "" && !(!isPremium && aiEnabled) && !isOverLimit && !isAtDailyLimit && onFileUpload && (
+        {showLoggedOverlay && (
           <div className="absolute inset-0 p-6 pointer-events-none flex items-start z-[5]">
             <span className="text-muted-foreground text-lg">
               Cole, digite seu texto ou{" "}
