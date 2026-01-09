@@ -44,6 +44,8 @@ interface MobileHeroProps {
   initialText?: string
   onTextChange?: (text: string) => void
   isConvertingFile?: boolean
+  // Operation mode for analytics
+  operationMode?: "correct" | "rewrite"
 }
 
 export function MobileHero({
@@ -78,6 +80,7 @@ export function MobileHero({
   initialText = "",
   onTextChange,
   isConvertingFile = false,
+  operationMode = "correct",
 }: MobileHeroProps) {
   const HeadingTag = headingAs
   const [localText, setLocalText] = useState("")
@@ -186,6 +189,7 @@ export function MobileHero({
             showToneAdjuster={showToneAdjuster}
             quickMode={quickMode}
             onQuickModeChange={onQuickModeChange}
+            operationMode={operationMode}
           />
         </div>
       </motion.div>

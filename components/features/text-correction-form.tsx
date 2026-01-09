@@ -261,6 +261,20 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
     (operationMode === "rewrite" && rewritesDailyLimit > 0 && freeRewritesCount >= rewritesDailyLimit)
   )
 
+  // Enviar evento GA4 quando o limite diário é atingido (momento crítico para conversão)
+  useEffect(() => {
+    if (isAtDailyLimit) {
+      sendGTMEvent("daily_limit_reached_view", {
+        operation_mode: operationMode,
+        device_type: "desktop",
+        limit: operationMode === "correct" ? correctionsDailyLimit : rewritesDailyLimit,
+        usage: operationMode === "correct" ? freeCorrectionsCount : freeRewritesCount,
+        user_id: profile?.id || null,
+        is_authenticated: !!user,
+      })
+    }
+  }, [isAtDailyLimit, operationMode, correctionsDailyLimit, rewritesDailyLimit, freeCorrectionsCount, freeRewritesCount, profile?.id, user])
+
   // Estado para controlar o pain banner
   const [painBannerData, setPainBannerData] = useState<PainBannerData | null>(null)
   const [showPainBanner, setShowPainBanner] = useState(false)

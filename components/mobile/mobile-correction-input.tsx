@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useCorrectionHaptic } from "@/hooks/use-haptic"
 import { cn } from "@/lib/utils"
 import { ToneAdjuster } from "@/components/tone-adjuster"
+import { sendGTMEvent } from "@/utils/gtm-helper"
 import {
   Tooltip,
   TooltipContent,
@@ -49,6 +50,8 @@ interface MobileCorrectionInputProps {
   // Quick mode (faster, less detailed corrections)
   quickMode?: boolean
   onQuickModeChange?: (enabled: boolean) => void
+  // Operation mode for analytics
+  operationMode?: "correct" | "rewrite"
 }
 
 export function MobileCorrectionInput({
@@ -76,6 +79,7 @@ export function MobileCorrectionInput({
   showToneAdjuster = true,
   quickMode = false,
   onQuickModeChange,
+  operationMode = "correct",
 }: MobileCorrectionInputProps) {
   const [hasStartedTyping, setHasStartedTyping] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -97,6 +101,19 @@ export function MobileCorrectionInput({
   useEffect(() => {
     textareaRef.current?.focus()
   }, [])
+
+  // Enviar evento GA4 quando o limite diário é atingido (momento crítico para conversão)
+  useEffect(() => {
+    if (isAtDailyLimit) {
+      sendGTMEvent("daily_limit_reached_view", {
+        operation_mode: operationMode,
+        device_type: "mobile",
+        limit: usageLimit,
+        usage: usageCount,
+        is_authenticated: isLoggedIn,
+      })
+    }
+  }, [isAtDailyLimit, operationMode, usageLimit, usageCount, isLoggedIn])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value

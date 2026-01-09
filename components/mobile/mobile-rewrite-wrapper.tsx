@@ -311,6 +311,7 @@ export function MobileRewriteWrapper({
                 usageLimit={rewritesDailyLimit}
                 initialText={transferredText}
                 onTextChange={setTransferredText}
+                operationMode="rewrite"
             />
 
             {/* <MobileFAB
