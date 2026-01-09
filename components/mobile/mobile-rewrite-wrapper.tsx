@@ -142,7 +142,7 @@ export function MobileRewriteWrapper({
                     limit: rewritesDailyLimit,
                     usage: usage.count,
                     device_type: "mobile",
-                    text_length: text.length,
+                    textLength: text.length,
                     character_limit: characterLimit,
                     user_id: profile?.id || null,
                     is_authenticated: !!profile,
@@ -152,7 +152,7 @@ export function MobileRewriteWrapper({
                 // Meta Pixel para remarketing
                 trackPixelCustomEvent("FreeRewriteLimitReached", {
                     device_type: "mobile",
-                    text_length: text.length,
+                    textLength: text.length,
                     is_authenticated: !!profile,
                 })
 

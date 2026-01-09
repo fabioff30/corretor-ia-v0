@@ -641,7 +641,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           limit: correctionsDailyLimit,
           usage: usage.count,
           device_type: "desktop",
-          text_length: originalText.length,
+          textLength: originalText.length,
           character_limit: characterLimit,
           user_id: profile?.id || null,
           is_authenticated: !!profile,
@@ -651,7 +651,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         // Meta Pixel para remarketing
         trackPixelCustomEvent("FreeCorrectionLimitReached", {
           device_type: "desktop",
-          text_length: originalText.length,
+          textLength: originalText.length,
           is_authenticated: !!profile,
         })
 
@@ -671,7 +671,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
           limit: rewritesDailyLimit,
           usage: rewriteUsage.count,
           device_type: "desktop",
-          text_length: originalText.length,
+          textLength: originalText.length,
           character_limit: characterLimit,
           user_id: profile?.id || null,
           is_authenticated: !!profile,
@@ -681,7 +681,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
         // Meta Pixel para remarketing
         trackPixelCustomEvent("FreeRewriteLimitReached", {
           device_type: "desktop",
-          text_length: originalText.length,
+          textLength: originalText.length,
           is_authenticated: !!profile,
         })
 

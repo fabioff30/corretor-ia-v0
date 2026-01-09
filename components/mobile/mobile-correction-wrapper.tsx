@@ -388,7 +388,7 @@ export function MobileCorrectionWrapper({
           limit: correctionsDailyLimit,
           usage: usage.count,
           device_type: "mobile",
-          text_length: text.length,
+          textLength: text.length,
           character_limit: characterLimit,
           user_id: profile?.id || null,
           is_authenticated: !!profile,
@@ -398,7 +398,7 @@ export function MobileCorrectionWrapper({
         // Meta Pixel para remarketing
         trackPixelCustomEvent("FreeCorrectionLimitReached", {
           device_type: "mobile",
-          text_length: text.length,
+          textLength: text.length,
           is_authenticated: !!profile,
         })
 
