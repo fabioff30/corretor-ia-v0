@@ -1502,8 +1502,8 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
                     </p>
                     <p className="text-foreground/80">
                       Correções ilimitadas, histórico inteligente, experiência sem anúncios e suporte prioritário. Hoje você usou{" "}
-                      <strong>{freeCorrectionsCount}</strong> de{" "}
-                      <strong>{correctionsDailyLimit}</strong> correções gratuitas.
+                      <strong>{user ? freeCorrectionsCount : guestCorrectionsCount}</strong> de{" "}
+                      <strong>{user ? correctionsDailyLimit : GUEST_DAILY_LIMIT}</strong> correções gratuitas.
                     </p>
                   </div>
                   <Button
@@ -1605,7 +1605,7 @@ export default function TextCorrectionForm({ onTextCorrected, initialMode, enabl
               ) : (
                 <span className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Plano gratuito: até {correctionsDailyLimit} correções por dia
+                  {user ? `Plano gratuito: até ${correctionsDailyLimit} correções por dia` : `Visitante: até ${GUEST_DAILY_LIMIT} correções por dia`}
                 </span>
               )}
             </div>
