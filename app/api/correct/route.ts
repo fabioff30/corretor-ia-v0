@@ -13,7 +13,8 @@ import { handleGeneralError, handleWebhookError } from "@/lib/api/error-handlers
 import { normalizeWebhookResponse } from "@/lib/api/response-normalizer"
 import { getCurrentUserWithProfile, type AuthContext } from "@/utils/auth-helpers"
 import { saveCorrection, incrementUserUsage, canUserPerformOperation } from "@/utils/limit-checker"
-import { checkGuestDailyLimit } from "@/lib/api/guest-daily-limit"
+// Guest rate limiting now handled by frontend localStorage (better UX, no 429 errors)
+// import { checkGuestDailyLimit } from "@/lib/api/guest-daily-limit"
 import { safeJsonParse, extractValidJson } from "@/utils/safe-json-fetch"
 
 // Increased to 300s to allow premium endpoints with ultrathink processing (PREMIUM_FETCH_TIMEOUT = 295s)
@@ -100,14 +101,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // GUEST users (not authenticated) - check daily limit (2/day per IP)
+    // GUEST users - rate limiting handled by frontend localStorage (better UX)
+    // Server-side Redis limit removed to avoid 429 errors
     if (!currentUserContext?.user) {
-      const guestLimitResult = await checkGuestDailyLimit(request)
-      if (guestLimitResult) {
-        console.log(`API: Guest daily limit exceeded`, requestId)
-        return guestLimitResult
-      }
-      console.log(`API: Guest user - daily limit OK`, requestId)
+      console.log(`API: Guest user - no server-side limit (localStorage-controlled)`, requestId)
     }
 
     // AUTHENTICATED users - check their plan
