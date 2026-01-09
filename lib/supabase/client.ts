@@ -6,6 +6,68 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/types/supabase'
 
+/**
+ * Corrige sessões corrompidas no localStorage ANTES de criar o cliente Supabase
+ * Isso previne o erro: TypeError: Cannot create property 'user' on string
+ *
+ * O erro ocorre quando a sessão é armazenada como string JSON em vez de objeto,
+ * causando falha ao SDK tentar acessar session.user
+ */
+function fixCorruptedSessionSync(): void {
+  if (typeof window === 'undefined') return
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)/)?.[1]
+    if (!projectRef) return
+
+    const storageKey = `sb-${projectRef}-auth-token`
+    const stored = localStorage.getItem(storageKey)
+    if (!stored) return
+
+    // Verificar se o valor armazenado é válido
+    try {
+      const parsed = JSON.parse(stored)
+
+      // Caso 1: Double serialization - parsed é string em vez de objeto
+      if (typeof parsed === 'string') {
+        console.warn('[Supabase] Detectada sessão double-serializada, corrigindo...')
+        try {
+          const session = JSON.parse(parsed)
+          if (session && typeof session === 'object' && session.access_token) {
+            localStorage.setItem(storageKey, JSON.stringify(session))
+            console.log('[Supabase] Sessão corrigida com sucesso')
+            return
+          }
+        } catch {
+          // Não conseguiu re-parsear, remover
+          console.warn('[Supabase] Sessão inválida, removendo...')
+          localStorage.removeItem(storageKey)
+          return
+        }
+      }
+
+      // Caso 2: Objeto válido mas sem access_token
+      if (typeof parsed === 'object' && !parsed?.access_token) {
+        console.warn('[Supabase] Sessão sem access_token, removendo...')
+        localStorage.removeItem(storageKey)
+        return
+      }
+
+    } catch {
+      // JSON inválido no storage
+      console.warn('[Supabase] Sessão com JSON inválido, removendo...')
+      localStorage.removeItem(storageKey)
+    }
+  } catch (error) {
+    console.error('[Supabase] Erro ao verificar/corrigir sessão:', error)
+  }
+}
+
+// Executar correção ANTES de criar qualquer cliente
+// Isso é crítico para prevenir o erro "Cannot create property 'user' on string"
+fixCorruptedSessionSync()
+
 // Protection against infinite refresh token loops
 let lastRefreshAttempt = 0
 let consecutiveFailures = 0
