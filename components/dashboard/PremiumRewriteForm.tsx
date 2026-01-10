@@ -31,6 +31,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { sendGTMEvent } from "@/utils/gtm-helper"
+import { PremiumLoading } from "@/components/ui/premium-loading"
+import { PremiumLoading as PremiumShimmer } from "@/components/premium-loading"
 import { StarRating } from "@/components/star-rating"
 import { API_REQUEST_TIMEOUT, MIN_REQUEST_INTERVAL } from "@/utils/constants"
 import { Badge } from "@/components/ui/badge"
@@ -425,10 +427,7 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
             className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Reescrevendo com IA Premium...
-              </>
+              <PremiumLoading text="Reescrevendo com IA Premium..." />
             ) : (
               <>
                 <Wand2 className="mr-2 h-4 w-4" />
@@ -444,6 +443,14 @@ export default function PremiumRewriteForm({ onTextRewritten }: PremiumRewriteFo
           )}
         </div>
       </form>
+
+      {isLoading && (
+        <Card>
+          <CardContent className="pt-6">
+            <PremiumShimmer lines={4} />
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert variant="destructive">
