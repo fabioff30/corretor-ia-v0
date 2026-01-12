@@ -182,7 +182,7 @@ export function validateWebhookTimestamp(
  */
 export interface WebhookData {
   id: string
-  type: 'payment' | 'subscription' | 'authorized_payment' | 'plan' | 'invoice' | 'point_integration_wh'
+  type: 'payment' | 'subscription' | 'authorized_payment' | 'plan' | 'invoice' | 'point_integration_wh' | 'merchant_order'
   action: string
   liveMode: boolean
   userId: string
@@ -192,7 +192,7 @@ export interface WebhookData {
 
 export function parseWebhookPayload(body: any): WebhookData | null {
   try {
-    // Support both v0 (old) and v1 (new) webhook formats from Mercado Pago
+    // Support multiple webhook formats from Mercado Pago
 
     // Format v1 (new): { data: { id: "..." }, type: "payment", action: "..." }
     if (body && body.data && body.data.id) {
@@ -203,6 +203,21 @@ export function parseWebhookPayload(body: any): WebhookData | null {
         liveMode: body.live_mode !== false,
         userId: body.user_id || '',
         apiVersion: body.api_version || 'v1',
+        dateCreated: body.date_created || new Date().toISOString(),
+      }
+    }
+
+    // Merchant order webhook format: { id: "...", type: "topic_merchant_order_wh", data: {...} }
+    // This is sent when a PIX QR code is generated (before payment)
+    // The ID is at the root level, not in data.id
+    if (body && body.id && body.type === 'topic_merchant_order_wh') {
+      return {
+        id: body.id,
+        type: 'merchant_order',
+        action: body.action || 'create',
+        liveMode: body.live_mode !== false,
+        userId: body.user_id?.toString() || '',
+        apiVersion: 'v1',
         dateCreated: body.date_created || new Date().toISOString(),
       }
     }
@@ -220,7 +235,7 @@ export function parseWebhookPayload(body: any): WebhookData | null {
       // Map topic to type
       let type: WebhookData['type'] = 'payment'
       if (body.topic === 'merchant_order') {
-        type = 'payment'
+        type = 'merchant_order'
       } else if (body.topic === 'subscription') {
         type = 'subscription'
       } else if (body.topic.includes('payment')) {

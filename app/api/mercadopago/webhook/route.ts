@@ -127,8 +127,18 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionEvent(webhookData.id, body)
         break
 
+      case 'merchant_order':
+        // Merchant order webhooks are informational (sent when PIX QR is generated)
+        // We don't need to process them - the payment webhook will come when user pays
+        console.log('[MP Webhook] Merchant order notification (informational):', {
+          id: webhookData.id,
+          action: webhookData.action,
+          status: body.data?.status || body.status,
+        })
+        break
+
       default:
-        console.log(`Unhandled webhook type: ${webhookData.type}`)
+        console.log(`[MP Webhook] Unhandled webhook type: ${webhookData.type}`)
     }
 
     // Return 200 OK to acknowledge receipt
