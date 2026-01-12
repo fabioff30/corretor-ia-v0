@@ -1,13 +1,17 @@
 /**
  * Utilitário para limpar cookies e storage inválidos de autenticação
  * Previne loops de refresh_token causados por cookies expirados/inválidos
+ *
+ * NOTA: A detecção e correção de sessões double-serialized agora é feita
+ * principalmente pelo storage-adapter.ts. Este arquivo mantém funções
+ * de limpeza forçada e monitoramento de erros como backup.
  */
 
 import { supabase } from '@/lib/supabase/client'
+import { cleanupCorruptedSessions } from '@/lib/supabase/storage-adapter'
 
 const CLEANUP_FLAG_KEY = 'auth_cleanup_done'
-const CLEANUP_VERSION = '4' // Incrementado para forçar nova limpeza + detecção de sessão corrompida
-const CORRUPTION_FIX_FLAG = 'auth_corruption_fix_done'
+const CLEANUP_VERSION = '5' // Incrementado para nova versão com storage adapter
 
 /**
  * Limpa todos os cookies e storage relacionados à autenticação do Supabase
@@ -99,75 +103,20 @@ export async function forceAuthCleanup(): Promise<void> {
  * Erro que isso previne:
  * TypeError: Cannot create property 'user' on string '{"access_token":"...","user":{...}}'
  *
+ * NOTA: Esta função agora delega para o storage-adapter.ts que é mais robusto
+ * e executa a correção de forma proativa em todas as operações de leitura.
+ *
  * @returns true se uma sessão corrompida foi detectada e tratada
  */
 export function detectAndFixCorruptedSession(): boolean {
   if (typeof window === 'undefined') return false
 
   try {
-    // Extrair o projectRef da URL do Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)/)?.[1]
+    // Delegar para o storage adapter que tem lógica mais robusta
+    cleanupCorruptedSessions()
 
-    if (!projectRef) {
-      console.warn('[AuthCleanup] Não foi possível extrair projectRef da SUPABASE_URL')
-      return false
-    }
-
-    const storageKey = `sb-${projectRef}-auth-token`
-    const stored = localStorage.getItem(storageKey)
-
-    if (!stored) return false
-
-    // Verificar se é uma string que contém JSON serializado duas vezes
-    // Exemplo: '"{\\"access_token\\":\\"...\\"}"' (string dentro de string)
-    if (stored.startsWith('"') && stored.endsWith('"')) {
-      console.warn('[AuthCleanup] Detectada sessão double-serializada, tentando corrigir...')
-      try {
-        const parsed = JSON.parse(stored) // Remove primeira camada de serialização
-        if (typeof parsed === 'string') {
-          // Ainda é string, tenta parsear novamente
-          const session = JSON.parse(parsed) // Remove segunda camada
-          if (session && typeof session === 'object' && session.access_token) {
-            // Sessão válida encontrada, corrigir no storage
-            localStorage.setItem(storageKey, JSON.stringify(session))
-            console.log('[AuthCleanup] Sessão double-serializada corrigida com sucesso')
-            return true
-          }
-        }
-      } catch {
-        // Se não conseguir corrigir, limpar completamente
-        console.warn('[AuthCleanup] Não foi possível corrigir sessão, removendo...')
-        localStorage.removeItem(storageKey)
-        return true
-      }
-    }
-
-    // Verificar se o valor parseado é uma string (em vez de objeto)
-    try {
-      const parsed = JSON.parse(stored)
-      if (typeof parsed === 'string') {
-        console.warn('[AuthCleanup] Sessão armazenada como string, tentando re-parse...')
-        try {
-          const session = JSON.parse(parsed)
-          if (session && typeof session === 'object' && session.access_token) {
-            localStorage.setItem(storageKey, JSON.stringify(session))
-            console.log('[AuthCleanup] Sessão re-parseada com sucesso')
-            return true
-          }
-        } catch {
-          // String não é JSON válido, remover
-          localStorage.removeItem(storageKey)
-          return true
-        }
-      }
-    } catch {
-      // Valor não é JSON válido, remover para evitar erros
-      console.warn('[AuthCleanup] Sessão com formato inválido, removendo...')
-      localStorage.removeItem(storageKey)
-      return true
-    }
-
+    // A função cleanupCorruptedSessions não retorna se houve correção,
+    // mas como ela é chamada proativamente, assumimos sucesso
     return false
   } catch (error) {
     console.error('[AuthCleanup] Erro ao verificar sessão corrompida:', error)
@@ -253,9 +202,13 @@ export class RefreshLoopDetector {
 
 /**
  * Monitora erros de autenticação do Supabase e limpa se necessário
+ * Também registra informações de debug para ajudar a identificar a origem do problema
  */
 export function monitorAuthErrors(): void {
   if (typeof window === 'undefined') return
+
+  // Flag para evitar múltiplos reloads
+  let isCleaningUp = false
 
   // Interceptar erros globais para detectar o TypeError específico de sessão corrompida
   const originalOnError = window.onerror
@@ -265,11 +218,24 @@ export function monitorAuthErrors(): void {
       typeof message === 'string' &&
       message.includes("Cannot create property 'user' on string")
     ) {
-      console.error('[AuthCleanup] Detectado erro de sessão corrompida via onerror, limpando...')
-      forceAuthCleanup().then(() => {
-        // Recarregar após limpeza para reinicializar o Supabase
-        setTimeout(() => window.location.reload(), 500)
+      // Log detalhado para debug
+      console.error('[AuthCleanup] ERRO DE SESSÃO CORROMPIDA DETECTADO', {
+        message,
+        source,
+        lineno,
+        colno,
+        errorStack: error?.stack,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
       })
+
+      if (!isCleaningUp) {
+        isCleaningUp = true
+        console.log('[AuthCleanup] Iniciando limpeza e reload...')
+        forceAuthCleanup().then(() => {
+          setTimeout(() => window.location.reload(), 500)
+        })
+      }
       return true // Prevenir propagação do erro
     }
     // Chamar handler original se existir
@@ -280,11 +246,22 @@ export function monitorAuthErrors(): void {
   window.addEventListener('unhandledrejection', (event) => {
     const errorMessage = event.reason?.message || String(event.reason)
     if (errorMessage.includes("Cannot create property 'user' on string")) {
-      console.error('[AuthCleanup] Detectado erro de sessão corrompida via promise rejection, limpando...')
-      event.preventDefault() // Prevenir log do erro
-      forceAuthCleanup().then(() => {
-        setTimeout(() => window.location.reload(), 500)
+      // Log detalhado para debug
+      console.error('[AuthCleanup] ERRO DE SESSÃO CORROMPIDA (Promise)', {
+        reason: event.reason,
+        stack: event.reason?.stack,
+        timestamp: new Date().toISOString(),
       })
+
+      event.preventDefault() // Prevenir log do erro
+
+      if (!isCleaningUp) {
+        isCleaningUp = true
+        console.log('[AuthCleanup] Iniciando limpeza e reload...')
+        forceAuthCleanup().then(() => {
+          setTimeout(() => window.location.reload(), 500)
+        })
+      }
     }
   })
 
