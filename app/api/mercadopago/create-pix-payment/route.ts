@@ -10,6 +10,7 @@ import { getMercadoPagoClient } from '@/lib/mercadopago/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCurrentUserWithProfile } from '@/utils/auth-helpers'
 import { validateWhatsAppPhone, normalizePhoneNumber } from '@/lib/julinho/client'
+import { isVoltaFeriasActive, VOLTA_FERIAS_CONFIG } from '@/utils/constants'
 import type { Tables, TablesInsert } from '@/types/supabase'
 
 export const maxDuration = 60
@@ -100,20 +101,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Define pricing
+    // Check if Volta às Férias promotion is active
+    const isPromoActive = isVoltaFeriasActive()
+
+    // Define pricing (with promotion prices when active)
     const pricing: Record<string, { amount: number; description: string }> = {
       monthly: {
-        amount: 29.90,
-        description: 'Plano Premium Mensal - CorretorIA'
+        amount: isPromoActive ? VOLTA_FERIAS_CONFIG.MONTHLY_PRICE : 29.90,
+        description: isPromoActive
+          ? 'Plano Premium Mensal - CorretorIA (Promoção Volta às Férias)'
+          : 'Plano Premium Mensal - CorretorIA'
       },
       annual: {
-        amount: 238.80,
-        description: 'Plano Premium Anual - CorretorIA (12x R$19,90)'
+        amount: isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_PRICE : 238.80,
+        description: isPromoActive
+          ? `Plano Premium Anual - CorretorIA (${VOLTA_FERIAS_CONFIG.ANNUAL_INSTALLMENTS}x R$${VOLTA_FERIAS_CONFIG.ANNUAL_INSTALLMENT.toFixed(2)} - Promoção Volta às Férias)`
+          : 'Plano Premium Anual - CorretorIA (12x R$19,90)'
       },
       bundle_monthly: {
         amount: 19.90,
         description: 'Pacote Fim de Ano - CorretorIA + Julinho Premium'
       }
+    }
+
+    if (isPromoActive && (planType === 'monthly' || planType === 'annual')) {
+      console.log('[MP PIX] PROMO ACTIVE: Using Volta às Férias pricing -', planType, ':', pricing[planType].amount)
     }
 
     const plan = pricing[planType]

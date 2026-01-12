@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession, STRIPE_PRICES } from '@/lib/stripe/server'
 import { getPublicConfig } from '@/utils/env-config'
+import { isVoltaFeriasActive, VOLTA_FERIAS_CONFIG } from '@/utils/constants'
 
 export const maxDuration = 60
 
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[Stripe Checkout]', isGuestCheckout ? 'Guest' : 'Authenticated', 'checkout for:', finalEmail, 'plan:', planType)
 
+    // Check if Volta às Férias promotion is active
+    const isPromoActive = isVoltaFeriasActive()
+
     // Get price ID based on plan type (or use test price ID if provided)
     let priceId: string
     if (testPriceId) {
@@ -81,18 +85,24 @@ export async function POST(request: NextRequest) {
     } else {
       switch (planType) {
         case 'monthly':
-          priceId = STRIPE_PRICES.MONTHLY
+          // Use promotion price ID if active
+          priceId = isPromoActive ? VOLTA_FERIAS_CONFIG.STRIPE_MONTHLY_PRICE_ID : STRIPE_PRICES.MONTHLY
           break
         case 'annual':
-          priceId = STRIPE_PRICES.ANNUAL
+          // Use promotion price ID if active
+          priceId = isPromoActive ? VOLTA_FERIAS_CONFIG.STRIPE_ANNUAL_PRICE_ID : STRIPE_PRICES.ANNUAL
           break
         case 'bundle_monthly':
         case 'bundle_monthly_test':
           priceId = STRIPE_PRICES.BUNDLE_MONTHLY
           break
         default:
-          priceId = STRIPE_PRICES.MONTHLY
+          priceId = isPromoActive ? VOLTA_FERIAS_CONFIG.STRIPE_MONTHLY_PRICE_ID : STRIPE_PRICES.MONTHLY
       }
+    }
+
+    if (isPromoActive && (planType === 'monthly' || planType === 'annual')) {
+      console.log('[Stripe Checkout] PROMO ACTIVE: Using Volta às Férias price ID:', priceId)
     }
 
     // Determine URLs - use request origin for correct environment
@@ -103,12 +113,12 @@ export async function POST(request: NextRequest) {
     // For all plans, redirect to dashboard after success
     // Include plan type and value for GA4 purchase tracking
     const planPrices: Record<string, number> = {
-      monthly: 29.90,
-      annual: 238.80,
+      monthly: isPromoActive ? VOLTA_FERIAS_CONFIG.MONTHLY_PRICE : 29.90,
+      annual: isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_PRICE : 238.80,
       bundle_monthly: 19.90,
       bundle_monthly_test: 19.90,
     }
-    const planValue = planPrices[planType] || 29.90
+    const planValue = planPrices[planType] || (isPromoActive ? VOLTA_FERIAS_CONFIG.MONTHLY_PRICE : 29.90)
 
     let successUrl: string
     if (isGuestCheckout) {

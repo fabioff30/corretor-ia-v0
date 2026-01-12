@@ -38,8 +38,13 @@ export const stripe = new Proxy({} as Stripe, {
 
 // Price IDs from Stripe Dashboard (Production Mode)
 export const STRIPE_PRICES = {
+  // Regular prices
   MONTHLY: 'price_1SKPXfAaDWyHAlqlOF5UHXPK', // R$ 29,90/mês (Production)
   ANNUAL: 'price_1SacDvAaDWyHAlql5FHTMJzI',  // R$ 238,80/ano - 12x R$19,90 (Production)
+  // Volta às Férias promotion prices (valid until 31/01/2026)
+  MONTHLY_PROMO: 'price_1SKPXlAaDWyHAlql9VZDQTzj', // R$ 19,90/mês (Promoção)
+  ANNUAL_PROMO: 'price_1SoqtZAaDWyHAlql9WK1SNR3',  // R$ 99,00/ano - 12x R$8,25 (Promoção)
+  // Other prices
   LIFETIME: 'price_1SX9iCAaDWyHAlqlcLPoTjZy', // R$ 99,90 Black Friday (Production)
   BUNDLE_MONTHLY: 'price_1Siz5IAaDWyHAlqlRbQ7iTHL', // R$ 19,90/mês - CorretorIA + Julinho Bundle (Production)
 } as const

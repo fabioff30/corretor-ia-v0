@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { stripe, getOrCreateStripeCustomer, STRIPE_PRICES } from '@/lib/stripe/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isVoltaFeriasActive, VOLTA_FERIAS_CONFIG } from '@/utils/constants'
 
 export const maxDuration = 60
 
@@ -34,11 +35,32 @@ export async function POST(request: NextRequest) {
     // Get or create customer
     const customerId = await getOrCreateStripeCustomer(userId, userEmail)
 
-    // Calculate amount based on plan type
-    const amount = planType === 'monthly' ? 2990 : 23880 // in cents (R$ 29.90 or R$ 238.80)
-    const description = planType === 'monthly'
-      ? 'CorretorIA Premium - Plano Mensal'
-      : 'CorretorIA Premium - Plano Anual'
+    // Check if Volta às Férias promotion is active
+    const isPromoActive = isVoltaFeriasActive()
+
+    // Calculate amount based on plan type (with promotion prices when active)
+    let amount: number
+    let description: string
+
+    if (planType === 'monthly') {
+      amount = isPromoActive
+        ? Math.round(VOLTA_FERIAS_CONFIG.MONTHLY_PRICE * 100) // R$ 19.90 = 1990 cents
+        : 2990 // R$ 29.90
+      description = isPromoActive
+        ? 'CorretorIA Premium - Plano Mensal (Promoção Volta às Férias)'
+        : 'CorretorIA Premium - Plano Mensal'
+    } else {
+      amount = isPromoActive
+        ? Math.round(VOLTA_FERIAS_CONFIG.ANNUAL_PRICE * 100) // R$ 99.00 = 9900 cents
+        : 23880 // R$ 238.80
+      description = isPromoActive
+        ? 'CorretorIA Premium - Plano Anual (Promoção Volta às Férias)'
+        : 'CorretorIA Premium - Plano Anual'
+    }
+
+    if (isPromoActive) {
+      console.log('[Stripe PIX] PROMO ACTIVE: Using Volta às Férias pricing -', planType, ':', amount / 100)
+    }
 
     // Create Payment Intent with PIX
     const paymentIntent = await stripe.paymentIntents.create({

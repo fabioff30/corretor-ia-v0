@@ -18,6 +18,8 @@ import { PremiumPixModal } from "@/components/premium-pix-modal"
 import { RegisterForPixDialog } from "@/components/premium/register-for-pix-dialog"
 import { InlineRegisterForm } from "@/components/premium/inline-register-form"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { CountdownTimer } from "@/components/bundle/countdown-timer"
+import { VOLTA_FERIAS_CONFIG, isVoltaFeriasActive } from "@/utils/constants"
 
 type PlanType = 'monthly' | 'annual'
 
@@ -45,10 +47,16 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
   const { toast } = useToast()
   const isMobile = useIsMobile()
 
-  // Pricing with discount
-  const monthlyPrice = 29.90
-  const annualPrice = 238.80 // 12x de R$19,90
-  const annualInstallment = 19.90
+  // Check if Volta às Férias promotion is active
+  const isPromoActive = isVoltaFeriasActive()
+
+  // Pricing with promotion support
+  const monthlyPrice = isPromoActive ? VOLTA_FERIAS_CONFIG.MONTHLY_PRICE : 29.90
+  const monthlyOriginalPrice = isPromoActive ? VOLTA_FERIAS_CONFIG.MONTHLY_ORIGINAL_PRICE : null
+  const annualPrice = isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_PRICE : 238.80
+  const annualOriginalPrice = isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_ORIGINAL_PRICE : null
+  const annualInstallment = isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_INSTALLMENT : 19.90
+  const annualInstallments = isPromoActive ? VOLTA_FERIAS_CONFIG.ANNUAL_INSTALLMENTS : 12
   const discountPercent = showDiscount && couponCode ? 50 : 0
   const monthlyPriceWithDiscount = monthlyPrice * (1 - discountPercent / 100)
   const annualPriceWithDiscount = annualPrice * (1 - discountPercent / 100)
@@ -57,6 +65,7 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
     { name: "Correções ilimitadas", included: true },
     { name: "Análises de IA ilimitadas", included: true },
     { name: "Reescrita de texto ilimitada", included: true },
+    { name: "Julinho ilimitado", included: true, highlight: isPromoActive },
     { name: "Até 20.000 caracteres por texto", included: true },
     { name: "Sem anúncios", included: true },
     { name: "Análise de estilo avançada", included: true },
@@ -439,6 +448,33 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
 
   return (
     <div className="py-8">
+      {/* Promotion Banner with Countdown */}
+      {isPromoActive && !showInlineRegister && (
+        <div className="max-w-5xl mx-auto mb-8 px-4">
+          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/30 rounded-xl p-6 text-center relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(251,191,36,0.1),transparent_50%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(249,115,22,0.1),transparent_50%)]" />
+
+            <div className="relative z-10">
+              <span className="inline-block bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-4 shadow-lg">
+                PROMOÇÃO VOLTA ÀS FÉRIAS
+              </span>
+              <h2 className="text-xl md:text-2xl font-bold mb-2 bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:from-amber-400 dark:to-orange-400">
+                Preços especiais por tempo limitado!
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Mensal por apenas <span className="font-bold text-amber-600 dark:text-amber-400">R$ {monthlyPrice.toFixed(2)}</span> ou Anual por <span className="font-bold text-amber-600 dark:text-amber-400">R$ {annualPrice.toFixed(2)}</span> (12x de R$ {annualInstallment.toFixed(2)})
+              </p>
+              <CountdownTimer
+                endDate={VOLTA_FERIAS_CONFIG.END_DATE}
+                className="max-w-lg mx-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile: Card único com 12x R$19,90 (esconde quando formulário inline visível) */}
       {isMobile && !showInlineRegister && (
         <div className="max-w-md mx-auto pt-4">
@@ -463,13 +499,23 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                   Acesso completo a todos os recursos
                 </CardDescription>
                 <div className="mt-4">
+                  {isPromoActive && annualOriginalPrice && (
+                    <div className="text-sm text-white/70 line-through mb-1">
+                      De R${annualOriginalPrice.toFixed(2)}
+                    </div>
+                  )}
                   <div className="flex items-baseline gap-1">
-                    <span className="text-lg text-white/80">12x de</span>
+                    <span className="text-lg text-white/80">{annualInstallments}x de</span>
                     <span className="text-4xl font-bold">R${annualInstallment.toFixed(2)}</span>
                   </div>
                   <div className="text-sm mt-1 text-white/90">
                     ou R${annualPrice.toFixed(2)} à vista
                   </div>
+                  {isPromoActive && annualOriginalPrice && (
+                    <div className="text-xs text-white/80 mt-2 bg-white/20 rounded-full px-3 py-1 inline-block">
+                      Economia de R${(annualOriginalPrice - annualPrice).toFixed(2)}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
 
@@ -547,6 +593,17 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                       </div>
                       <div className="text-xs text-white/80 mt-1">Depois R${monthlyPrice.toFixed(2)}/mês</div>
                     </>
+                  ) : isPromoActive && monthlyOriginalPrice ? (
+                    <>
+                      <div className="text-sm text-white/70 line-through">De R${monthlyOriginalPrice.toFixed(2)}</div>
+                      <div>
+                        <span className="text-4xl font-bold">R${monthlyPrice.toFixed(2)}</span>
+                        <span className="text-white/90 ml-1">/mês</span>
+                      </div>
+                      <div className="text-xs text-white/80 mt-2 bg-white/20 rounded-full px-3 py-1 inline-block">
+                        Economia de R${(monthlyOriginalPrice - monthlyPrice).toFixed(2)}/mês
+                      </div>
+                    </>
                   ) : (
                     <>
                       <span className="text-4xl font-bold">R${monthlyPrice.toFixed(2)}</span>
@@ -565,8 +622,13 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                       ) : (
                         <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
                       )}
-                      <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
+                      <span className={`${feature.included ? "" : "text-muted-foreground text-sm"} ${(feature as any).highlight ? "font-semibold text-amber-600 dark:text-amber-400" : ""}`}>
                         {feature.name}
+                        {(feature as any).highlight && (
+                          <span className="ml-2 text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded">
+                            Incluso!
+                          </span>
+                        )}
                         {feature.comingSoon && (
                           <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
                             Em breve
@@ -672,13 +734,23 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                     </>
                   ) : (
                     <>
+                      {isPromoActive && annualOriginalPrice && (
+                        <div className="text-sm text-white/70 line-through mb-1">
+                          De R${annualOriginalPrice.toFixed(2)}
+                        </div>
+                      )}
                       <div className="flex items-baseline gap-1">
-                        <span className="text-lg text-white/80">12x de</span>
+                        <span className="text-lg text-white/80">{annualInstallments}x de</span>
                         <span className="text-4xl font-bold">R${annualInstallment.toFixed(2)}</span>
                       </div>
                       <div className="text-sm mt-1 text-white/90">
                         ou R${annualPrice.toFixed(2)} à vista
                       </div>
+                      {isPromoActive && annualOriginalPrice && (
+                        <div className="text-xs text-white/80 mt-2 bg-white/20 rounded-full px-3 py-1 inline-block">
+                          Economia de R${(annualOriginalPrice - annualPrice).toFixed(2)}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -693,8 +765,13 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                       ) : (
                         <X className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
                       )}
-                      <span className={feature.included ? "" : "text-muted-foreground text-sm"}>
+                      <span className={`${feature.included ? "" : "text-muted-foreground text-sm"} ${(feature as any).highlight ? "font-semibold text-amber-600 dark:text-amber-400" : ""}`}>
                         {feature.name}
+                        {(feature as any).highlight && (
+                          <span className="ml-2 text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded">
+                            Incluso!
+                          </span>
+                        )}
                         {feature.comingSoon && (
                           <span className="ml-2 text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded">
                             Em breve
@@ -885,9 +962,17 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
                     MELHOR OFERTA
                   </span>
                   <h3 className="font-bold mt-1">Plano Anual</h3>
+                  {isPromoActive && annualOriginalPrice && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      Economia de R${(annualOriginalPrice - annualPrice).toFixed(2)}
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">12x de</div>
+                  {isPromoActive && annualOriginalPrice && (
+                    <div className="text-xs text-muted-foreground line-through">R${annualOriginalPrice.toFixed(2)}</div>
+                  )}
+                  <div className="text-sm text-muted-foreground">{annualInstallments}x de</div>
                   <div className="text-2xl font-bold text-green-600">R${annualInstallment.toFixed(2)}</div>
                   <div className="text-xs text-muted-foreground">ou R${annualPrice.toFixed(2)} à vista</div>
                 </div>
@@ -930,8 +1015,18 @@ export function PremiumPlan({ couponCode, showDiscount = false }: PremiumPlanPro
             {/* Plano Mensal */}
             <div className="p-4 border rounded-lg">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold">Plano Mensal</h3>
+                <div>
+                  <h3 className="font-bold">Plano Mensal</h3>
+                  {isPromoActive && monthlyOriginalPrice && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      Economia de R${(monthlyOriginalPrice - monthlyPrice).toFixed(2)}/mês
+                    </span>
+                  )}
+                </div>
                 <div className="text-right">
+                  {isPromoActive && monthlyOriginalPrice && (
+                    <div className="text-xs text-muted-foreground line-through">R${monthlyOriginalPrice.toFixed(2)}</div>
+                  )}
                   <div className="text-2xl font-bold">R${monthlyPrice.toFixed(2)}</div>
                   <div className="text-xs text-muted-foreground">/mês</div>
                 </div>

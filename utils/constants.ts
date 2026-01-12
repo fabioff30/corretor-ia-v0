@@ -90,3 +90,21 @@ export const BLACK_FRIDAY_CONFIG = {
 export const isBlackFridayActive = (): boolean => {
   return new Date() < BLACK_FRIDAY_CONFIG.END_DATE
 }
+
+// Volta às Férias Promotion Configuration (January 2026)
+export const VOLTA_FERIAS_CONFIG = {
+  END_DATE: new Date('2026-02-01T02:59:59Z'), // 31/01/2026 23:59:59 BRT (UTC-3)
+  MONTHLY_PRICE: 19.90,
+  MONTHLY_ORIGINAL_PRICE: 29.90,
+  ANNUAL_PRICE: 99.00,
+  ANNUAL_ORIGINAL_PRICE: 238.80,
+  ANNUAL_INSTALLMENT: 8.25,
+  ANNUAL_INSTALLMENTS: 12,
+  STRIPE_MONTHLY_PRICE_ID: 'price_1SKPXlAaDWyHAlql9VZDQTzj',
+  STRIPE_ANNUAL_PRICE_ID: 'price_1SoqtZAaDWyHAlql9WK1SNR3',
+}
+
+// Helper function to check if Volta às Férias promotion is active
+export const isVoltaFeriasActive = (): boolean => {
+  return new Date() < VOLTA_FERIAS_CONFIG.END_DATE
+}
