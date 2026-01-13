@@ -58,6 +58,70 @@ function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
   }
 }
 
+/**
+ * Corrige double-serialization em cookies de sessão do Supabase
+ * Problema: TypeError: Cannot create property 'user' on string
+ * Causa: JSON.stringify aplicado duas vezes resulta em string ao invés de objeto
+ */
+function fixCookieDoubleSerialization(value: string | null): string | null {
+  if (!value) return null
+
+  try {
+    const parsed = JSON.parse(value)
+
+    // Se o valor parseado é uma string, está double-serialized
+    if (typeof parsed === 'string') {
+      try {
+        const innerParsed = JSON.parse(parsed)
+        if (innerParsed && typeof innerParsed === 'object') {
+          // Verificar se é uma sessão Supabase
+          if (innerParsed.access_token || innerParsed.user || innerParsed.refresh_token) {
+            console.warn('[Server Cookie] Corrigindo double-serialization')
+            return JSON.stringify(innerParsed)
+          }
+        }
+      } catch {
+        // String interna não é JSON válido
+        return null
+      }
+    }
+
+    return value
+  } catch {
+    // Valor não é JSON, retornar como está
+    return value
+  }
+}
+
+/**
+ * Previne double-serialization ao salvar cookies
+ */
+function validateCookieBeforeStore(value: string): string {
+  try {
+    const parsed = JSON.parse(value)
+
+    // Se o valor parseado é uma string, alguém fez JSON.stringify duas vezes
+    if (typeof parsed === 'string') {
+      try {
+        const innerParsed = JSON.parse(parsed)
+        if (innerParsed && typeof innerParsed === 'object') {
+          if (innerParsed.access_token || innerParsed.user || innerParsed.refresh_token) {
+            console.warn('[Server Cookie] Prevenindo double-serialization na escrita')
+            return JSON.stringify(innerParsed)
+          }
+        }
+      } catch {
+        // Não é JSON válido internamente
+      }
+    }
+
+    return value
+  } catch {
+    // Valor não é JSON, retornar como está
+    return value
+  }
+}
+
 export async function createClient(cookieStore?: CookieStore): Promise<SupabaseClient<Database>> {
   const store = cookieStore ?? (await cookies())
 
@@ -67,12 +131,21 @@ export async function createClient(cookieStore?: CookieStore): Promise<SupabaseC
     {
       cookies: {
         get(name: string) {
-          return store.get(name)?.value
+          const value = store.get(name)?.value
+          // Aplicar fix de double-serialization para cookies de auth
+          if (name.startsWith('sb-') && value) {
+            return fixCookieDoubleSerialization(value)
+          }
+          return value
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
             const normalized = withNormalizedCookieOptions(options)
-            store.set({ name, value, ...normalized })
+            // Validar antes de salvar para cookies de auth
+            const validatedValue = name.startsWith('sb-')
+              ? validateCookieBeforeStore(value)
+              : value
+            store.set({ name, value: validatedValue, ...normalized })
           } catch (error) {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
@@ -94,7 +167,7 @@ export async function createClient(cookieStore?: CookieStore): Promise<SupabaseC
   )
 }
 
-export { withNormalizedCookieOptions }
+export { withNormalizedCookieOptions, fixCookieDoubleSerialization, validateCookieBeforeStore }
 
 /**
  * Cliente Supabase com service_role key para operações administrativas

@@ -5,7 +5,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
-import { withNormalizedCookieOptions } from '@/lib/supabase/server'
+import { withNormalizedCookieOptions, fixCookieDoubleSerialization, validateCookieBeforeStore } from '@/lib/supabase/server'
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -20,13 +20,22 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          const value = request.cookies.get(name)?.value
+          // Aplicar fix de double-serialization para cookies de auth
+          if (name.startsWith('sb-') && value) {
+            return fixCookieDoubleSerialization(value)
+          }
+          return value
         },
         set(name: string, value: string, options: CookieOptions) {
           const normalized = withNormalizedCookieOptions(options)
+          // Validar antes de salvar para cookies de auth
+          const validatedValue = name.startsWith('sb-')
+            ? validateCookieBeforeStore(value)
+            : value
           request.cookies.set({
             name,
-            value,
+            value: validatedValue,
             ...normalized,
           })
           response = NextResponse.next({
@@ -36,7 +45,7 @@ export async function updateSession(request: NextRequest) {
           })
           response.cookies.set({
             name,
-            value,
+            value: validatedValue,
             ...normalized,
           })
         },
