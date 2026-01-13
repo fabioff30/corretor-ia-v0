@@ -52,8 +52,8 @@ function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
     sameSite: options.sameSite ?? 'lax',
     // Disponível em toda aplicação
     path: options.path ?? '/',
-    // Expira com o refresh token (7 dias)
-    maxAge: options.maxAge ?? 60 * 60 * 24 * 7,
+    // Expira com o refresh token (30 dias para sessões de longa duração)
+    maxAge: options.maxAge ?? 60 * 60 * 24 * 30,
     ...(resolvedCookieDomain ? { domain: resolvedCookieDomain } : {}),
   }
 }

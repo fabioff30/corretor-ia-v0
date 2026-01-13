@@ -11,6 +11,7 @@ import Script from "next/script"
 import { GTM_ID } from "@/utils/constants"
 import { CookieConsent } from "@/components/cookie-consent"
 import { UserProvider } from "@/components/providers/user-provider"
+import { SessionRefreshProvider } from "@/components/providers/session-refresh-provider"
 import { AdSenseLoaderWithRoutes } from "@/components/ads/adsense-loader-with-routes"
 import { CleverWebServerLoader } from "@/components/ads/clever-webserver-loader"
 import { createClient as createServerClient } from "@/lib/supabase/server"
@@ -238,6 +239,7 @@ export default async function RootLayout({
         </noscript>
 
         <UserProvider initialUser={session?.user ?? null} initialProfile={initialProfile}>
+          <SessionRefreshProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             <BlackFridayBanner />
             <div className="flex min-h-screen flex-col">
@@ -254,6 +256,7 @@ export default async function RootLayout({
             <PageviewTracker />
             {/* <CleverWebServerLoader /> */}
           </ThemeProvider>
+          </SessionRefreshProvider>
         </UserProvider>      </body>
     </html>
   )
