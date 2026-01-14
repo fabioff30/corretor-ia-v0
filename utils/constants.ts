@@ -56,6 +56,11 @@ export const DEEPSEEK_STREAM_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir-str
 export const DEEPSEEK_LONG_TEXT_THRESHOLD = 5000 // Usar DeepSeek para textos >= 5k chars
 export const DEEPSEEK_CHUNK_THRESHOLD = 80000 // Chunking paralelo para textos >= 80k chars
 
+// Large Text Processing - For texts that need chunking
+export const STREAMING_TIMEOUT = 150000 // 2.5 min timeout for streaming (margin before Vercel 300s)
+export const LARGE_TEXT_THRESHOLD = 80000 // Trigger chunked processing at 80K chars
+export const LONG_TEXT_WEBHOOK_URL = `${WORKERS_API_BASE}/api/premium-corrigir-long` // Endpoint for very large texts
+
 // Lite (Quick Mode) endpoint for faster, less detailed corrections
 export const LITE_WEBHOOK_URL = `${WORKERS_API_BASE}/api/corrigir-lite`
 

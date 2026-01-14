@@ -50,6 +50,10 @@ export async function callWebhook(options: WebhookOptions): Promise<Response> {
       if (url.includes("analysis-ai")) {
         effectiveTimeout = AI_DETECTOR_TIMEOUT
         console.log(`API: Using extended timeout for AI detector: ${effectiveTimeout}ms`, requestId)
+      } else if (url.includes("premium-corrigir-long")) {
+        // Long-text endpoint needs the maximum timeout for chunked processing
+        effectiveTimeout = PREMIUM_FETCH_TIMEOUT
+        console.log(`API: Using extended timeout for long-text endpoint: ${effectiveTimeout}ms`, requestId)
       } else if (url.includes("premium-corrigir") || url.includes("premium-reescrever")) {
         effectiveTimeout = PREMIUM_FETCH_TIMEOUT
         console.log(`API: Using extended timeout for premium endpoint: ${effectiveTimeout}ms`, requestId)
@@ -103,6 +107,10 @@ async function callFallbackWebhook(fallbackUrl: string, text: string, requestId:
   if (fallbackUrl.includes("analysis-ai")) {
     effectiveTimeout = AI_DETECTOR_TIMEOUT
     console.log(`API: Using extended timeout for fallback AI detector: ${effectiveTimeout}ms`, requestId)
+  } else if (fallbackUrl.includes("premium-corrigir-long")) {
+    // Long-text endpoint needs the maximum timeout for chunked processing
+    effectiveTimeout = PREMIUM_FETCH_TIMEOUT
+    console.log(`API: Using extended timeout for fallback long-text endpoint: ${effectiveTimeout}ms`, requestId)
   } else if (fallbackUrl.includes("premium-corrigir") || fallbackUrl.includes("premium-reescrever")) {
     effectiveTimeout = PREMIUM_FETCH_TIMEOUT
     console.log(`API: Using extended timeout for fallback premium endpoint: ${effectiveTimeout}ms`, requestId)

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logRequest } from "@/utils/logger"
-import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, LITE_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN } from "@/utils/constants"
+import { WEBHOOK_URL, FALLBACK_WEBHOOK_URL, PREMIUM_WEBHOOK_URL, DEEPSEEK_STREAM_WEBHOOK_URL, LITE_WEBHOOK_URL, DEEPSEEK_LONG_TEXT_THRESHOLD, AUTH_TOKEN, STREAMING_TIMEOUT, LARGE_TEXT_THRESHOLD, LONG_TEXT_WEBHOOK_URL } from "@/utils/constants"
 import { sanitizeHeaderValue } from "@/utils/http-headers"
 import {
   applyRateLimit,
@@ -165,9 +165,21 @@ export async function POST(request: NextRequest) {
     // For texts > 5k AND client accepts SSE, use streaming with progress
     // Premium users get Gemini 3 Pro Preview with SSE
     // Free users get DeepSeek streaming
+    // For very large texts (>80K), use the chunked long-text endpoint
     if (textLength >= STREAMING_THRESHOLD && clientAcceptsSSE) {
-      const streamUrl = isPremium ? PREMIUM_WEBHOOK_URL : DEEPSEEK_STREAM_WEBHOOK_URL
-      console.log(`API: Routing to ${isPremium ? 'Premium Gemini' : 'DeepSeek'} streaming for long text (${textLength} chars)`, requestId)
+      // For very large texts, use the chunked endpoint directly
+      const streamUrl = textLength >= LARGE_TEXT_THRESHOLD && isPremium
+        ? LONG_TEXT_WEBHOOK_URL
+        : (isPremium ? PREMIUM_WEBHOOK_URL : DEEPSEEK_STREAM_WEBHOOK_URL)
+
+      console.log(`API: Routing to ${textLength >= LARGE_TEXT_THRESHOLD ? 'Long-Text Chunked' : (isPremium ? 'Premium Gemini' : 'DeepSeek')} streaming for ${textLength >= LARGE_TEXT_THRESHOLD ? 'very large' : 'long'} text (${textLength} chars)`, requestId)
+
+      // Create abort controller with timeout to prevent hanging connections
+      const streamController = new AbortController()
+      const streamTimeout = setTimeout(() => {
+        console.log(`API: Streaming timeout after ${STREAMING_TIMEOUT}ms, aborting`, requestId)
+        streamController.abort()
+      }, STREAMING_TIMEOUT)
 
       try {
         const streamResponse = await fetch(streamUrl, {
@@ -180,8 +192,13 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             text,
             authToken: AUTH_TOKEN,
+            // For long-text endpoint, specify chunk size
+            ...(textLength >= LARGE_TEXT_THRESHOLD && { chunkSize: 40000 }),
           }),
+          signal: streamController.signal,
         })
+
+        clearTimeout(streamTimeout)
 
         if (streamResponse.ok && streamResponse.headers.get("Content-Type")?.includes("text/event-stream")) {
           // Return SSE stream directly to client for real-time progress
@@ -202,7 +219,15 @@ export async function POST(request: NextRequest) {
           console.error(`API: Streaming failed (${streamResponse.status}), falling back to regular webhook`, requestId)
         }
       } catch (streamError) {
-        console.error("API: Streaming error, falling back to regular webhook", streamError, requestId)
+        clearTimeout(streamTimeout)
+        const errorMessage = streamError instanceof Error ? streamError.message : String(streamError)
+        const isAborted = streamError instanceof Error && streamError.name === 'AbortError'
+        console.error(`API: Streaming ${isAborted ? 'timeout' : 'error'}, falling back to ${textLength >= LARGE_TEXT_THRESHOLD ? 'long-text' : 'regular'} webhook`, errorMessage, requestId)
+
+        // For very large texts that timed out on streaming, use the long-text endpoint as fallback
+        if (textLength >= LARGE_TEXT_THRESHOLD && isPremium) {
+          console.log(`API: Large text (${textLength} chars) - will use long-text endpoint for fallback`, requestId)
+        }
       }
     }
 
@@ -216,9 +241,13 @@ export async function POST(request: NextRequest) {
       webhookData.tone = tone
     }
 
-    // Webhook selection: Premium > Quick Mode (Lite) > Regular
+    // Webhook selection: Long-Text (>80K) > Premium > Quick Mode (Lite) > Regular
     let webhookUrl: string
-    if (isPremium) {
+    if (isPremium && textLength >= LARGE_TEXT_THRESHOLD) {
+      // For very large texts, use the chunked long-text endpoint
+      webhookUrl = LONG_TEXT_WEBHOOK_URL
+      console.log(`API: Using LONG-TEXT webhook for very large text (${textLength} chars)`, requestId)
+    } else if (isPremium) {
       webhookUrl = PREMIUM_WEBHOOK_URL
       console.log(`API: Using PREMIUM webhook`, requestId)
     } else if (quickMode) {
@@ -229,9 +258,14 @@ export async function POST(request: NextRequest) {
       console.log(`API: Using regular webhook`, requestId)
     }
 
+    // For long-text endpoint, add chunkSize to the request
+    if (textLength >= LARGE_TEXT_THRESHOLD && isPremium) {
+      webhookData.chunkSize = 40000 // 40K chars per chunk
+    }
+
     const response = await callWebhook({
       url: webhookUrl,
-      fallbackUrl: FALLBACK_WEBHOOK_URL,
+      fallbackUrl: textLength >= LARGE_TEXT_THRESHOLD ? LONG_TEXT_WEBHOOK_URL : FALLBACK_WEBHOOK_URL, // Use long-text as fallback for large texts
       text,
       requestId,
       additionalData: webhookData,
