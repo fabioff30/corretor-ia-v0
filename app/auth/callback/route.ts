@@ -10,7 +10,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, fixCookieDoubleSerialization, withNormalizedCookieOptions } from '@/lib/supabase/server'
 
 /**
  * Detecta se o request vem de um dispositivo mobile via User-Agent
@@ -18,6 +18,33 @@ import { createClient } from '@/lib/supabase/server'
 function isMobileUserAgent(request: NextRequest | Request): boolean {
   const ua = request.headers.get('user-agent') || ''
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+}
+
+/**
+ * Verifica e corrige cookies de sessão após serem setados
+ * Importante para Firefox que pode aplicar double-serialization
+ */
+async function verifyCookiesAfterLogin(cookieStore: Awaited<ReturnType<typeof cookies>>): Promise<void> {
+  try {
+    const allCookies = cookieStore.getAll()
+
+    for (const cookie of allCookies) {
+      if (cookie.name.startsWith('sb-') && cookie.value) {
+        const fixed = fixCookieDoubleSerialization(cookie.value)
+        if (fixed && fixed !== cookie.value) {
+          console.log('[Auth Callback] Corrigindo cookie double-serialized:', cookie.name)
+          const options = withNormalizedCookieOptions({})
+          cookieStore.set({
+            name: cookie.name,
+            value: fixed,
+            ...options,
+          })
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Auth Callback] Erro ao verificar cookies:', error)
+  }
 }
 
 function getSafeRedirectUrl(next: string | null, origin: string, defaultPath: string = "/dashboard"): URL {
@@ -100,6 +127,9 @@ export async function GET(request: NextRequest | Request) {
         new URL(`/login?error=${encodeURIComponent('Erro ao autenticar. Tente novamente.')}`, requestUrl.origin)
       )
     }
+
+    // Verificar e corrigir cookies após login (importante para Firefox)
+    await verifyCookiesAfterLogin(cookieStore)
 
     // Success - redirect para home no mobile, dashboard no desktop
     const defaultRedirect = isMobileUserAgent(request) ? "/" : "/dashboard"
