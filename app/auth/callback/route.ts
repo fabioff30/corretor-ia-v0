@@ -1,16 +1,18 @@
 /**
- * Callback de autenticação do Supabase
- * Processa o retorno do OAuth (Google) e confirmação de email
+ * Callback de autenticacao do Supabase
+ * Processa o retorno do OAuth (Google) e confirmacao de email
  * Suporta PKCE flow (code) usando @supabase/ssr
  *
  * IMPORTANT: This must be a Route Handler (route.ts), not a Page (page.tsx)
  * to properly set cookies before redirect
+ *
+ * O SDK @supabase/ssr lida internamente com serialization de cookies
+ * @see https://supabase.com/docs/guides/auth/server-side/advanced-guide
  */
 
 import { NextResponse, NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
-import type { Database } from '@/types/supabase'
-import { createClient, fixCookieDoubleSerialization, withNormalizedCookieOptions } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * Detecta se o request vem de um dispositivo mobile via User-Agent
@@ -21,34 +23,9 @@ function isMobileUserAgent(request: NextRequest | Request): boolean {
 }
 
 /**
- * Verifica e corrige cookies de sessão após serem setados
- * Importante para Firefox que pode aplicar double-serialization
+ * Valida e retorna URL segura para redirect
  */
-async function verifyCookiesAfterLogin(cookieStore: Awaited<ReturnType<typeof cookies>>): Promise<void> {
-  try {
-    const allCookies = cookieStore.getAll()
-
-    for (const cookie of allCookies) {
-      if (cookie.name.startsWith('sb-') && cookie.value) {
-        const fixed = fixCookieDoubleSerialization(cookie.value)
-        if (fixed && fixed !== cookie.value) {
-          console.log('[Auth Callback] Corrigindo cookie double-serialized:', cookie.name)
-          const options = withNormalizedCookieOptions({})
-          cookieStore.set({
-            name: cookie.name,
-            value: fixed,
-            ...options,
-          })
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[Auth Callback] Erro ao verificar cookies:', error)
-  }
-}
-
 function getSafeRedirectUrl(next: string | null, origin: string, defaultPath: string = "/dashboard"): URL {
-  // Redirecionar para o defaultPath por padrão após login
   const fallback = new URL(defaultPath, origin)
 
   if (!next) {
@@ -57,6 +34,7 @@ function getSafeRedirectUrl(next: string | null, origin: string, defaultPath: st
 
   const trimmed = next.trim()
 
+  // Prevenir open redirect attacks
   if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
     return fallback
   }
@@ -115,8 +93,7 @@ export async function GET(request: NextRequest | Request) {
       } as unknown as Awaited<ReturnType<typeof cookies>>
     }
 
-    // ✅ Create Supabase client with explicit cookie handlers
-    // This ensures cookies are properly set in the response
+    // Criar cliente Supabase - usa padrao getAll/setAll internamente
     const supabase = await createClient(cookieStore)
 
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
@@ -127,9 +104,6 @@ export async function GET(request: NextRequest | Request) {
         new URL(`/login?error=${encodeURIComponent('Erro ao autenticar. Tente novamente.')}`, requestUrl.origin)
       )
     }
-
-    // Verificar e corrigir cookies após login (importante para Firefox)
-    await verifyCookiesAfterLogin(cookieStore)
 
     // Success - redirect para home no mobile, dashboard no desktop
     const defaultRedirect = isMobileUserAgent(request) ? "/" : "/dashboard"
@@ -142,6 +116,6 @@ export async function GET(request: NextRequest | Request) {
   // If we get here, something went wrong
   console.error('[Auth Callback] No code provided')
   return NextResponse.redirect(
-    new URL('/login?error=Código de autenticação não fornecido', requestUrl.origin)
+    new URL('/login?error=Codigo de autenticacao nao fornecido', requestUrl.origin)
   )
 }

@@ -1,17 +1,20 @@
 /**
  * Supabase Client para uso no Middleware
+ *
+ * IMPORTANTE: Usa o padrao getAll/setAll recomendado pela documentacao do @supabase/ssr
+ * Isso evita problemas de double-serialization e race conditions
+ *
+ * @see https://supabase.com/docs/guides/auth/server-side/advanced-guide
  */
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
-import { withNormalizedCookieOptions, fixCookieDoubleSerialization, validateCookieBeforeStore } from '@/lib/supabase/server'
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  // Criar response inicial
+  let supabaseResponse = NextResponse.next({
+    request,
   })
 
   const supabase = createServerClient<Database>(
@@ -19,68 +22,52 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          const value = request.cookies.get(name)?.value
-          // Aplicar fix de double-serialization para cookies de auth
-          if (name.startsWith('sb-') && value) {
-            return fixCookieDoubleSerialization(value)
-          }
-          return value
+        // Padrao recomendado: getAll/setAll
+        // O SDK lida internamente com chunking e encoding
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          const normalized = withNormalizedCookieOptions(options)
-          // Validar antes de salvar para cookies de auth
-          const validatedValue = name.startsWith('sb-')
-            ? validateCookieBeforeStore(value)
-            : value
-          request.cookies.set({
-            name,
-            value: validatedValue,
-            ...normalized,
+        setAll(cookiesToSet) {
+          // Setar cookies no request (para proximas chamadas no mesmo request)
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          // Recriar response para incluir os novos cookies
+          supabaseResponse = NextResponse.next({
+            request,
           })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: validatedValue,
-            ...normalized,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          const normalized = withNormalizedCookieOptions(options)
-          request.cookies.set({
-            name,
-            value: '',
-            ...normalized,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...normalized,
-          })
+          // Setar cookies na response (para enviar ao browser)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  // Check if Supabase auth cookies exist before calling getUser()
-  // This prevents unnecessary refresh attempts after logout
-  const hasAuthCookies = request.cookies.getAll().some(cookie =>
-    cookie.name.startsWith('sb-') && cookie.value && cookie.value !== ''
+  // Verificar se existem cookies de auth antes de chamar getUser()
+  // Isso evita tentativas desnecessarias de refresh apos logout
+  const hasAuthCookies = request.cookies.getAll().some(
+    cookie => cookie.name.startsWith('sb-') && cookie.value && cookie.value !== ''
   )
 
   if (hasAuthCookies) {
-    // Refresh session se expirado - importante para sessões de longa duração
-    await supabase.auth.getUser()
+    // getUser() faz refresh automatico se o token estiver expirado
+    const { error } = await supabase.auth.getUser()
+
+    // Tratamento gracioso do erro de refresh token ja usado
+    // Isso acontece em race conditions quando multiplos requests chegam simultaneamente
+    if (error) {
+      if (error.message?.includes('refresh_token_already_used') ||
+          (error as any).code === 'refresh_token_already_used') {
+        console.warn('[Middleware] Refresh token ja usado por outro request - ignorando')
+        // NAO fazer nada - outro request ja atualizou os cookies
+      } else {
+        // Outros erros podem ser logados mas nao devem quebrar o fluxo
+        console.error('[Middleware] Auth error:', error.message)
+      }
+    }
   }
 
-  return response
+  return supabaseResponse
 }
