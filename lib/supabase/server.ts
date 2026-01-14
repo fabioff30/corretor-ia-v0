@@ -59,16 +59,65 @@ function withNormalizedCookieOptions(options: CookieOptions): CookieOptions {
 }
 
 /**
+ * Tenta desserializar recursivamente até encontrar um objeto de sessão válido
+ * Isso é necessário porque Safari/Firefox podem aplicar múltiplas camadas de serialização
+ */
+function deepUnserialize(value: string, depth: number = 0): { found: boolean; value: string } {
+  // Limitar profundidade para evitar loops infinitos
+  if (depth > 5) return { found: false, value }
+
+  try {
+    const parsed = JSON.parse(value)
+
+    // Se chegamos em um objeto com dados de sessão, sucesso!
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (parsed.access_token || parsed.user || parsed.refresh_token) {
+        return { found: true, value: JSON.stringify(parsed) }
+      }
+    }
+
+    // Se ainda é uma string, continuar desserializando
+    if (typeof parsed === 'string') {
+      return deepUnserialize(parsed, depth + 1)
+    }
+
+    // Não é sessão válida, retornar original
+    return { found: false, value }
+  } catch {
+    // Não é JSON válido
+    return { found: false, value }
+  }
+}
+
+/**
  * Corrige double-serialization em cookies de sessão do Supabase
  * Problema: TypeError: Cannot create property 'user' on string
- * Causa: JSON.stringify aplicado duas vezes resulta em string ao invés de objeto
+ * Causa: JSON.stringify aplicado duas vezes (ou mais) resulta em string ao invés de objeto
  *
- * Detecta múltiplos padrões de corrupção:
- * 1. Valor começa com aspas (Firefox tende a fazer isso)
- * 2. Valor parseado é string ao invés de objeto
+ * Esta função usa desserialização recursiva para lidar com múltiplas camadas
+ * de serialização que podem ocorrer em Safari/Firefox/iOS
  */
 function fixCookieDoubleSerialization(value: string | null): string | null {
   if (!value) return null
+
+  // Verificar se parece ser um cookie de sessão (contém access_token em algum lugar)
+  if (!value.includes('access_token') && !value.includes('refresh_token')) {
+    return value
+  }
+
+  // Log para debug em produção (temporário)
+  const preview = value.length > 100 ? value.substring(0, 100) + '...' : value
+  console.log('[Server Cookie] Verificando valor (primeiros 100 chars):', preview)
+
+  // Tentar desserialização recursiva
+  const result = deepUnserialize(value, 0)
+
+  if (result.found && result.value !== value) {
+    console.warn('[Server Cookie] Corrigido double-serialization na leitura (detectado via deep parse)')
+    return result.value
+  }
+
+  // Se não encontrou via deep parse, verificar padrões específicos
 
   // Caso 1: Valor começa e termina com aspas (double-quoted)
   // Ex: '"{\"access_token\":\"...\"}"'
@@ -123,23 +172,37 @@ function fixCookieDoubleSerialization(value: string | null): string | null {
 
 /**
  * Previne double-serialization ao salvar cookies
- * Detecta múltiplos padrões de corrupção que podem ocorrer em diferentes browsers
+ * Usa desserialização recursiva para garantir que salvamos sempre o formato correto
  */
 function validateCookieBeforeStore(value: string): string {
+  // Verificar se parece ser um cookie de sessão
+  if (!value.includes('access_token') && !value.includes('refresh_token')) {
+    return value
+  }
+
+  // Log para debug
+  const preview = value.length > 100 ? value.substring(0, 100) + '...' : value
+  console.log('[Server Cookie] Validando antes de salvar (primeiros 100 chars):', preview)
+
+  // Usar desserialização recursiva para encontrar o objeto real
+  const result = deepUnserialize(value, 0)
+
+  if (result.found && result.value !== value) {
+    console.warn('[Server Cookie] Corrigido double-serialization na escrita (detectado via deep parse)')
+    return result.value
+  }
+
   // Caso 1: Valor já está double-serialized (começa e termina com aspas de string JSON)
-  // Isso acontece quando JSON.stringify é chamado em uma string JSON
-  // Ex: '"{\"access_token\":\"...\"}"' ao invés de '{"access_token":"..."}'
   if (value.startsWith('"') && value.endsWith('"') && value.length > 2) {
     try {
       const unquoted = JSON.parse(value)
-      // Se após parse ainda é string e parece ser JSON de sessão
       if (typeof unquoted === 'string' && (unquoted.startsWith('{') || unquoted.startsWith('['))) {
         try {
           const innerParsed = JSON.parse(unquoted)
           if (innerParsed && typeof innerParsed === 'object') {
             if (innerParsed.access_token || innerParsed.user || innerParsed.refresh_token) {
               console.warn('[Server Cookie] Detectado double-quote na escrita, corrigindo')
-              return unquoted // Retorna a string JSON sem as aspas extras
+              return unquoted
             }
           }
         } catch {
@@ -147,15 +210,13 @@ function validateCookieBeforeStore(value: string): string {
         }
       }
     } catch {
-      // Não é JSON válido, continuar para próximas verificações
+      // Não é JSON válido
     }
   }
 
-  // Caso 2: Valor parseado é uma string (double-serialization padrão)
+  // Caso 2: Valor parseado é uma string
   try {
     const parsed = JSON.parse(value)
-
-    // Se o valor parseado é uma string, alguém fez JSON.stringify duas vezes
     if (typeof parsed === 'string') {
       try {
         const innerParsed = JSON.parse(parsed)
@@ -169,10 +230,8 @@ function validateCookieBeforeStore(value: string): string {
         // Não é JSON válido internamente
       }
     }
-
     return value
   } catch {
-    // Valor não é JSON, retornar como está
     return value
   }
 }
