@@ -14,6 +14,7 @@ import Link from "next/link"
 import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase/client"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -34,9 +35,12 @@ export function RegisterForm() {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const isMobile = useIsMobile()
 
   // Get redirect URL from query params
-  const redirectUrl = searchParams.get('redirect') || '/dashboard'
+  // Mobile vai para home, desktop vai para dashboard por padrão
+  const defaultRedirect = isMobile ? '/' : '/dashboard'
+  const redirectUrl = searchParams.get('redirect') || defaultRedirect
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -371,7 +375,7 @@ export function RegisterForm() {
           <p className="text-center text-sm text-muted-foreground">
             Ja tem uma conta?{" "}
             <Link
-              href={`/login${redirectUrl !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
+              href={`/login${redirectUrl !== defaultRedirect ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
               className="text-primary hover:underline font-medium"
             >
               Fazer login

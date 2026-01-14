@@ -11,6 +11,7 @@ import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useUser } from "@/components/providers/user-provider"
 import { useToast } from "@/hooks/use-toast"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -22,6 +23,7 @@ export function LoginForm() {
   const { signIn } = useUser()
   const { toast } = useToast()
   const router = useRouter()
+  const isMobile = useIsMobile()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +49,9 @@ export function LoginForm() {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta ao CorretorIA"
         })
-        router.push("/dashboard")
+        // Mobile vai para home, desktop vai para dashboard
+        const redirectTo = isMobile ? "/" : "/dashboard"
+        router.push(redirectTo)
       }
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : null

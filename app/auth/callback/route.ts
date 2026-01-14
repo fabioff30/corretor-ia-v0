@@ -12,9 +12,17 @@ import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 import { createClient } from '@/lib/supabase/server'
 
-function getSafeRedirectUrl(next: string | null, origin: string): URL {
-  // Redirecionar para /dashboard por padrão após login
-  const fallback = new URL("/dashboard", origin)
+/**
+ * Detecta se o request vem de um dispositivo mobile via User-Agent
+ */
+function isMobileUserAgent(request: NextRequest | Request): boolean {
+  const ua = request.headers.get('user-agent') || ''
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+}
+
+function getSafeRedirectUrl(next: string | null, origin: string, defaultPath: string = "/dashboard"): URL {
+  // Redirecionar para o defaultPath por padrão após login
+  const fallback = new URL(defaultPath, origin)
 
   if (!next) {
     return fallback
@@ -93,9 +101,10 @@ export async function GET(request: NextRequest | Request) {
       )
     }
 
-    // Success - redirect para home (o TextCorrectionForm detecta automaticamente o plano)
-    const redirectUrl = getSafeRedirectUrl(next, requestUrl.origin)
-    console.log('[Auth Callback] Login successful! Redirecting to:', redirectUrl.toString())
+    // Success - redirect para home no mobile, dashboard no desktop
+    const defaultRedirect = isMobileUserAgent(request) ? "/" : "/dashboard"
+    const redirectUrl = getSafeRedirectUrl(next, requestUrl.origin, defaultRedirect)
+    console.log('[Auth Callback] Login successful! Redirecting to:', redirectUrl.toString(), '(mobile:', isMobileUserAgent(request), ')')
 
     return NextResponse.redirect(redirectUrl)
   }
